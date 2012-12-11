@@ -406,7 +406,6 @@ C
      1        ' has impossible number of constraints!' )
  1009 FORMAT( ' Incomplete classification for problem ', A8 )
  1010 FORMAT( ' Classification not found for Problem ', A8 )
- 1011 FORMAT( ' ', A8, ' ', 60A1 )
  1201 FORMAT( '   *** YOU USED MORE THAN 28 CHARACTERS.  Please choose',
      1             ' again.'
      1        / )

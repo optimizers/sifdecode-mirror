@@ -69,7 +69,8 @@ C                  Addition by Kristjan Jonasson
       CHARACTER*8  TARGET( MAXTRG ), LIST(5)
       CHARACTER*1  CHOICE, CHAR, UPPER
       INTEGER      I, IM1, J, NVAR( MAXTRG ), NCON( MAXTRG ), L, K, NUM,
-     *             NMATCH, CONVERT, NBT,  NBI, LN, UN, LM, SIZE, UM
+     *             NMATCH, CONVERT, NBT,  NBI, LN, UN, LM, SIZE, UM, 
+     *             NBLK
       LOGICAL      REJECT, ANYFNV,  ANYFNC, MATCH
       INTRINSIC    MIN
 C
@@ -754,14 +755,15 @@ C
         IF ( MATCH( PBCLS(10:28), TARGET, MAXTRG, ANYFNV, ANYFNC,
      1               NVAR, NCON, LN, UN, LM, UM ) ) THEN
           NBLK = 8
-          DO 3030 NLBK = 8, 2, -1
+          DO 3030 NBLK = 8, 2, -1
             IF ( PBCLS(NBLK:NBLK) .NE. ' ' ) GO TO 3040
  3030     CONTINUE
  3040     CONTINUE
           WRITE ( FLSDVC, '(A)' ) PBCLS(1:NBLK)
         ENDIF
         GO TO 3020
- 3050   CLOSE ( FLSDVC )
+ 3050   CONTINUE
+        CLOSE ( FLSDVC )
         CLOSE ( CLSDVC )
       ENDIF
       WRITE ( STDOUT, 7000 )
@@ -776,14 +778,14 @@ C  Non excutable statements
 C
  1000 FORMAT( /'      *************************************************'
      1        /'      *                                               *'
-     1        /'      *         CONSTRAINED AND UNCONSTRAINED         *'
-     1        /'      *              TESTING ENVIRONMENT              *'
+     1        /'      *         Constrained and Unconstrained         *'
+     1        /'      *              Testing Environment              *'
      1        /'      *                                               *'
-     1        /'      *                   ( CUTE )                    *'
+     1        /'      *                   ( CUTEst )                  *'
      1        /'      *                                               *'
-     1        /'      *         INTERACTIVE PROBLEM SELECTION         *'
+     1        /'      *         interactive problem selection         *'
      1        /'      *                                               *'
-     1        /'      *                CGT PRODUCTIONS                *'
+     1        /'      *                CGT productions                *'
      1        /'      *                                               *'
      1        /'      *************************************************'
      1        / )
@@ -1154,10 +1156,11 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      CHARACTER*8  T( MAXTRG )
-      CHARACTER*19 C
       LOGICAL      ANYFNV, ANYFNC
-      INTEGER      NV( MAXTRG ), NC( MAXTRG ), MAXTRG, LN, UN, LM, UM
+      INTEGER      MAXTRG, LN, UN, LM, UM
+      CHARACTER*19 C
+      INTEGER      NV( MAXTRG ), NC( MAXTRG )
+      CHARACTER*8  T( MAXTRG )
 C
 C  Other variables
 C
@@ -1356,8 +1359,8 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      CHARACTER*8 T( MX )
       INTEGER     I, MX
+      CHARACTER*8 T( MX )
 C
 C  Other variables
 C
@@ -1386,7 +1389,8 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      INTEGER N( MX ), MX
+      INTEGER MX
+      INTEGER N( MX )
 C
 C  Other variables
 C
