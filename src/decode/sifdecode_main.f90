@@ -142,7 +142,7 @@
 
 !  decode the problem
 
-      CALL SIFDECODE_sdlanc( ingps, outda, infn, outfn, outff, outfd, outra,   &
+      CALL SIFDECODE_decode( ingps, outda, infn, outfn, outff, outfd, outra,   &
                              ingr, outgr, outgf, outgd, inex, outex, outem,    &
                              outea, print_level, out, noname, algorithm,       &
                              auto, ad0, single, status )

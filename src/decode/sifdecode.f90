@@ -1,4 +1,4 @@
-! THIS VERSION: SIFDECODE 1.0 - 20/10/2012 AT 13:00 GMT.
+! THIS VERSION: SIFDECODE 1.0 - 12/12/2012 AT 12:12 GMT.
 
 !-*-*-*-*-*-*-*-*-*-*-*- S I F D E C O D E   M O D U l E -*-*-*-*-*-*-*-*-*-*-
 
@@ -8,7 +8,7 @@
 !  History -
 !   fortran 77 version originally released as part of CUTE, December 1990
 !   Became separate subroutines in SifDec, April 2004
-!   Updated fortran 2003 version packaged and released October 2012
+!   Updated fortran 2003 version packaged and released December 2012
 
 !  For full documentation, see 
 !   http://galahad.rl.ac.uk/galahad-www/specs.html
@@ -18,7 +18,7 @@
       IMPLICIT NONE
 
       PRIVATE
-      PUBLIC :: SIFDECODE_sdlanc
+      PUBLIC :: SIFDECODE_decode
 
 !---------------
 !  V e r s i o n
@@ -39,6 +39,123 @@
 !   P a r a m e t e r s
 !----------------------
 
+!  -------------------------------------------------------------------
+
+!  default array lengths
+
+!  the following parameters define the default sizes of problem
+!  dependent arrays. The actual sizes used will be determined
+!  automatically, and the arrays adjusted as the SIF file is 
+!  decoded, but good initial values may speed things up
+
+!  [In SifDec an error messages was issued if any of these sizes
+!   was too small, telling the user which parameter to increase.
+!   This was, as our users never tired of telling us, frankly tedious]
+
+!  -------------------------------------------------------------------
+
+!  maximum number of variables
+
+      INTEGER, PARAMETER :: nmax = 1000000
+
+!  maximum number of groups
+
+!     INTEGER, PARAMETER :: ng_guess = 1
+      INTEGER, PARAMETER :: ng_guess = 600000
+
+!  maximum number of different group types
+
+!     INTEGER, PARAMETER :: ngtype_guess = 1
+      INTEGER, PARAMETER :: ngtype_guess = 10   
+
+!  maximum total number of real parameters associated with groups
+
+      INTEGER, PARAMETER :: ngp_guess = 1200000
+
+!  maximum number of nonlinear elements
+
+      INTEGER, PARAMETER :: nel_guess = 1000000
+
+!  maximum number of different nonlinear element types
+
+!     INTEGER, PARAMETER :: netype_guess = 1
+      INTEGER, PARAMETER :: netype_guess = 20
+
+!  maximum total number of elemental variables
+
+!     INTEGER, PARAMETER :: nelvar_guess = 1
+      INTEGER, PARAMETER :: nelvar_guess = 1000000
+
+!  maximum total number of auxliliary parameters used when defining function
+!  and derivative values
+
+      INTEGER, PARAMETER :: nauxpar_guess = 100
+
+!  maximum number of real parameters associated with nonlinear elements
+
+      INTEGER, PARAMETER :: nelp_guess = 1000000
+
+!  maximum number of nonzeros in linear elements
+
+      INTEGER, PARAMETER :: la = 8000000
+
+!  maximum number of integer parameters
+
+      INTEGER, PARAMETER :: nindex = 100   
+
+!  maximum number of real parameters
+
+      INTEGER, PARAMETER :: nrlndx = 20000 
+
+!  maximum number of vectors of bounds
+
+      INTEGER, PARAMETER :: nbmax  = 2     
+
+!  maximum number of vectors of solutions
+
+      INTEGER, PARAMETER :: nstart_guess = 3     
+
+!  maximum number of vectors of bounds on the objective function
+
+      INTEGER, PARAMETER :: nobmax = 2     
+
+!  dependencies on the maximum number of nontrivial group types
+!  ngpmax is the total number of group parameters
+
+      INTEGER, PARAMETER :: ngpmax = ngtype_guess
+
+!  dependencies on the maximum number of nonlinear element types nev_guess, 
+!  niv_guess and nep_guess are the total number of elemental and internal 
+!  variables and parameters respectively
+
+      INTEGER, PARAMETER :: nev_guess = 5 * netype_guess
+      INTEGER, PARAMETER :: niv_guess = 5 * netype_guess
+      INTEGER, PARAMETER :: nep_guess = 3 * netype_guess
+
+!  dependencies on the maximum number of nonzeros in linear elements
+
+      INTEGER, PARAMETER :: licna = la
+
+!  maximum number of statements in a do-loop
+
+      INTEGER, PARAMETER :: maxins = 200
+
+!  maximum nesting of do-loops
+
+      INTEGER, PARAMETER :: maxlev = 3   
+
+!  maximum number of array instructions
+
+      INTEGER, PARAMETER :: maxara = 150
+
+!  maximum size of dictionary
+
+      INTEGER, PARAMETER :: length                                             &
+        = nmax + ng_guess + nel_guess + nauxpar_guess + 1000
+
+!  other parameters used by the decoder
+
+      INTEGER, PARAMETER :: buffer = 75
       INTEGER, PARAMETER :: max_record_length = 160
       INTEGER, PARAMETER :: nfunct = 14
       INTEGER, PARAMETER :: nbytes_by_2 = nbytes / 2
@@ -49,20 +166,20 @@
       REAL ( KIND = wp ), PARAMETER :: epsmch = EPSILON( one )
       LOGICAL, PARAMETER :: oneobj = .FALSE.
 
-      CHARACTER ( len = 10 ), PARAMETER :: cqsqr = '123456789S'
-      CHARACTER ( len = 10 ), PARAMETER :: cqprod = '123456789P'
-      CHARACTER ( len = 10 ), PARAMETER :: cqgrou = '123456789G'
-      CHARACTER ( len = 1 ), DIMENSION( 10 ), PARAMETER :: CHARS =             &
+      CHARACTER ( LEN = 10 ), PARAMETER :: cqsqr = '123456789S'
+      CHARACTER ( LEN = 10 ), PARAMETER :: cqprod = '123456789P'
+      CHARACTER ( LEN = 10 ), PARAMETER :: cqgrou = '123456789G'
+      CHARACTER ( LEN = 1 ), DIMENSION( 10 ), PARAMETER :: CHARS =             &
                  (/ '0', '1', '2', '3', '4', '5','6', '7', '8', '9'/)
-      CHARACTER ( len = 1 ), DIMENSION( 26 ), PARAMETER :: LCHARS =            &
+      CHARACTER ( LEN = 1 ), DIMENSION( 26 ), PARAMETER :: LCHARS =            &
                  (/ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',          &
                     'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',          &
                     'u', 'v', 'w', 'x', 'y', 'z' /)
-      CHARACTER ( len = 1 ), DIMENSION( 26 ), PARAMETER :: UCHARS =            &
+      CHARACTER ( LEN = 1 ), DIMENSION( 26 ), PARAMETER :: UCHARS =            &
                  (/ 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',          &
                     'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',          &
                     'U', 'V', 'W', 'X', 'Y', 'Z' /)
-      CHARACTER ( len = 6 ), DIMENSION( nfunct ), PARAMETER :: FUNCTN =        &
+      CHARACTER ( LEN = 6 ), DIMENSION( nfunct ), PARAMETER :: FUNCTN =        &
          (/ 'ABS   ', 'SQRT  ', 'EXP   ', 'LOG   ', 'LOG10 ',                  &
             'SIN   ', 'COS   ', 'TAN   ', 'ARCSIN', 'ARCCOS',                  &
             'ARCTAN', 'HYPSIN', 'HYPCOS', 'HYPTAN' /)
@@ -74,11 +191,36 @@
       INTEGER :: hash_empty
       REAL ( KIND = wp ) :: hash_prime
 
+!-------------------------------------
+!   G e n e r i c  i n t e r f a c e s
+!-------------------------------------
+
+!  define generic interfaces to routines for extending allocatable arrays
+
+      INTERFACE ALLOCATE_array
+        MODULE PROCEDURE ALLOCATE_array_integer,                               &
+                         ALLOCATE_array_real,                                  &
+                         ALLOCATE_array_logical,                               &
+                         ALLOCATE_array_character10,                           &
+                         ALLOCATE_array2_integer,                              &
+                         ALLOCATE_array2_real,                                 &
+                         ALLOCATE_array2_character10
+      END INTERFACE
+
+      INTERFACE EXTEND_array
+        MODULE PROCEDURE EXTEND_array_integer,                                 &
+                         EXTEND_array_real,                                    &
+                         EXTEND_array_character10,                             &
+                         EXTEND_array2_integer,                                &
+                         EXTEND_array2_real,                                   &
+                         EXTEND_array2_character10
+      END INTERFACE
+
     CONTAINS
 
-!-*-*-*-*-*- S I F D E C O D E   S D L A N C   S U B R O U T I N E -*-*-*-*-*-
+!-*-*-*-*-*- S I F D E C O D E   D E C O D E    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SIFDECODE_sdlanc( iingps, outda, iinfn, outfn, outff, outfd,  &
+      SUBROUTINE SIFDECODE_decode( iingps, outda, iinfn, outfn, outff, outfd,  &
                                    outra, iingr, outgr, outgf, outgd, iinex,   &
                                    outex, outem, outea, print_level, out,      &
                                    noname, ialgor, iauto, iad0, single, status )
@@ -89,218 +231,89 @@
 
 !  ------------------------------------------------------------------------
 !  decode a SIF file and convert the data into a form suitable for input to 
-!  SBMIN, AUGLG or BARIA
+!  GALAHAD or other external packages using CUTEst
+
+!  formerly sdlanc in SiFDec
 !  ------------------------------------------------------------------------
 
 !  local variables
 
-      INTEGER :: i, ig, isg, iinex, la, lb, length, nmax, ngmax
-      INTEGER :: nobmax, nimax, liwk, lwk, nconst
-      INTEGER :: nsmax, nbmax, netmax, nomax, nlmax, nelmax
-      INTEGER :: nelnum, neling, negmax, nepvmx, ngpvmx
-      INTEGER :: nindex, maxins, maxlev, maxara, narray, nobjgr
-      INTEGER :: ngrmax, nrlndx, nepmax, ngpmax, nevmax
-      INTEGER :: ninmax, numax, nsetvc, lstadg, lstada, lelvar
-      INTEGER :: lstaev, lntvar, lbnds, lintre, licna, nreal
-      INTEGER :: nlinob, nnlnob, nlineq, nnlneq, nlinin, nnlnin
-      INTEGER :: nfree, nfixed, nlower, nupper, nboth, nslack
-      INTEGER :: n, ng, nbnd, neltyp, nlvars, nobj, nrange
-      INTEGER :: nnza, ngrtyp, nstart, nlisgp, nnlvrs, nobbnd
+      INTEGER :: i, ig, isg, iinex
+      INTEGER :: nlinob, nnlnob, nlineq, nnlneq, nlinin, nnlnin, alloc_status
+      INTEGER :: nfree, nfixed, nlower, nupper, nboth, nslack, nreal, narray
+      INTEGER :: n, ng, nbnd, neltype, nlvars, nobj, nrange, nconst, nobjgr
+      INTEGER :: nnza, ngtype, nstart, nlisgp, nlisep, nnlvrs, nobbnd
+      INTEGER :: nelvar, nelnum, neling, len1_vstart, len1_cstart, len_defined
+      INTEGER :: nevnames, nivnames, nepnames
+      INTEGER :: len_renames = nauxpar_guess
+      INTEGER :: len_innames = nauxpar_guess
+      INTEGER :: len_lonames = nauxpar_guess
+      INTEGER :: len_minames = nauxpar_guess
+      INTEGER :: len_exnames = nauxpar_guess
       REAL ( KIND = wp ) :: blo, bup
       LOGICAL :: debug, gotlin
-      CHARACTER ( len = 10 ) :: nameof, namerh, namera, namebn, namest, nameob
-      CHARACTER ( len = 72 ) :: lineex
-
-!  ------------------------------------------------------
-
-!  parameters whose value might be changed by the user:
-
-!  the following parameters define the sizes of problem
-!  dependent arrays. these may be changed by the user
-!  to suit a particular problem or system configuration
-
-!  an error messages will be issued if any of these sizes
-!  is too small, telling which parameter to increase
-
-!  ------------------------------------------------------
-
-!  maximum number of variables
-
-      PARAMETER      ( nmax   = 1000000 )
-
-!  maximum number of groups
-
-      PARAMETER      ( ngmax  = 600000 )
-
-!  maximum number of different group types
-
-      PARAMETER      ( ngrmax = 10    )
-
-!  maximum total number of real parameters associated with groups
-
-      PARAMETER      ( ngpvmx = 1200000 )
-
-!  maximum number of nonlinear elements
-
-      PARAMETER      ( nelmax = 1000000 )
-
-!  maximum number of different nonlinear element types
-
-      PARAMETER      ( nlmax  = 20     )
-
-!  maximum total number of elemental variables
-
-      PARAMETER      ( nevmax = 1000000 )
-
-!  maximum total number of internal variables
-
-      PARAMETER      ( ninmax = 150000  )
-
-!  maximum number of entries in an element Hessian
-
-      PARAMETER      ( nsetvc = 100    )
-
-!  maximum number of real parameters associated with nonlinear elements
-
-      PARAMETER      ( nepvmx = 1000000 )
-
-!  maximum number of nonzeros in linear elements
-
-      PARAMETER      ( la     = 8000000 )
-
-!  maximum number of integer parameters
-
-      PARAMETER      ( nindex = 100    )
-
-!  maximum number of real parameters
-
-      PARAMETER      ( nrlndx = 20000  )
-
-!  maximum number of vectors of bounds
-
-      PARAMETER      ( nbmax  = 2      )
-
-!  maximum number of vectors of solutions
-
-      PARAMETER      ( nsmax  = 3      )
-
-!  maximum number of vectors of bounds on the objective function
-
-      PARAMETER      ( nobmax = 2      )
-
-!  ---------------------------------------------------------------------
-
-!  end of parameters that might be changed by the user
-
-!  ---------------------------------------------------------------------
-
-!  dependencies on the maximum number of nontrivial group types
-!  ngpmax is the total number of group parameters
-
-      PARAMETER      ( ngpmax = ngrmax )
-
-!  dependencies on the maximum number of groups
-
-      PARAMETER      ( nomax = ngmax )
-      PARAMETER      ( numax = ngmax )
-      PARAMETER      ( lstadg = ngmax )
-      PARAMETER      ( lstada = ngmax )
-      PARAMETER      ( lb = ngmax )
-      PARAMETER      ( lbnds = nmax + ngmax )
-
-!  dependencies on the maximum total number of real
-!  parameters associated with groups
-
-      PARAMETER      ( lwk = ngpvmx )
-
-!  dependencies on the maximum number of nonlinear element types
-!  netmax, nimax and nepmax are the total number of elemental and
-!  internal variables and parameters respectively
-
-      PARAMETER      ( netmax = 5 * nlmax )
-      PARAMETER      ( nimax = 5 * nlmax )
-      PARAMETER      ( nepmax = 3 * nlmax )
-
-!  dependencies on the maximum number of nonlinear elements
-
-      PARAMETER      ( negmax = nelmax )
-      PARAMETER      ( lstaev = nelmax )
-      PARAMETER      ( lntvar = nelmax + 1 )
-      PARAMETER      ( lintre = nelmax )
-      PARAMETER      ( liwk = nelmax + ngmax )
-
-!  dependencies on the maximum total number of elemental variables
-
-      PARAMETER      ( lelvar = nevmax )
-
-!  dependencies on the maximum number of nonzeros in linear elements
-
-      PARAMETER      ( licna = la     )
-
-!  maximum number of statements in a do-loop
-
-      PARAMETER      ( maxins = 200    )
-
-!  maximum nesting of do-loops
-
-      PARAMETER      ( maxlev = 3      )
-
-!  maximum number of array instructions
-
-      PARAMETER      ( maxara = 150    )
-
-!  maximum size of dictionary
-
-      PARAMETER      ( length = nmax + ngmax + nelmax + ninmax + 1000 )
+      CHARACTER ( LEN = 10 ) :: nameof, namerh, namera, namebn, namest, nameob
+      CHARACTER ( LEN = 24 ) :: bad_alloc
+      CHARACTER ( LEN = 72 ) :: lineex
 
 !  array definitions
 
-      INTEGER :: INLIST( length ), ISTAEV( nelmax )
-      INTEGER :: ISTATE( ngmax ), ITABLE ( length )
-      INTEGER :: IELV  ( nlmax  ), IINV  ( nlmax )
-      INTEGER :: ITYPEE( nelmax ), IELING( negmax, 2 )
-      INTEGER :: IEPA  ( nlmax  ), IGPA  ( ngrmax )
-      INTEGER :: IDROWS( 2, ngmax ), ITYPEG( ngmax )
-      INTEGER :: IELVAR( lelvar ), INTVAR( lntvar )
-      INTEGER :: ISTADA( lstada ), ICNA  ( licna  )
-      INTEGER :: ISTEP ( nelmax ), ISTGP( ngmax ), IWK( liwk )
+      INTEGER :: INLIST( length )
+      INTEGER :: ITABLE ( length )
+      INTEGER :: ICNA( licna  )
       INTEGER :: INDVAL( nindex ), INSTR( 5, maxins, maxlev )
       INTEGER :: NINSTR( maxlev ), IARRAY( 5, 3, maxara )
-      INTEGER :: ICOORD( la, 2 ), ISTADG( ngmax ), IJUMP( nlmax )
+      INTEGER :: ICOORD( la, 2 )
       INTEGER :: ITYPEV( nmax )
-      REAL ( KIND = wp ) :: GPTEMP( ngpvmx )
-      REAL ( KIND = wp ) :: EPVALU( nepvmx ), GPVALU( ngpvmx ), DFAULT( NMAX)
+      REAL ( KIND = wp ) :: DFAULT( nmax )
       REAL ( KIND = wp ) :: A( la ), BND( 2, nmax, nbmax ), REALVL( nrlndx )
-      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax ), CSTART( ngmax, nsmax )
-      REAL ( KIND = wp ) :: RSCALE( ngmax ), CSCALE( nmax ), WK( lwk )
-      REAL ( KIND = wp ) :: RDROWS( 2, ngmax ), VSTART( nmax, nsmax )
+      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax )
+      REAL ( KIND = wp ) :: CSCALE( nmax )
       REAL ( KIND = wp ) :: RVALUE( maxara, 3 ), VARRAY( 2, maxara )
-      REAL ( KIND = wp ) :: FBOUND( 2, nobmax ), WEIGHT( negmax )
-      REAL ( KIND = wp ) :: ABYROW( la ), B( lb ), BL( lbnds ), BU( lbnds )
-      REAL ( KIND = wp ) :: X( nmax ), U( numax ), ESCALE( negmax )
-      REAL ( KIND = wp ) :: VSCALE( nmax ), GSCALE( ngmax ), CLMULT( ngmax )
-      LOGICAL :: INTREP( lintre ), LDEFND( nlmax )
-      LOGICAL :: SETVEC( nsetvc ), GXEQX( ngmax )
-      CHARACTER ( len = 2 ) :: FARRAY( maxara )
-      CHARACTER ( len = 8 ) :: pname
-      CHARACTER ( len = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
-      CHARACTER ( len = 10 ) :: LONAME( ninmax ), BNAMES( nbmax  )
-      CHARACTER ( len = 10 ) :: GNAMES( ngmax  ), VNAMES( nmax   )
-      CHARACTER ( len = 10 ) :: ETYPES( nlmax  ), GTYPES( ngrmax )
-      CHARACTER ( len = 10 ) :: LNAMES( nelmax ), OBNAME( nobmax )
-      CHARACTER ( len = 10 ) :: EPNAME( nepmax ), GPNAME( ngpmax )
-      CHARACTER ( len = 10 ) :: ONAMES( nomax  ), ENAMES( netmax )
-      CHARACTER ( len = 10 ) :: EXNAME( ninmax ), SNAMES( nsmax )
-      CHARACTER ( len = 10 ) :: ANAMES( ngrmax ), INAMES( nimax  )
-      CHARACTER ( len = 10 ) :: MINAME( ninmax ), RENAME( ninmax )
-      CHARACTER ( len = 10 ) :: INNAME( ninmax )
-      CHARACTER ( len = 10 ) :: ARRAY( 3, maxara ), CARRAY( 2, maxara )
-      CHARACTER ( len = 12  ) :: KEY( length )
-      CHARACTER ( len = max_record_length ) :: nuline
+      REAL ( KIND = wp ) :: FBOUND( 2, nobmax )
+      REAL ( KIND = wp ) :: ABYROW( la )
+      REAL ( KIND = wp ) :: X( nmax )
+      REAL ( KIND = wp ) :: VSCALE( nmax )
+      CHARACTER ( LEN = 2 ) :: FARRAY( maxara )
+      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
+      CHARACTER ( LEN = 10 ) :: BNAMES( nbmax  )
+      CHARACTER ( LEN = 10 ) :: VNAMES( nmax   )
+      CHARACTER ( LEN = 10 ) :: OBNAME( nobmax ), GPNAME( ngpmax )
+      CHARACTER ( LEN = 10 ) :: ARRAY( 3, maxara ), CARRAY( 2, maxara )
+      CHARACTER ( LEN = 12  ) :: KEY( length )
+      CHARACTER ( LEN = max_record_length ) :: nuline
 
-      CHARACTER ( len = 1 ), DIMENSION( 2 ), PARAMETER :: S = (/ ' ', 's' /)
-      CHARACTER ( len = 3 ), DIMENSION( 2 ), PARAMETER :: ARE                  &
+      CHARACTER ( LEN = 1 ), DIMENSION( 2 ), PARAMETER :: S = (/ ' ', 's' /)
+      CHARACTER ( LEN = 3 ), DIMENSION( 2 ), PARAMETER :: ARE                  &
         = (/ 'is ', 'are' /)
+
+!  allocatable array definitions
+
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GTYPESP_ptr, ELVAR, A_ptr, IWK
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GSTATE, GTYPE, GP_ptr
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: TYPEE, EP_ptr, EV_ptr
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELV, INV, ELP
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELING_el, ELING_g, ELING_ptr
+      INTEGER, ALLOCATABLE, DIMENSION( :, : ) :: IDROWS
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B, BL, BU
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: EP_val
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: GP_val, GP_val_orig
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RSCALE, GSCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: WEIGHT, ESCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: VSTART, CSTART
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: RDROWS
+      LOGICAL, ALLOCATABLE, DIMENSION( : ) :: DEFINED
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GANAMES, GNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ETYPES, GTYPES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ONAMES, SNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EVNAMES, IVNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EPNAMES
+
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LONAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: MINAMES, EXNAMES
 
       debug = print_level < 0
       IF ( single ) THEN
@@ -310,21 +323,23 @@
       END IF
       IF ( print_level /= 0 ) print_level = 9
 
-!  read the gps mps data
+!  read the GPS MPS data
 
-      CALL GPSMPS( la, nmax, ngmax, nomax, nlmax, nelmax, nimax, netmax,       &
-                   nevmax, ngrmax, nsmax, nepmax, ngpmax, nbmax, nobmax, nnza, &
-                   length, n, ng, nobj, nconst, nrange, nbnd, nstart, neltyp,  &
-                   ngrtyp, nlvars, nnlvrs, nlisgp, liwk, nelnum, neling,       &
-                   narray, nindex, negmax, nepvmx, ngpvmx, maxins, maxlev,     &
-                   maxara, nrlndx, nobbnd, pname, ICOORD, IELING, INLIST,      &
-                   ITABLE, ISTATE, IELV, IINV, ITYPEE, IDROWS, IELVAR, ISTADG, &
-                   ITYPEG, IEPA, IGPA, IWK, ISTEP, ISTAEV, ISTGP, INDVAL,      &
-                   INSTR, ninstr, IARRAY, ITYPEV, A, BND, VSTART, CSTART,      &
-                   RSCALE, CSCALE, RDROWS, REALVL, DFAULT, rvalue, VARRAY,     &
-                   EPVALU, BNDFLT, GPVALU, GPTEMP, farray, FBOUND, WEIGHT,     &
-                   NAMIIN, NAMRIN, GNAMES, VNAMES, BNAMES, ETYPES, INAMES,     &
-                   lnames, ONAMES, ENAMES, SNAMES, ANAMES, GTYPES, EPNAME,     &
+      CALL INTERPRET_gpsmps(                                                   &
+                   la, nmax, ngpmax, nbmax, nobmax, nnza, length,             &
+                   n, ng, nobj, nconst, nrange, nbnd, nstart, neltype, ngtype, &
+                   nelvar, nlvars, nnlvrs, nlisgp, nlisep, nelnum, neling,     &
+                   narray, nindex, maxins, maxlev, maxara, nrlndx, &
+                   nobbnd, nevnames, nivnames, nepnames, pname,  &
+                   ICOORD, ELING_el, ELING_g, INLIST,      &
+                   ITABLE, GSTATE, ELV, INV, TYPEE, IDROWS, ELVAR,          &
+                   ELING_ptr, GTYPE, ELP, GTYPESP_ptr, IWK, EP_ptr, EV_ptr,    &
+                   GP_ptr, INDVAL, INSTR, ninstr, IARRAY, ITYPEV, A, BND,      &
+                   len1_vstart, VSTART, len1_cstart, CSTART,                   &
+                   RSCALE, CSCALE, RDROWS, REALVL, DFAULT, RVALUE, VARRAY,     &
+                   EP_val, BNDFLT, GP_val, GP_val_orig, farray, FBOUND, WEIGHT,&
+                   NAMIIN, NAMRIN, GNAMES, VNAMES, BNAMES, ETYPES, IVNAMES,    &
+                   LNAMES, ONAMES, EVNAMES, SNAMES, GANAMES, GTYPES, EPNAMES,  &
                    GPNAME, OBNAME, array, CARRAY, KEY, single, iingps, out,    &
                    status, debug )
       IF ( status /= 0 ) THEN
@@ -341,7 +356,7 @@
       nlinin = 0
       nnlnin = 0
       DO ig = 1, ng
-        isg = ISTATE( ig )
+        isg = GSTATE( ig )
         IF ( isg > 0 ) THEN
           isg = MOD( isg - 1, 4 )
           IF ( isg == 0 ) nlinob = nlinob + 1
@@ -363,23 +378,24 @@
       IF ( nstart > 0 ) namest = SNAMES( 1 )
       IF ( nobj > 0 .AND. oneobj ) nameof = ONAMES( 1 )
       IF ( nobbnd > 0 ) nameob = OBNAME( 1 )
-      IF ( print_level /= 0 ) WRITE( out, 2070 ) nconst, nrange, nbnd,         &
-           nstart, nobj, nobbnd
+      IF ( print_level /= 0 ) WRITE( out, 2070 )                               &
+                                nconst, nrange, nbnd, nstart, nobj, nobbnd
 
-!  convert to input for one of the lancelot programs
+!  convert to input for GALAHAD or other external packages
 
-      CALL INLANC( n, nlvars, ng, nelnum, nobj, length, lstadg, lelvar,        &
-                   lstaev, lntvar, licna, lstada, la, lb, lbnds, lintre, liwk, &
-                   lwk, nmax, ngmax, nbmax, nsmax, nlmax, nelmax, negmax,      &
-                   nobmax, ngrmax, ngpvmx, nepvmx, nomax, nlisgp, nbnd, nnza,  &
-                   nconst, nstart, nrange, nobjgr, nobbnd, neltyp, ngrtyp,     &
+      CALL MAKE_outsdif( n, nlvars, ng, nelnum, neling, nobj, length, nelvar,  &
+                   licna, la,               &
+                   nmax, nbmax,                    &
+                   nobmax, nlisgp, nlisep, nbnd, nnza,                 &
+                   nconst, nstart, nrange, nobjgr, nobbnd, neltype, ngtype,    &
                    pname, nameob, namerh, namera, namebn, namest,              &
-                   nameof, ISTADG, IELVAR, ISTAEV, INTVAR, ICNA, ISTADA,       &
-                   ICOORD, INLIST, ITABLE, ISTATE, IDROWS, IELV, IINV, IGPA,   &
-                   IELING( 1, 1 ), ISTEP, ISTGP, ITYPEE, ITYPEG, ITYPEV, IWK,  &
-                   A, BND, VSTART, CSTART, RSCALE, CSCALE, RDROWS, DFAULT,     &
-                   WEIGHT, BNDFLT, WK, GPVALU, EPVALU, FBOUND, ABYROW, B, BL,  &
-                   BU, X, CLMULT, ESCALE, GSCALE, VSCALE, INTREP, GXEQX, KEY,  &
+                   nameof, ELING_ptr, ELVAR, EV_ptr, ICNA, A_ptr,      &
+                   ICOORD, INLIST, ITABLE, GSTATE, IDROWS, ELV, INV,         &
+                   GTYPESP_ptr, ELING_el, EP_ptr, GP_ptr, TYPEE,         &
+                   GTYPE, ITYPEV, IWK, A, BND, len1_vstart, VSTART,            &
+                   len1_cstart, CSTART, RSCALE, CSCALE, RDROWS, DFAULT,        &
+                   WEIGHT, BNDFLT, GP_val, EP_val, FBOUND, ABYROW, B, BL,  &
+                   BU, X, ESCALE, GSCALE, VSCALE, KEY,                 &
                    GNAMES, VNAMES, BNAMES, SNAMES, ONAMES, ETYPES, GTYPES,     &
                    OBNAME, ialgor, iauto, out, outda, single, status, debug )
       IF ( status /= 0 ) THEN
@@ -390,31 +406,27 @@
 
 !  assign the variables to bound types
 
-      nfree = 0
-      nfixed = 0
-      nlower = 0
-      nupper = 0
-      nboth = 0
+      nfree = 0 ; nfixed = 0 ; nlower = 0 ; nupper = 0 ; nboth = 0
       IF ( ialgor <= 2 ) THEN
-         nslack = nlinin + nnlnin
+        nslack = nlinin + nnlnin
       ELSE
-         nslack = 0
+        nslack = 0
       END IF
       nreal = n - nslack
-      DO 110 i = 1, nreal
-         blo = BL( i )
-         bup = BU( i )
-         IF ( blo <= - biginf .AND. bup >= biginf ) nfree = nfree  + 1
-         IF ( blo <= - biginf .AND. bup < biginf ) nupper = nupper + 1
-         IF ( blo > - biginf .AND. bup >= biginf ) nlower = nlower + 1
-         IF ( blo > - biginf .AND. bup < biginf ) THEN
-            IF ( blo == bup ) THEN
-                nfixed = nfixed + 1
-            ELSE
-                nboth = nboth  + 1
-            END IF
-         END IF
-  110 CONTINUE
+      DO i = 1, nreal
+        blo = BL( i )
+        bup = BU( i )
+        IF ( blo <= - biginf .AND. bup >= biginf ) nfree = nfree  + 1
+        IF ( blo <= - biginf .AND. bup < biginf ) nupper = nupper + 1
+        IF ( blo > - biginf .AND. bup >= biginf ) nlower = nlower + 1
+        IF ( blo > - biginf .AND. bup < biginf ) THEN
+          IF ( blo == bup ) THEN
+            nfixed = nfixed + 1
+          ELSE
+            nboth = nboth  + 1
+          END IF
+        END IF
+      END DO
 
 !  print problem summary
 
@@ -447,25 +459,59 @@
 
 !  print details of the problem
 
-      CALL PRINTP( nmax, ngmax, nlmax, nelmax, netmax, nevmax, nepmax, ngrmax, &
-                   negmax, nepvmx, ngpvmx, ngpmax, lstada, licna, liwk, n, ng, &
-                   nlvars, nelnum, ISTATE, ISTADG, IELVAR, ITYPEG, ITYPEE,     &
-                   IELV, IINV, IEPA, IGPA, ISTADA, ICNA, ISTGP, ISTEP, ISTAEV, &
-                   IELING, ITYPEV, IWK, ABYROW, B, BL, BU, X, EPVALU, GPVALU,  &
-                   GSCALE, ESCALE, VSCALE, pname, VNAMES, GNAMES, lnames,      &
-                   ETYPES, ENAMES, ANAMES, EPNAME, GPNAME, GTYPES, out,        &
-                   print_level )
+      CALL PRINT_details( nmax, nelvar, &
+                          neltype, nevnames, nepnames, ngtype, ngpmax, &
+                          licna, n, ng, nlvars, nelnum, neling, nlisgp, nlisep, &
+                          GSTATE, ELING_ptr,  &
+                          ELVAR, GTYPE, TYPEE, ELV, INV, ELP, GTYPESP_ptr, &
+                          A_ptr, ICNA, GP_ptr, EP_ptr, EV_ptr, &
+                          ELING_el, ITYPEV,  &
+                          IWK, ABYROW, B, BL, BU, X, EP_val, GP_val, GSCALE,   &
+                          ESCALE, VSCALE, pname, VNAMES, GNAMES, LNAMES,       &
+                          ETYPES, EVNAMES, GANAMES, EPNAMES, GPNAME, GTYPES,   &
+                          out, print_level )
       IF ( noname ) pname = '        '
 
+!  allocate workspace
+
+      len_defined = MAX( neltype, ngtype )
+      CALL ALLOCATE_array( DEFINED, len_defined, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'DEFINED' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( RENAMES, len_renames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RENAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( INNAMES, len_innames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'INNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( LONAMES, len_lonames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'LONAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( MINAMES, len_minames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'MINAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( EXNAMES, len_exnames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EXNAMES' ; GO TO 980 ; END IF
+   
 !  make subroutines elfun and range
 
       IF ( iauto == 0 ) THEN
-        CALL MAKE_elfun( iinfn, out, outfn, outra, status, nlmax, nimax,       &
-                         netmax, ninmax, numax, neltyp, pname, ENAMES, INAMES, &
-                         RENAME, INNAME, LONAME, MINAME, EXNAME, ETYPES,       &
-                         LDEFND, length, ITABLE, KEY, IELV, IINV, INLIST,      &
-                         EPNAME, IEPA, nepmax, debug, ijump, U, SETVEC,        &
-                         nsetvc, single, nuline, gotlin, print_level )
+        CALL MAKE_elfun( iinfn, out, outfn, outra, status,                     &
+                         nevnames, nivnames, nepnames,                         &
+                         neltype, pname, EVNAMES, IVNAMES,             &
+                         len_renames, RENAMES, len_innames, INNAMES,           &
+                         len_lonames, LONAMES, len_minames, MINAMES,           &
+                         len_exnames, EXNAMES,                                 &
+                         DEFINED, length, ITABLE, KEY,                         &
+                         ETYPES, ELV, INV, INLIST,                             &
+                         EPNAMES, ELP, debug,                                  &
+                         single, nuline, gotlin, print_level )
         IF ( status /= 0 ) THEN
           WRITE( out, 2030 ) status
           RETURN
@@ -475,11 +521,14 @@
 
       ELSE
         CALL MAKE_elfun_ad( iinfn, out, outff, outfd, outra, outem, status,    &
-                            nlmax, nimax, netmax, ninmax, numax, neltyp,       &
-                            pname, ENAMES, INAMES, RENAME, INNAME, LONAME,     &
-                            MINAME, EXNAME, ETYPES, LDEFND, length, ITABLE,    &
-                            KEY, IELV, IINV, INLIST, EPNAME, IEPA, nepmax,     &
-                            debug, ijump, U, single, nuline, gotlin, iauto,    &
+                            nevnames, nivnames, nepnames, neltype,     &
+                            pname, EVNAMES, IVNAMES,                           &
+                            len_renames, RENAMES, len_innames, INNAMES,        &
+                            len_lonames, LONAMES, len_minames, MINAMES,        &
+                            len_exnames, EXNAMES,                              &
+                            DEFINED, length, ITABLE, KEY,                      &
+                            ETYPES, ELV, INV, INLIST, EPNAMES, ELP,            &
+                            debug, single, nuline, gotlin, iauto,              &
                             iad0, print_level )
         IF ( status /= 0 ) THEN
           WRITE( out, 2090 ) status
@@ -490,11 +539,14 @@
 !  make subroutine group and obtain group information
 
       IF ( iauto == 0 ) THEN
-        CALL MAKE_group( iingr, out, outgr, status, ngrtyp, ngrmax, nlmax,     &
-                         ninmax, pname, ANAMES, RENAME, INNAME, LONAME,        &
-                         MINAME, EXNAME, GTYPES, LDEFND, GPNAME, IGPA, ngpmax, &
-                         debug, length, ITABLE, KEY, INLIST, single, nuline,   &
-                         gotlin, print_level )
+        CALL MAKE_group( iingr, out, outgr, status, ngtype,                    &
+                         pname, GANAMES,                               &
+                         len_renames, RENAMES, len_innames, INNAMES,           &
+                         len_lonames, LONAMES, len_minames, MINAMES,           &
+                         len_exnames, EXNAMES,                                 &
+                         GPNAME, DEFINED, GTYPES, GTYPESP_ptr,                 &
+                         ngpmax, debug, length, ITABLE, KEY, INLIST,           &
+                         single, nuline, gotlin, print_level )
         IF ( status /= 0 ) THEN
           WRITE( out, 2040 ) status
           RETURN
@@ -503,10 +555,14 @@
 !  make subroutines groupf and groupd
 
       ELSE
-        CALL MAKE_group_ad( iingr, out, outgf, outgd, outem, status, ngrtyp,   &
-                            ngrmax, nlmax, ninmax, pname, ANAMES, RENAME,      &
-                            INNAME, LONAME, MINAME, EXNAME, GTYPES, LDEFND,    &
-                            GPNAME, IGPA, ngpmax, debug, length, ITABLE, KEY,  &
+        CALL MAKE_group_ad( iingr, out, outgf, outgd, outem, status, ngtype,   &
+                            pname, GANAMES,                            &
+                            len_renames, RENAMES, len_innames, INNAMES,        &
+                            len_lonames, LONAMES, len_minames, MINAMES,        &
+                            len_exnames, EXNAMES,                              &
+                            GPNAME, DEFINED,                                   &
+                            GTYPES, GTYPESP_ptr,                               &
+                            ngpmax, debug, length, ITABLE, KEY,                &
                             INLIST, single, nuline, gotlin, iauto, iad0,       &
                             print_level )
         IF ( status /= 0 ) THEN
@@ -517,40 +573,48 @@
 
 !  finally, read any additional programs
 
-  500 CONTINUE
-      IF ( gotlin ) THEN
-        LINEEX( 1 : 72 ) = NULINE( 1 : 72 )
-        gotlin = .FALSE.
-      ELSE
-        READ( UNIT = iinex, FMT = 1000, END = 600, ERR = 600 ) lineex
-      END IF
+      DO 
+        IF ( gotlin ) THEN
+          LINEEX( 1 : 72 ) = NULINE( 1 : 72 )
+          gotlin = .FALSE.
+        ELSE
+          READ( UNIT = iinex, FMT = 1000, END = 600, ERR = 600 ) lineex
+        END IF
 
 !  skip blank lines
 
-      DO i = 1, 72
-        IF ( LINEEX( I: i ) /= ' ' ) THEN
-          WRITE( outex, 1000 ) lineex
-          GO TO 500
-        END IF
+        DO i = 1, 72
+          IF ( LINEEX( i : i ) /= ' ' ) THEN
+            WRITE( outex, 1000 ) lineex
+            CYCLE
+          END IF
+        END DO
       END DO
-      GO TO 500
   600 CONTINUE
 
 !  if required, translate any external file to accept automatic 
 !  differentiation constructs
 
       IF ( iauto == 1 .OR. iauto == 2 )                                        &
-        CALL TRANS( out, outex, outea, outem, single, iauto,                   &
-                    iad0, NAMRIN, nrlndx, NAMIIN, nindex )
+        CALL TRANSLATE_for_ad( out, outex, outea, outem, single, iauto,        &
+                               iad0, NAMRIN, nrlndx, NAMIIN, nindex )
       status = 0
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from SIFDECODE_decode-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
 
  1000 FORMAT( A72 )
  2000 FORMAT( ' ' )
- 2010 FORMAT( /, ' Return from GPSMPS, status = ', I0 )
- 2020 FORMAT( /, ' Return from INLANC, status = ', I0 )
+ 2010 FORMAT( /, ' Return from INTERPRET_gpsmps, status = ', I0 )
+ 2020 FORMAT( /, ' Return from MAKE_outsdif, status = ', I0 )
  2030 FORMAT( /, ' Return from MAKE_elfun, status = ', I0 )
  2040 FORMAT( /, ' Return from MAKE_group, status = ', I0 )
  2050 FORMAT( /, ' Single precision version will be formed', / )
@@ -575,74 +639,87 @@
  2240 FORMAT( ' There ', A, 1X, I0, ' fixed variable', A )
  2250 FORMAT( ' There ', A, 1X, I0, ' slack variable', A )
 
-!  end of subroutine SIFDECODE_sdlanc
+!  end of subroutine SIFDECODE_decode
 
-      END SUBROUTINE SIFDECODE_sdlanc
+      END SUBROUTINE SIFDECODE_decode
 
-!-*-*-*-*-*- S I F D E C O D E   G P S M P S   S U B R O U T I N E -*-*-*-*-*-
+!-  S I F D E C O D E   I N T E R P R E T _ G P S M P S   S U B R O U T I N E  -
 
-      SUBROUTINE GPSMPS( la, nmax, ngmax, nomax, nlmax, nelmax,                &
-                         nimax, netmax, nevmax, ngrmax, nsmax, nepmax,         &
+      SUBROUTINE INTERPRET_gpsmps( la, nmax,                   &
                          ngpmax, nbmax, nobmax, nnza, length, n, ng,           &
-                         nobj, nconst, nrange, nbnd, nstart, neltyp,           &
-                         ngrtyp, nlvars, nnlvrs, nlisgp, liwk,                 &
-                         nelnum, neling, narray, nindex, negmax, nepvmx,       &
-                         ngpvmx, maxins, maxlev, maxara, nrlndx, nobbnd,       &
-                         pname, ICOORD, IELING, INLIST, ITABLE, ISTATE,        &
-                         IELV, IINV, ITYPEE, IDROWS, IELVAR, ISTADG,           &
-                         ITYPEG, IEPA, IGPA, IWK, ISTEP, ISTAEV,               &
-                         ISTGP, INDVAL, INSTR, ninstr, IARRAY, ITYPEV,         &
-                         A, BND, VSTART, CSTART, RSCALE, CSCALE, RDROWS,       &
-                         REALVL, DFAULT, rvalue, VARRAY, EPVALU, BNDFLT,       &
-                         GPVALU, GPTEMP, farray, FBOUND, WEIGHT, NAMIIN,       &
-                         NAMRIN, GNAMES, VNAMES, BNAMES, ETYPES, INAMES,       &
-                         lnames, ONAMES, ENAMES, SNAMES, ANAMES, GTYPES,       &
-                         EPNAME, GPNAME, OBNAME, array, CARRAY, KEY,           &
+                         nobj, nconst, nrange, nbnd, nstart, neltype,          &
+                         ngtype, nelvar, nlvars, nnlvrs, nlisgp, nlisep,       &
+                         nelnum, neling, narray, nindex,       &
+                         maxins, maxlev, maxara, nrlndx, nobbnd,   &
+                         nevnames, nivnames, nepnames, pname,      &
+                         ICOORD, ELING_el, ELING_g, INLIST, ITABLE, GSTATE,    &
+                         ELV, INV, TYPEE, IDROWS, ELVAR, ELING_ptr,         &
+                         GTYPE, ELP, GTYPESP_ptr, IWK, EP_ptr, EV_ptr,         &
+                         GP_ptr, INDVAL, INSTR, ninstr, IARRAY, ITYPEV,        &
+                         A, BND, len1_vstart, VSTART, len1_cstart, CSTART,     &
+                         RSCALE, CSCALE, RDROWS,                               &
+                         REALVL, DFAULT, RVALUE, VARRAY, EP_val, BNDFLT,       &
+                         GP_val, GP_val_orig, farray, FBOUND, WEIGHT, NAMIIN,  &
+                         NAMRIN, GNAMES, VNAMES, BNAMES, ETYPES, IVNAMES,      &
+                         LNAMES, ONAMES, EVNAMES, SNAMES, GANAMES, GTYPES,     &
+                         EPNAMES, GPNAME, OBNAME, array, CARRAY, KEY,          &
                          single, input, out, status, debug )
-      INTEGER :: la, nmax, ngmax, nomax, nlmax, nelmax
-      INTEGER :: nevmax, ngrmax, nsmax, nobmax, nobbnd, nrlndx
-      INTEGER :: nepmax, ngpmax, nbmax, nnza, length, n, ng
-      INTEGER :: nconst, nrange, nbnd, nstart, neltyp, ngrtyp
+      INTEGER :: la, nmax
+      INTEGER :: nobmax, nobbnd, nrlndx, nelvar
+      INTEGER :: ngpmax, nbmax, nnza, length, n, ng
+      INTEGER :: nconst, nrange, nbnd, nstart, neltype, ngtype
       INTEGER :: nlvars, nnlvrs, nelnum, neling, narray, nindex
-      INTEGER :: negmax, nepvmx, ngpvmx, maxins, maxlev, maxara
-      INTEGER :: nlisgp, input, netmax, out, status, nimax
-      INTEGER :: nobj, liwk
+      INTEGER :: maxins, maxlev, maxara
+      INTEGER :: nlisgp, nlisep, input, out, status
+      INTEGER :: nobj, len1_vstart, len1_cstart
+      INTEGER :: nevnames, nivnames, nepnames
       LOGICAL :: single, debug 
-      CHARACTER ( len = 8 ) :: pname
-      INTEGER :: INLIST( length ), ISTAEV( nelmax )
-      INTEGER :: ISTATE( ngmax ), ITABLE ( length )
-      INTEGER :: IELV  ( nlmax  ), IINV  ( nlmax )
-      INTEGER :: ITYPEE( nelmax ), IELING( negmax, 2 )
-      INTEGER :: IEPA  ( nlmax  ), IGPA  ( ngrmax )
-      INTEGER :: IDROWS( 2, ngmax ), ITYPEG( ngmax )
-      INTEGER :: IELVAR( nevmax ), ITYPEV( nmax )
-      INTEGER :: ISTEP ( nelmax ), ISTGP( ngmax ), IWK( liwk )
+      CHARACTER ( LEN = 8 ) :: pname
+      INTEGER :: INLIST( length )
+      INTEGER :: ITABLE ( length )
+      INTEGER :: ITYPEV( nmax )
       INTEGER :: INDVAL( nindex ), INSTR( 5, maxins, maxlev )
       INTEGER :: NINSTR( maxlev ), IARRAY( 5, 3, maxara )
-      INTEGER :: ICOORD( la, 2 ), ISTADG( ngmax )
-      REAL ( KIND = wp ) :: GPTEMP( ngpvmx )
-      REAL ( KIND = wp ) :: EPVALU( nepvmx ), GPVALU( ngpvmx ), DFAULT( NMAX)
+      INTEGER :: ICOORD( la, 2 )
+      REAL ( KIND = wp ) :: DFAULT( nmax )
       REAL ( KIND = wp ) :: A( la ), BND( 2, nmax, nbmax ), REALVL( nrlndx )
-      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax ), CSTART( ngmax, nsmax )
-      REAL ( KIND = wp ) :: RSCALE( ngmax ), CSCALE( nmax )
-      REAL ( KIND = wp ) :: RDROWS( 2, ngmax ), VSTART( nmax, nsmax )
+      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax )
+      REAL ( KIND = wp ) :: CSCALE( nmax )
       REAL ( KIND = wp ) :: RVALUE( maxara, 3 ), VARRAY( 2, maxara )
-      REAL ( KIND = wp ) :: FBOUND( 2, nobmax ), WEIGHT( negmax )
-      CHARACTER ( len = 2 ) :: FARRAY( maxara )
-      CHARACTER ( len = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
-      CHARACTER ( len = 10 ) :: BNAMES( nbmax  )
-      CHARACTER ( len = 10 ) :: GNAMES( ngmax  ), VNAMES( nmax   )
-      CHARACTER ( len = 10 ) :: ETYPES( nlmax  ), INAMES( nimax  )
-      CHARACTER ( len = 10 ) :: LNAMES( nelmax ), OBNAME( nobmax )
-      CHARACTER ( len = 10 ) :: EPNAME( nepmax ), GPNAME( ngpmax )
-      CHARACTER ( len = 10 ) :: ONAMES( nomax  ), ENAMES( netmax )
-      CHARACTER ( len = 10 ) :: SNAMES( nsmax )
-      CHARACTER ( len = 10 ) :: ANAMES( ngrmax ), GTYPES( ngrmax )
-      CHARACTER ( len = 10 ) :: ARRAY( 3, maxara ), CARRAY( 2, maxara )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      REAL ( KIND = wp ) :: FBOUND( 2, nobmax )
+      CHARACTER ( LEN = 2 ) :: FARRAY( maxara )
+      CHARACTER ( LEN = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
+      CHARACTER ( LEN = 10 ) :: BNAMES( nbmax  )
+      CHARACTER ( LEN = 10 ) :: VNAMES( nmax   )
+      CHARACTER ( LEN = 10 ) :: OBNAME( nobmax )
+      CHARACTER ( LEN = 10 ) :: GPNAME( ngpmax )
+      CHARACTER ( LEN = 10 ) :: ARRAY( 3, maxara ), CARRAY( 2, maxara )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
+
+
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELV, INV, ELP
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: EV_ptr, TYPEE, EP_ptr
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GTYPESP_ptr, ELVAR, IWK
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELING_ptr, GSTATE, GTYPE, GP_ptr
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELING_el, ELING_g
+      INTEGER, ALLOCATABLE, DIMENSION( :, : ) :: IDROWS
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RSCALE, WEIGHT
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: EP_val
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: GP_val_orig, GP_val
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: VSTART, CSTART
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: RDROWS
+
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GANAMES, GNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GTYPES, ETYPES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ONAMES, SNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EVNAMES, IVNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EPNAMES
 
 !  -------------------------------------------------------------------
 !  read a GPS MPS data file
+
+!  formerly GPSMPS in SiFDec
 
 !  MPS indicator cards
 !  --------------------
@@ -692,175 +769,301 @@
 !  and      http://www.numerical.rl.ac.uk/lancelot/sif/sifhtml.html
 
 !  -------------------------------------------------------------------
-!  returns with negative values of inform indicate that insufficient
+!  returns with negative values of status indicate that insufficient
 !  array space has been allowed, as follows:
 
-!    inform = - 1  when length not large enough
-!    inform = - 2  when nnza > la
-!    inform = - 3  when neltyp >= nlmax
-!    inform = - 4  when ngrtyp >= ngrmax
-!    inform = - 5  when nobj > nomax
-!    inform = - 6  when ng > ngmax
-!    inform = - 7  when n > nmax
-!    inform = - 8  when nstart > nsmax
-!    inform = - 9  when nelnum > nelmax
-!    inform = - 10 when neling > negmax
-!    inform = - 11 when ninstr( 1 or 2 or 3 ) > maxins
-!    inform = - 12 when narray > maxara
-!    inform = - 13 when nbnd > nbmax
-!    inform = - 14 when neln > netmax
-!    inform = - 15 when nlisev > nevmax
-!    inform = - 16 when ninn > nimax
-!    inform = - 17 when nlisep > nepvmx
-!    inform = - 18 when nlisgp > ngpvmx
-!    inform = - 19 when nepn > nepmax
-!    inform = - 20 when ngpn > ngpmax
-!    inform = - 21 when nusein > nindex
-!    inform = - 22 when nusere > nrlndx
-!    inform = - 23 when nobbnd > nobmax
+!    status = - 1  when length not large enough
+!    status = - 2  when nnza > la
+!    status = - 3  when ELV, INV, ELP or ETYPES cannot be extended further
+!    status = - 4  when GTYPESP_ptr, GANAMES or GTYPES cannot be 
+!                  extended further
+!    status = - 5  when ONAMES cannot be extended further
+!    status = - 6  when GSTATE, GTYPE, GNAMES, RSCALE, IDROWS or RDROWS 
+!                  cannot be extended further
+!    status = - 7  when n > nmax
+!    status = - 8  when VSTART, CSTART or SNAMES cannot be extended further
+!    status = - 9  when ELING_el, ELING_p, WEIGHT, EV_ptr, EP_ptr, TYPEE, or 
+!                  LNAMES cannot be extended further
+!    status = - 10 no longer used
+!    status = - 11 when ninstr( 1 or 2 or 3 ) > maxins
+!    status = - 12 when narray > maxara
+!    status = - 13 when nbnd > nbmax
+!    status = - 14 when EVNAMES cannot be extended further
+!    status = - 15 when ELVAR cannot be extended further
+!    status = - 16 when IVNAMES cannot be extended further
+!    status = - 17 when EP_val cannot be extended further
+!    status = - 18 when GP_val or GP_val_orig cannot be extended further
+!    status = - 19 when EPNAMES cannot be extended further
+!    status = - 20 when ngpn > ngpmax
+!    status = - 21 when nusein > nindex
+!    status = - 22 when nusere > nrlndx
+!    status = - 23 when nobbnd > nobmax
 !  -------------------------------------------------------------------
+
+!  parameter definitions
+
+      INTEGER, PARAMETER :: mblank = 1, mfixed = 2, mfree = 3, mname = 4
+      INTEGER, PARAMETER :: mrows = 5, mgroup = 6, mcnstr = 7, mcols = 8
+      INTEGER, PARAMETER :: mvars = 9, mconst = 10, mrhs = 11, mrhsp = 12
+      INTEGER, PARAMETER :: mrange = 13, mbound = 14, mstart = 15, mqhess = 16
+      INTEGER, PARAMETER :: mquadr = 17, mquads = 18, mquado = 19, mqsect = 20
+      INTEGER, PARAMETER :: mqmatr = 21, metype = 22, meuses = 23, mgtype = 24
+      INTEGER, PARAMETER :: mguses = 25, mobbnd = 26, mendat = 27
+      INTEGER, PARAMETER :: nincrs = 23
+      INTEGER, PARAMETER :: maxnul = 20
+      INTEGER, DIMENSION( mendat ), PARAMETER :: LENIND                        &
+        = (/ 0, 12, 11, 4, 4, 6, 11, 7, 9, 9, 3, 4, 6, 6, 11, 7, 9, 5, 7, 8,   &
+             7, 12, 12, 10, 10, 12, 6  /)
+      CHARACTER ( LEN = 12 ), DIMENSION( mendat ), PARAMETER :: INDIC8         &
+        = (/ '            ', 'FIXED FORMAT', 'FREE FORMAT ', 'NAME        ',   &
+             'ROWS        ', 'GROUPS      ', 'CONSTRAINTS ', 'COLUMNS     ',   &
+             'VARIABLES   ', 'CONSTANTS   ', 'RHS         ', 'RHS''        ',  &
+             'RANGES      ', 'BOUNDS      ', 'START POINT ', 'HESSIAN     ',   &
+             'QUADRATIC   ', 'QUADS       ', 'QUADOBJ     ', 'QSECTION    ',   &
+             'QMATRIX     ', 'ELEMENT TYPE', 'ELEMENT USES', 'GROUP TYPE  ',   &
+             'GROUP USES  ', 'OBJECT BOUND', 'ENDATA      ' /)
+      CHARACTER ( LEN = 6 ), DIMENSION( nincrs ), PARAMETER :: INCRSE          &
+        = (/ 'LENGTH', 'LA    ', 'NLMAX ', 'NGRMAX', 'NOMAX ', 'NGMAX ',       &
+             'NMAX  ', 'NSMAX ', 'NELMAX', '      ', 'MAXINS', 'MAXARA',       &
+             'NBMAX ', 'NEVMAX', 'NEVMAX', 'NIVMAX', 'NEPVMX', 'NGPVMX',       &
+             'NEPMAX', 'NGPMAX', 'NINDEX', 'NRLNDX', 'NOBMAX' /)
 
 !  local variables
 
       INTEGER :: i, ip, is, intype, intypo, j, k, k1, k2, l, l1, l2, l3, level2
-      INTEGER :: ifree, ifield, novals, nvar, ncol, neln, ninn, nlisep, nlisev
-      INTEGER :: mblank, mname, mrows, mgroup, mcnstr, mobbnd
-      INTEGER :: mvars, mconst, mrhs, mrhsp, mrange, mbound, mcols
-      INTEGER :: mstart, metype, mgtype, meuses, mguses, mendat
-      INTEGER :: mfree, mfixed, maxnul, nlines, ilines
-      INTEGER :: nepn, ngpn, ngrupe, nelmnt, nusein, nusere, mqsect, mqmatr
-      INTEGER :: mqhess, mquado, mquadr, mquads, iptype, istype, ndtype
+      INTEGER :: ifree, ifield, novals, nvar, ncol
+      INTEGER :: nlines, ilines, ngpn, ngrupe, nelmnt, nusein
+      INTEGER :: iptype, istype, ndtype, nusere, level, ijump, lineno
       INTEGER :: level3, lev1, lev2, lev3, lev1s, lev2s, lev3s
       INTEGER :: lev1e, lev2e, lev3e, lev1i, lev2i, lev3i, levl3a
-      INTEGER :: level, ijump, nincrs, lineno
-      INTEGER, DIMENSION( 4 ) :: LOOP
+      INTEGER :: used_length, new_length, min_length, alloc_status
       REAL ( KIND = wp ) :: value4, value6
-      LOGICAL :: defnam, inrep, defaut, doloop, strtgu
-      LOGICAL :: endbnd, endst, setana, endelt, endgrt, delset
-      LOGICAL :: endelu, grp1st, grpyet, varyet, fixed, dgrset
-      LOGICAL :: qgroup, qsqr, qprod
-      CHARACTER ( len = 2 ) :: field1, colfie
-      CHARACTER ( len = 10 ) :: field2, field3, field5, grupe, elmnt
-      CHARACTER ( len = 10 ) :: detype, dgtype
-      CHARACTER ( len = 12 ) :: field
-      CHARACTER ( len = max_record_length ) :: nuline, blnkln
+      LOGICAL :: defnam, inrep, defaut, doloop
+      LOGICAL :: end_bound_section, end_start_section, end_quadratic_section
+      LOGICAL :: end_element_type_section, end_element_uses_section
+      LOGICAL :: end_group_type_section, start_group_uses_section
+      LOGICAL :: dgrset, adddoloop, qgroup, qsqr, qprod
+      LOGICAL :: setana, delset, grp1st, grpyet, varyet, fixed
+      CHARACTER ( LEN = 2 ) :: field1, colfie
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5, grupe, elmnt
+      CHARACTER ( LEN = 10 ) :: detype, dgtype
+      CHARACTER ( LEN = 12 ) :: field, header
+      CHARACTER ( LEN = 24 ) :: bad_alloc
+      CHARACTER ( LEN = max_record_length ) :: nuline, blnkln
+      INTEGER, DIMENSION( 4 ) :: LOOP
+      CHARACTER ( LEN = 65 ), DIMENSION( maxnul ) :: NULINA
 
-!  parameter definitions
+!  allocatble array dimensions
 
-      PARAMETER        ( nincrs = 23 )
-      CHARACTER ( len = 6 ) :: INCRSE( nincrs )
-      PARAMETER        ( mblank =  1, mfixed =  2, mfree = 3  )
-      PARAMETER        ( mname =  4, mrows =  5 )
-      PARAMETER        ( mgroup =  6, mcnstr =  7, mcols =  8 )
-      PARAMETER        ( mvars =  9, mconst = 10, mrhs = 11 )
-      PARAMETER        ( mrhsp = 12, mrange = 13, mbound = 14 )
-      PARAMETER        ( mstart = 15, mqhess = 16, mquadr = 17 )
-      PARAMETER        ( mquads = 18, mquado = 19, mqsect = 20 )
-      PARAMETER        ( mqmatr = 21 )
-      PARAMETER        ( metype = 22, meuses = 23, mgtype = 24 )
-      PARAMETER        ( mguses = 25, mobbnd = 26, mendat = 27 )
-      INTEGER :: LENIND( mendat )
-      CHARACTER ( len = 12 ) :: INDIC8( mendat ), header
-      PARAMETER        ( maxnul = 20 )
-      CHARACTER ( len = 65 ) :: NULINA( maxnul )
-      LOGICAL :: adddoloop
+      INTEGER :: len_gp_ptr, len_eling_ptr
 
-!  data declarations
+      INTEGER :: len_elvar = nelvar_guess 
+      INTEGER :: len_gtypesp_ptr = MAX( ngtype_guess + 1, 2 )
+      INTEGER :: len_ganames = MAX( ngtype_guess, 1 )
+      INTEGER :: len_gtypes = MAX( ngtype_guess, 1 )
+      INTEGER :: len_gstate = ng_guess
+      INTEGER :: len_gtype = ng_guess
+      INTEGER :: len_gnames = ng_guess 
+      INTEGER :: len_rscale = ng_guess
+      INTEGER :: len1_idrows = 2
+      INTEGER :: len2_idrows = ng_guess
+      INTEGER :: len1_rdrows = 2
+      INTEGER :: len2_rdrows = ng_guess
+      INTEGER :: len2_cstart = MAX( nstart_guess, 1 )
+      INTEGER :: len2_vstart = MAX( nstart_guess, 1 )
+      INTEGER :: len_snames = nstart_guess
+      INTEGER :: len_onames = ng_guess
+      INTEGER :: len_gp_val_orig = ngp_guess
+      INTEGER :: len_eling_el = nel_guess
+      INTEGER :: len_eling_g = nel_guess
+      INTEGER :: len_weight = nel_guess
+      INTEGER :: len_typee = nel_guess
+      INTEGER :: len_ev_ptr = nel_guess + 1
+      INTEGER :: len_ep_ptr = nel_guess + 1
+      INTEGER :: len_lnames = nel_guess
+      INTEGER :: len_elv = netype_guess + 1
+      INTEGER :: len_inv = netype_guess + 1
+      INTEGER :: len_elp = netype_guess + 1
+      INTEGER :: len_etypes = MAX( netype_guess, 1 )
+      INTEGER :: len_evnames = nev_guess 
+      INTEGER :: len_ivnames = niv_guess 
+      INTEGER :: len_epnames = nep_guess 
 
-      DATA INCRSE / 'LENGTH', 'LA    ', 'NLMAX ', 'NGRMAX', 'NOMAX ',          &
-                    'NGMAX ', 'NMAX  ', 'NSMAX ', 'NELMAX', 'NEGMAX',          &
-                    'MAXINS', 'MAXARA', 'NBMAX ', 'NETMAX', 'NEVMAX',          &
-                    'NIMAX ', 'NEPVMX', 'NGPVMX', 'NEPMAX', 'NGPMAX',          &
-                    'NINDEX', 'NRLNDX', 'NOBMAX' /
-      DATA INDIC8( mblank ) / '            ' /, LENIND( mblank ) / 0  /
-      DATA INDIC8( mfixed ) / 'FIXED FORMAT' /, LENIND( mfixed ) / 12 /
-      DATA INDIC8( mfree  ) / 'FREE FORMAT ' /, LENIND( mfree  ) / 11 /
-      DATA INDIC8( mname  ) / 'NAME        ' /, LENIND( mname  ) / 4  /
-      DATA INDIC8( mrows  ) / 'ROWS        ' /, LENIND( mrows  ) / 4  /
-      DATA INDIC8( mgroup ) / 'GROUPS      ' /, LENIND( mgroup ) / 6  /
-      DATA INDIC8( mcnstr ) / 'CONSTRAINTS ' /, LENIND( mcnstr ) / 11 /
-      DATA INDIC8( mcols  ) / 'COLUMNS     ' /, LENIND( mcols  ) / 7  /
-      DATA INDIC8( mvars  ) / 'VARIABLES   ' /, LENIND( mvars  ) / 9  /
-      DATA INDIC8( mconst ) / 'CONSTANTS   ' /, LENIND( mconst ) / 9  /
-      DATA INDIC8( mrhs   ) / 'RHS         ' /, LENIND( mrhs   ) / 3  /
-      DATA INDIC8( mrhsp  ) / 'RHS''       ' /, LENIND( mrhsp  ) / 4  /
-      DATA INDIC8( mrange ) / 'RANGES      ' /, LENIND( mrange ) / 6  /
-      DATA INDIC8( mbound ) / 'BOUNDS      ' /, LENIND( mbound ) / 6  /
-      DATA INDIC8( mstart ) / 'START POINT ' /, LENIND( mstart ) / 11 /
-      DATA INDIC8( mqhess ) / 'HESSIAN     ' /, LENIND( mqhess ) / 7  /
-      DATA INDIC8( mquadr ) / 'QUADRATIC   ' /, LENIND( mquadr ) / 9  /
-      DATA INDIC8( mquads ) / 'QUADS       ' /, LENIND( mquads ) / 5  /
-      DATA INDIC8( mquado ) / 'QUADOBJ     ' /, LENIND( mquado ) / 7  /
-      DATA INDIC8( mqsect ) / 'QSECTION    ' /, LENIND( mqsect ) / 8  /
-      DATA INDIC8( mqmatr ) / 'QMATRIX    '  /, LENIND( mqmatr ) / 7  /
-      DATA INDIC8( metype ) / 'ELEMENT TYPE' /, LENIND( metype ) / 12 /
-      DATA INDIC8( meuses ) / 'ELEMENT USES' /, LENIND( meuses ) / 12 /
-      DATA INDIC8( mgtype ) / 'GROUP TYPE  ' /, LENIND( mgtype ) / 10 /
-      DATA INDIC8( mguses ) / 'GROUP USES  ' /, LENIND( mguses ) / 10 /
-      DATA INDIC8( mobbnd ) / 'OBJECT BOUND' /, LENIND( mobbnd ) / 12 /
-      DATA INDIC8( mendat ) / 'ENDATA      ' /, LENIND( mendat ) / 6  /
+      INTEGER :: len_ep_val = nelp_guess
+
+!      INTEGER :: len_inlist = length
+!      INTEGER :: len_itable = length
+!      INTEGER :: len_icna = licna 
+!      INTEGER :: len_indval = nindex
+!      INTEGER :: len2_instr = maxins
+!      INTEGER :: len3_instr = maxlev
+!      INTEGER :: len_ninstr = maxlev
+!      INTEGER :: len3_iarray = maxara
+!      INTEGER :: len1_icoord = la
+!      INTEGER :: len_itypev = nmax
+!      INTEGER :: len_dfault = nmax
+!      INTEGER :: len_a = la
+!      INTEGER :: len2_bnd = nmax
+!      INTEGER :: len3_bnd = nbmax
+!      INTEGER :: len_realvl = nrlndx
+!      INTEGER :: len2_bndflt = nbmax 
+!      INTEGER :: len_cscale = nmax
+!      INTEGER :: len1_rvalue = maxara
+!      INTEGER :: len2_varray = maxara
+!      INTEGER :: len2_fbound = nobmax
+!      INTEGER :: len_abyrow = la
+!      INTEGER :: len_b = lb
+!      INTEGER :: len_x = nmax
+!      INTEGER :: len_vscale = nmax
+!      INTEGER :: len_farray = maxara
+!      INTEGER :: len_namiin = nindex
+!      INTEGER :: len_namrin = nrlndx
+!      INTEGER :: len_bnames = nbmax 
+!      INTEGER :: len_vnames = nmax  
+!      INTEGER :: len_obname = nobmax
+!      INTEGER :: len_gpname = ngpmax
+!      INTEGER :: len2_array = maxara
+!      INTEGER :: len2_carray = maxara
+!      INTEGER :: len_key = length
 
 !  set initial values for integer variables
 
-      intype = 1
-      intypo = 1
-      status = 0
-      lineno = 0
-      nvar = 0
-      nnza = 0
-      ng = 0
-      nbnd = 0
-      nstart = 0
-      nobj = 0
-      neltyp = 0
-      ngrtyp = 0
-      nelnum = 0
-      ngrupe = 0
-      nlisev = 0
-      nlisep = 0
-      nlisgp = 0
-      neling = 0
-      nusein = 0
-      nusere = 0
-      nobbnd = 0
-      ndtype = 0
-      neln = 0
-      ninn = 0
-      nepn = 0
-      nlvars = - 1
-      nnlvrs = - 1
-      nconst = - 1
-      nrange = - 1
-      level = 0
-      ilines = 0
-      nlines = 0
-      iptype = 0
-      istype = 0
+      intype = 1 ; intypo = 1 ; lineno = 0 ; nvar = 0 ; nnza = 0
+      ng = 0 ; nbnd = 0 ; nstart = 0 ; nobj = 0 ; neltype = 0 ; ngtype = 0
+      nelnum = 0 ; ngrupe = 0 ; nelvar = 0 ; nlisep = 0 ; nlisgp = 0
+      neling = 0 ; nusein = 0 ; nusere = 0 ; nobbnd = 0 ; ndtype = 0
+      nevnames = 0 ; nivnames = 0 ; nepnames = 0 ; nlvars = - 1 ; nnlvrs = - 1
+      nconst = - 1 ; nrange = - 1 ; level = 0 ; ilines = 0 ; nlines = 0
+      iptype = 0 ; istype = 0 ; status = 0
 
 !  set initial values for logical variables
 
-      defnam = .FALSE.
-      doloop = .FALSE.
-      endbnd = .FALSE.
-      endst = .FALSE.
-      endelt = .FALSE.
-      endelu = .FALSE.
-      endgrt = .FALSE.
-      strtgu = .FALSE.
-      grpyet = .FALSE.
-      varyet = .FALSE.
-      delset = .FALSE.
-      dgrset = .FALSE.
-      grp1st = .TRUE.
-      fixed = .TRUE.
-      qgroup = .FALSE.
-      qsqr = .FALSE.
+      defnam = .FALSE. ; doloop = .FALSE. ; 
+      end_bound_section = .FALSE. ; end_start_section = .FALSE.
+      end_quadratic_section = .FALSE.
+      end_element_type_section = .FALSE. ; end_element_uses_section = .FALSE. 
+      end_group_type_section = .FALSE. ; start_group_uses_section = .FALSE.
+      grpyet = .FALSE. ; varyet = .FALSE. ; delset = .FALSE. ; dgrset = .FALSE.
+      grp1st = .TRUE. ; fixed = .TRUE. ; qgroup = .FALSE. ; qsqr = .FALSE.
       qprod = .FALSE.
 
 !  set initial values for real variables
 
-      value4 = 0.0D+0
-      value6 = 0.0D+0
+      value4 = 0.0D+0 ; value6 = 0.0D+0
+
+!  allocate arrays
+
+      CALL ALLOCATE_array( ELV, len_elv, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELV' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( INV, len_inv, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'INV' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( ELP, len_elp, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELP' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( EV_ptr, len_ev_ptr, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EV_ptr' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( TYPEE, len_typee, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'TYPEE' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( EP_ptr, len_ep_ptr, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EP_ptr' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( ELING_el, len_eling_el, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELING_el' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( ELING_g, len_eling_el, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELING_g' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( ELVAR, len_elvar, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELVAR' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( ETYPES, len_etypes, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ETYPES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( GTYPESP_ptr, len_gtypesp_ptr, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GTYPESP_ptr' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( GANAMES, len_ganames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GANAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( GTYPES, len_gtypes, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GTYPES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( GSTATE, len_gstate, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GSTATE' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( GTYPE, len_gtype, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GTYPE' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( GP_val_orig, len_gp_val_orig, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GP_val_orig' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( EP_val, len_ep_val, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EP_val' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( RSCALE, len_rscale, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RSCALE' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( WEIGHT, len_weight, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'WEIGHT' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( IDROWS, len1_idrows, len2_idrows, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IDROWS' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( RDROWS, len1_rdrows, len2_rdrows, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RDROWS' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( GNAMES, len_gnames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( LNAMES, len_lnames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'LNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( ONAMES, len_onames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( SNAMES, len_snames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'SNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( EVNAMES, len_evnames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EVNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( IVNAMES, len_ivnames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IVNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( EPNAMES, len_epnames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EPNAMES' ; GO TO 980 ; END IF
 
 !  set up itable data
 
@@ -868,7 +1071,7 @@
 
 !  initialize row data
 
-      RSCALE( : ngmax ) = one
+      RSCALE( :  len_rscale ) = one
 
 !  initialize column data
 
@@ -936,20 +1139,19 @@
 
 !  consider the header part of the card
 
-      header = NULINE( 1: 12 )
+      header = NULINE( 1 : 12 )
 
 !  ignore blank lines
 
       IF ( header == INDIC8( mblank ) ) THEN
-        IF (  NULINE( 13: 14 ) == '  ' .AND.                                   &
-              NULINE( 15: 24 ) == '          ' .AND.                           &
-              NULINE( 40: 49 ) == '          ' ) GO TO 100
+        IF (  NULINE( 13 : 14 ) == '  ' .AND. NULINE( 15 : 24 ) == '          '&
+              .AND. NULINE( 40 : 49 ) == '          ' ) GO TO 100
       END IF
-      IF ( NULINE( 1: 1 ) /= ' ' ) THEN
+      IF ( NULINE( 1 : 1 ) /= ' ' ) THEN
 
 !  ignore comment cards
 
-        IF ( NULINE( 1: 1 ) == '*' ) GO TO 100
+        IF ( NULINE( 1 : 1 ) == '*' ) GO TO 100
 
 !  check if we have entered fixed-format input
 
@@ -998,6 +1200,7 @@
         status = 2
         IF ( out > 0 ) WRITE( out, 2020 )
         GO TO 800
+
   120   CONTINUE
         IF ( intype == mgroup .OR. intype == MCNSTR) intype = mrows
         IF ( intype == mrhs .OR. intype == mrhsp ) intype = mconst
@@ -1032,6 +1235,11 @@
           IF ( nlvars < 0 ) THEN
             nlvars = nvar
             n = nlvars
+            len1_vstart = nlvars
+            CALL ALLOCATE_array( VSTART, len1_vstart, len2_vstart,             &
+                                 alloc_status )
+            IF ( alloc_status /= 0 ) THEN
+              bad_alloc = 'VSTART' ; GO TO 980 ; END IF
           END IF
         END IF
 
@@ -1054,17 +1262,22 @@
 !  the bound vectors have been completed
 
         IF ( intype >= mstart ) THEN
-          IF ( .NOT. endbnd ) THEN
-            endbnd = .TRUE.
+          IF ( .NOT. end_bound_section ) THEN
+            end_bound_section = .TRUE.
             IF ( nbnd == 0 ) nbnd = 1
+            len1_cstart = ng + 1
+            CALL ALLOCATE_array( CSTART, len1_cstart, len2_cstart,             &
+                                 alloc_status )
+            IF ( alloc_status /= 0 ) THEN
+              bad_alloc = 'CSTART' ; GO TO 980 ; END IF
           END IF
         END IF
 
 !  the starting vectors have been completed
 
         IF ( intype >= mqhess ) THEN
-          IF ( .NOT. endst ) THEN
-            endst = .TRUE.
+          IF ( .NOT. end_start_section ) THEN
+            end_start_section = .TRUE.
             IF ( nstart == 0 ) nstart = 1
           END IF
         END IF
@@ -1072,45 +1285,92 @@
 !  the quadratic Hessian has been completed
 
         IF ( intype >= metype ) THEN
+          IF ( .NOT. end_quadratic_section ) THEN
+            end_quadratic_section = .TRUE.
+            len_gp_ptr = ng + 1
+            CALL ALLOCATE_array( GP_ptr, len_gp_ptr, alloc_status )
+            IF ( alloc_status /= 0 ) THEN
+              bad_alloc = 'GP_ptr' ; GO TO 980 ; END IF
+
+            len_eling_ptr = ng + 1
+            CALL ALLOCATE_array( ELING_ptr, len_eling_ptr, alloc_status )
+            IF ( alloc_status /= 0 ) THEN
+              bad_alloc = 'ELING_ptr' ; GO TO 980 ; END IF
+          END IF
         END IF
 
 !  the element types have all been specified
 
         IF ( intype >= meuses ) THEN
-          IF ( .NOT. endelt ) THEN
-            endelt = .TRUE.
+          IF ( .NOT. end_element_type_section ) THEN
+            end_element_type_section = .TRUE.
 
 !  if the last element has no explicit internal representation,
 !  use its elemental representation
 
-            IF ( neltyp > 0 ) THEN
-              IF ( ETYPES( neltyp ) /= cqsqr .AND.                            &
-                   ETYPES( neltyp ) /= cqprod ) THEN
+            IF ( neltype > 0 ) THEN
+              IF ( ETYPES( neltype ) /= cqsqr .AND.                            &
+                   ETYPES( neltype ) /= cqprod ) THEN
                 IF ( .NOT. inrep ) THEN
-                  DO k = IELV( neltyp ), neln
-                    ninn = ninn + 1
-                    IF ( ninn > nimax ) THEN
-                      status = - 16
-                      GO TO 700
+                  i = nevnames - ELV( neltype ) + 1
+                  IF ( nivnames + i > len_ivnames ) THEN
+                    used_length = nivnames ; min_length = nivnames + i
+                    new_length = 3 * min_length / 2 + 1 
+                    CALL EXTEND_array( IVNAMES, len_ivnames, used_length,    &
+                                       new_length, min_length, buffer,       &
+                                       status, alloc_status )
+                    IF ( status /= 0 ) THEN
+                       bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
                     END IF
-                    INAMES( ninn ) = ENAMES( k )
+                    len_ivnames = new_length
+                  END IF
+                  DO k = ELV( neltype ), nevnames
+                    nivnames = nivnames + 1
+                    IVNAMES( nivnames ) = EVNAMES( k )
                   END DO
                 ELSE
-                  IF ( ninn - IINV( neltyp ) >= neln - IELV( neltyp ) ) THEN
+                  IF ( nivnames - INV( neltype ) >=                            &
+                       nevnames - ELV( neltype ) ) THEN
                     status = 76
                     IF ( out > 0 ) WRITE( out, 2760 )
                     GO TO 800
                   END IF
                 END IF
               END IF
-              IF ( neltyp >= nlmax ) THEN
-                status = - 3
-                GO TO 700
+
+              IF ( neltype >= len_elv ) THEN
+                used_length = neltype ; min_length = neltype + 1
+                new_length = min_length + 1 
+                CALL EXTEND_array( ELV, len_elv, used_length, new_length,      &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
+                len_elv = new_length
+              END IF
+
+              IF ( neltype >= len_inv ) THEN
+                used_length = neltype ; min_length = neltype + 1
+                new_length = min_length + 1 
+                CALL EXTEND_array( INV, len_inv, used_length, new_length,      &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
+                len_inv = new_length
+              END IF
+
+              IF ( neltype >= len_elp ) THEN
+                used_length = neltype ; min_length = neltype + 1
+                new_length = min_length + 1 
+                CALL EXTEND_array( ELP, len_elp, used_length, new_length,      &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
+                len_elp = new_length
               END IF
             END IF
-            IELV( neltyp + 1 ) = neln + 1
-            IINV( neltyp + 1 ) = ninn + 1
-            IEPA( neltyp + 1 ) = nepn + 1
+            ELV( neltype + 1 ) = nevnames + 1
+            INV( neltype + 1 ) = nivnames + 1
+            ELP( neltype + 1 ) = nepnames + 1
           END IF
         END IF
 
@@ -1121,103 +1381,118 @@
 !  check if there are any nonlinear variables
 
           IF ( nnlvrs < 0 ) nnlvrs = n - nlvars
-          IF ( .NOT. endelu ) THEN
-            endelu = .TRUE.
+          IF ( .NOT. end_element_uses_section ) THEN
+            end_element_uses_section = .TRUE.
 
 !  check that the nonlinear elements have been completely specified
 !  first check the parameter values have been set
 
             IF ( nelnum > 0 ) THEN
-              DO 153 j = 1, nelnum
-                k = ITYPEE( j )
-                ip = IEPA( k ) - 1
-                k1 = IEPA( k + 1 ) - IEPA( k )
-                k2 = ISTEP( j ) - 1
+              DO j = 1, nelnum
+                k = TYPEE( j )
+                ip = ELP( k ) - 1
+                k1 = ELP( k + 1 ) - ELP( k )
+                k2 = EP_ptr( j ) - 1
                 DO i = 1, k1
-                  IF ( EPVALU( k2 + i ) == biginf ) THEN
+                  IF ( EP_val( k2 + i ) == biginf ) THEN
                     status = 28
                     IF ( out > 0 ) WRITE( out, 2280 )                          &
-                       LNAMES( j ), EPNAME( ip + i )
+                       LNAMES( j ), EPNAMES( ip + i )
                   END IF
                 END DO
 
 !  now check the elemental variables have been set
 
-                is = IELV( k ) - 1
-                k1 = IELV( k + 1 ) - IELV( k )
-                k2 = ISTAEV( j ) - 1
+                is = ELV( k ) - 1
+                k1 = ELV( k + 1 ) - ELV( k )
+                k2 = EV_ptr( j ) - 1
                 DO i = 1, k1
-                  IF ( IELVAR( k2 + i ) == 0 ) THEN
+                  IF ( ELVAR( k2 + i ) == 0 ) THEN
                     status = 16
                     IF ( out > 0 ) WRITE( out, 2160 )                          &
-                       LNAMES( j ), ENAMES( is + i )
+                       LNAMES( j ), EVNAMES( is + i )
                   END IF
                 END DO
-  153         CONTINUE
+              END DO
             END IF
             IF ( status /= 0 ) RETURN
           END IF
-          ISTEP( nelnum + 1 ) = nlisep + 1
-          ISTAEV( nelnum + 1 ) = nlisev + 1
+          EP_ptr( nelnum + 1 ) = nlisep + 1
+          EV_ptr( nelnum + 1 ) = nelvar + 1
         END IF
 
 !  the group types have all been specified
 
-         IF ( intype >= mguses .AND. ngrtyp > 0 ) THEN
+         IF ( intype >= mguses .AND. ngtype > 0 ) THEN
 
 !  check that the argument for the last group-type has been set
 
-           IF ( .NOT. endgrt ) THEN
-             endgrt = .TRUE.
+           IF ( .NOT. end_group_type_section ) THEN
+             end_group_type_section = .TRUE.
              IF ( .NOT. setana ) THEN
                status = 25
                IF ( out > 0 ) WRITE( out, 2250 )
                RETURN
              END IF
-             IF ( ngrtyp >= ngrmax ) THEN
-               status = - 4
-               GO TO 700
+             IF ( ngtype >= len_gtypesp_ptr ) THEN
+               used_length = ngtype ; min_length = ngtype + 1
+               new_length = 3 * min_length / 2 + 1
+               CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr,                &
+                                  used_length, new_length, min_length,         &
+                                  buffer, status, alloc_status )
+               IF ( status /= 0 ) THEN
+                  bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
+               len_gtypesp_ptr = new_length
              END IF
-             IGPA( ngrtyp + 1 ) = ngpn + 1
+             GTYPESP_ptr( ngtype + 1 ) = ngpn + 1
            END IF
          END IF
-         IF ( intype == mendat ) THEN
 
-!  check that the groups have been completely specified by
-!  checking that the parameter values have been set
+         IF ( intype == mendat ) THEN
+           k = MAX( ng, nelnum )
+           CALL ALLOCATE_array( IWK, k, alloc_status )
+           IF ( alloc_status /= 0 ) THEN
+             bad_alloc = 'IWK' ; GO TO 980 ; END IF
+
+           CALL ALLOCATE_array( GP_val, nlisgp, alloc_status )
+           IF ( alloc_status /= 0 ) THEN
+             bad_alloc = 'GP_val' ; GO TO 980 ; END IF
+
+!  check that the groups have been completely specified by checking that the 
+!  parameter values have been set
 
            nlisgp = 0
            DO j = 1, ng
-             k = ITYPEG( j )
+             k = GTYPE( j )
              IF ( k < 0 ) THEN
                k = - k - 1
-               ITYPEG( j ) = k
-               ISTGP( j ) = nlisgp + 1
+               GTYPE( j ) = k
+               GP_ptr( j ) = nlisgp + 1
                IF ( k /= 0 ) THEN
-                 k1 = IGPA( k + 1 ) - IGPA( k )
+                 k1 = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
                  IF ( k1 > 0 ) THEN
-                   ip = IGPA( k ) - 1
-                   k2 = ISTGP( j ) - 1
+                   ip = GTYPESP_ptr( k ) - 1
+                   k2 = GP_ptr( j ) - 1
                    status = 34
                    DO i = 1, k1
                      nlisgp = nlisgp + 1
-                     GPVALU( nlisgp ) = biginf
-                     IF ( out > 0 ) WRITE( out, 2340 )                         &
-                       GNAMES( j ), GPNAME( ip + i )
+                     GP_val( nlisgp ) = biginf
+                     IF ( out > 0 )                                            &
+                       WRITE( out, 2340 ) GNAMES( j ), GPNAME( ip + i )
                    END DO 
                  END IF 
                END IF 
              ELSE IF ( k == 0 ) THEN
-               ISTGP( j ) = nlisgp + 1
+               GP_ptr( j ) = nlisgp + 1
              ELSE
-               ISTGP( j ) = nlisgp + 1
-               ip = IGPA( k ) - 1
-               k1 = IGPA( k + 1 ) - IGPA( k )
-               k2 = ISTGP( j ) - 1
+               GP_ptr( j ) = nlisgp + 1
+               ip = GTYPESP_ptr( k ) - 1
+               k1 = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
+               k2 = GP_ptr( j ) - 1
                DO i = 1, k1
                  nlisgp = nlisgp + 1
-                 GPVALU( nlisgp ) = GPTEMP( k2 + i )
-                 IF ( GPVALU( nlisgp ) == biginf ) THEN
+                 GP_val( nlisgp ) = GP_val_orig( k2 + i )
+                 IF ( GP_val( nlisgp ) == biginf ) THEN
                    status = 34
                    IF ( out > 0 ) WRITE( out, 2340 )                           &
                      GNAMES( j ), GPNAME( ip + i )
@@ -1225,17 +1500,17 @@
                END DO
              END IF
            END DO
-           ISTGP( ng + 1 ) = nlisgp + 1
+           GP_ptr( ng + 1 ) = nlisgp + 1
            IF ( status /= 0 ) RETURN
 
-!  sort the list of elements for each group, so that the
-!  elements for group i precede those for group i + 1, i = 1, ng - 1
+!  sort the list of elements for each group, so that the elements for group i 
+!  precede those for group i + 1, i = 1, ng - 1
 
            IF ( neling > 0 ) THEN
-             CALL REORDA( ng, neling, IELING( 1, 1 ), IELING( 1, 2 ),          &
-                          WEIGHT, ISTADG, IWK )
+             CALL REORDER( ng, neling, ELING_el, ELING_g,                      &
+                           WEIGHT, ELING_ptr, IWK )
            ELSE
-             ISTADG( : ng + 1 ) = 1
+             ELING_ptr( : ng + 1 ) = 1
            END IF
          END IF
 
@@ -1249,10 +1524,10 @@
 !  a data card has been found. Rread the character fields 1, 2, 3 and 5 
 !  from the new data line
 
-      field1 = NULINE(  2:  3 )
-      field2 = NULINE(  5: 14 )
-      field3 = NULINE( 15: 24 )
-      field5 = NULINE( 40: 49 )
+      field1 = NULINE(  2 :  3 )
+      field2 = NULINE(  5 : 14 )
+      field3 = NULINE( 15 : 24 )
+      field5 = NULINE( 40 : 49 )
 
 !  start of a do-loop
 ! ===================
@@ -1299,7 +1574,7 @@
             GO TO 700
           END IF
           INLIST( ifree ) = nusein
-          NAMIIN( nusein ) = FIELD( 1: 7 )
+          NAMIIN( nusein ) = FIELD( 1 : 7 )
         END IF
         IF ( level == 0 ) THEN
           LOOP( 1 ) = INLIST( ifree )
@@ -1313,7 +1588,7 @@
         CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
         IF ( ifield <= 0 ) THEN
           status = 3
-          IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1: 10 )
+          IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
           GO TO 800
         END IF
         IF ( level == 0 ) THEN
@@ -1351,9 +1626,9 @@
 
         adddoloop = .FALSE.
         IF ( level == 1 ) THEN
-          adddoloop = ( FIELD2( 1: 10 ) == NAMIIN( LOOP( 1 ) ) )
+          adddoloop = ( FIELD2( 1 : 10 ) == NAMIIN( LOOP( 1 ) ) )
         ELSE IF( level > 1 ) THEN
-          adddoloop = ( FIELD2( 1: 10 ) ==                                     &
+          adddoloop = ( FIELD2( 1 : 10 ) ==                                    &
             NAMIIN( INSTR( 2, NINSTR( level - 1 ), level - 1 ) ) )
         ENDIF
         IF ( adddoloop ) THEN
@@ -1675,13 +1950,13 @@
              field1 == 'R=' .OR. field1 == 'R+' .OR.                           &
              field1 == 'R-' .OR. field1 == 'R*' .OR.                           &
              field1 == 'R/' .OR. field1 == 'R(' ) THEN
-          CALL PROCAI( nindex, nrlndx, length, nusein, nusere,                 &
-                       status, out, level, NINSTR( level ),                    &
+          CALL DECODE_scalar_instruction( nindex, nrlndx, length, nusein,      &
+                       nusere, status, out, level, NINSTR( level ),            &
                        debug, RVALUE( NINSTR( level ), level ),                &
                        INLIST, ITABLE, NAMIIN, NAMRIN,                         &
                        INSTR( 1, NINSTR( level ), level ), KEY,                &
                        field1, field2, field3, field5,                         &
-                       NULINE( 25: 36 ) )
+                       NULINE( 25 : 36 ) )
           IF ( status > 0 ) GO TO 800
           IF ( status < 0 ) GO TO 700
 
@@ -1689,8 +1964,8 @@
 ! ===============================================================
 
         ELSE
-          IF ( FIELD1( 1: 1 ) /= 'X' .AND. FIELD1( 1: 1 ) /= 'Z'               &
-               .AND. FIELD1( 1: 1 ) /= 'A' ) THEN
+          IF ( field1( 1 : 1 ) /= 'X' .AND. field1( 1 : 1 ) /= 'Z'             &
+               .AND. field1( 1 : 1 ) /= 'A' ) THEN
              status = 6
              IF ( out > 0 ) WRITE( out, 2060 )
              GO TO 800
@@ -1700,9 +1975,9 @@
              status = - 12
              GO TO 700
           END IF
-          CALL PROCAD( nindex, nrlndx, level, NINSTR( level ),                 &
-                       nusere, length, narray, intype, status, out,            &
-                       debug, grp1st,                                          &
+          CALL DECODE_array_instruction( nindex, nrlndx, level,                &
+                       NINSTR( level ), nusere, length, narray, intype,        &
+                       status, out, debug, grp1st,                             &
                        field1, field2, field3, field5,                         &
                        NULINE( 25 : 36 ), NULINE( 50 : 61 ),                   &
                        INLIST,                                                 &
@@ -1740,18 +2015,17 @@
 
 !  1) an arithmetic instruction. decode the instruction
 
-          CALL PROCAI( nindex, nrlndx, length, nusein, nusere,                 &
-                         status, out, 0, 1, debug, RVALUE( 1, 1 ),             &
-                         INLIST, ITABLE, NAMIIN, NAMRIN,                       &
-                         INSTR( 1, 1, 1 ), KEY,                                &
-                         field1, field2, field3, field5,                       &
-                         NULINE( 25: 36 ) )
+          CALL DECODE_scalar_instruction( nindex, nrlndx, length, nusein,      &
+                       nusere, status, out, 0, 1, debug, RVALUE( 1, 1 ),       &
+                       INLIST, ITABLE, NAMIIN, NAMRIN,                         &
+                       INSTR( 1, 1, 1 ), KEY,                                  &
+                       field1, field2, field3, field5, NULINE( 25 : 36 ) )
           IF ( status > 0 ) GO TO 800
           IF ( status < 0 ) GO TO 700
 
 !  execute the instruction
 
-          IF ( FIELD1( 1 : 1 ) == 'I' ) THEN
+          IF ( field1( 1 : 1 ) == 'I' ) THEN
             CALL GETIIN( nindex, INDVAL, nrlndx, REALVL, INSTR( 1, 1, 1 ) )
             IF ( debug .AND. out > 0 ) WRITE( out, 5010 ) 0, 1,                &
                 NAMIIN( INSTR( 2, 1, 1 ) ), INDVAL( INSTR( 2, 1, 1 ) )
@@ -1765,12 +2039,12 @@
           END IF
           GO TO 100
         ELSE
-          IF ( FIELD1( 1 : 1 ) == 'X' .OR. FIELD1( 1: 1 ) == 'Z' .OR.          &
-               FIELD1( 1 : 1 ) == 'A' ) THEN
+          IF ( field1( 1 : 1 ) == 'X' .OR. field1( 1 : 1 ) == 'Z' .OR.         &
+               field1( 1 : 1 ) == 'A' ) THEN
 
 !  2) an array definition. decode the instruction
 
-            CALL PROCAD( nindex, nrlndx, 0, 1, nusere,                         &
+            CALL DECODE_array_instruction( nindex, nrlndx, 0, 1, nusere,       &
                          length, 1, intype, status, out,                       &
                          debug, grp1st,                                        &
                          field1, field2, field3, field5,                       &
@@ -1804,31 +2078,31 @@
           ELSE
             novals = 0
             IF ( ( field3 /= '          ' .AND.                                &
-                   NULINE( 15: 15 ) /= '$' ) .OR. intype == mobbnd ) THEN
+                   NULINE( 15 : 15 ) /= '$' ) .OR. intype == mobbnd ) THEN
               novals = novals + 1
               IF (   intype <= mqhess .OR. intype == mobbnd .OR.               &
                 ( ( intype == meuses .OR. intype == mguses )                   &
                     .AND. field1 == 'P ' ) .OR. ( intype == mguses             &
                           .AND. field1 == 'E ' ) ) THEN
                 IF ( intype == mguses .AND. field1 == 'E '.AND.                &
-                  NULINE( 25: 36 ) == '            ' ) THEN
+                  NULINE( 25 : 36 ) == '            ' ) THEN
                   value4 = one
                 ELSE
-                   CALL GETVAL( NULINE( 25: 36 ), value4 )
+                   CALL GETVAL( NULINE( 25 : 36 ), value4 )
                 END IF
                 IF ( intype == mrange ) value4 = ABS( value4 )
               END IF
-              IF ( field5 /= '          ' .AND. NULINE( 40: 40 ) /= '$' ) THEN
+              IF ( field5 /= '          ' .AND. NULINE( 40 : 40 ) /= '$' ) THEN
                 novals = novals + 1
                 IF (  intype <= mqhess .OR.                                    &
                     ( ( intype == meuses .OR. intype == mguses )               &
                          .AND. field1 == 'P ' ) .OR. ( intype ==               &
                               mguses .AND. field1 == 'E ' ) ) THEN
                   IF ( intype == mguses .AND. field1 == 'E ' .AND.             &
-                        NULINE( 50: 61 ) == '            ' ) THEN
+                        NULINE( 50 : 61 ) == '            ' ) THEN
                      value6 = one
                   ELSE
-                    CALL GETVAL( NULINE( 50: 61 ), value6 )
+                    CALL GETVAL( NULINE( 50 : 61 ), value6 )
                   END IF
                   IF ( intype == mrange ) value6 = ABS( value6 )
                   IF ( intype < mconst ) THEN
@@ -1869,7 +2143,7 @@
            field1 == 'A+' .OR. field1 == 'A-' .OR.                             &
            field1 == 'A*' .OR. field1 == 'A/' .OR.                             &
            field1 == 'A(' ) THEN
-        CALL PROCAA( nindex, length, nusere, status, out,                      &
+        CALL EXECUTE_array_instruction( nindex, length, nusere, status, out,   &
                      nrlndx, INLIST, ITABLE,                                   &
                      NAMRIN, KEY, INDVAL, REALVL,                              &
                      field1, field2, field3, field5, value4 )
@@ -1891,15 +2165,19 @@
 
   420 CONTINUE
       IF ( grp1st ) THEN
-        CALL SGRP1( ng, ngmax, nomax, length, nobj, novals, INLIST, IDROWS,    &
-                    ISTATE, ITYPEG, ITABLE, RDROWS, RSCALE, field1, field2,    &
-                    field3, value4, field5, value6, GNAMES, ONAMES, KEY,       &
-                    out, status )
+        CALL SGRP1( ng, length, nobj, novals, INLIST,                          &
+                    len2_idrows, IDROWS, len_gstate, GSTATE,                   &
+                    len_gtype, GTYPE, ITABLE, len2_rdrows, RDROWS,             &
+                    len_rscale, RSCALE, field1, field2, field3, value4,        &
+                    field5, value6, len_gnames, GNAMES, len_onames, ONAMES,    &
+                    KEY, out, status )
       ELSE
-        CALL SGRP2( ng, ngmax, nomax, la, length, nnza, nobj, novals, INLIST,  &
-                    IDROWS, ISTATE, ITYPEG, ITABLE, ICOORD, A, RDROWS,         &
-                    RSCALE, field1, field2, field3, value4, field5, value6,    &
-                    GNAMES, ONAMES, KEY, out, status )
+        CALL SGRP2( ng, la, length, nnza, nobj, novals, INLIST,                &
+                    len2_idrows, IDROWS, len_gstate, GSTATE,                   &
+                    len_gtype, GTYPE, ITABLE, ICOORD, A, len2_rdrows, RDROWS,  &
+                    len_rscale, RSCALE, field1, field2, field3, value4,        &
+                    field5, value6, len_gnames, GNAMES, len_onames, ONAMES,    &
+                    KEY, out, status )
       END IF
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
@@ -1916,10 +2194,11 @@
       IF ( intype == mconst ) colfie = 'CO'
       IF ( intype == mrange ) colfie = 'RA'
       IF ( grp1st .OR. intype /= mcols ) THEN
-        CALL SVAR2( nmax, ngmax, la, length, nnza, nvar, novals, nrlndx,       &
-                    intype == mcols, colfie, ICOORD, ISTATE, ITYPEV, INLIST,   &
-                    ITABLE, A, CSCALE, REALVL, DFAULT, field1, field2,         &
-                    field3, value4, field5, value6, VNAMES, KEY, out, status )
+        CALL SVAR2( nmax, la, length, nnza, nvar, novals, nrlndx,              &
+                    intype == mcols, colfie, ICOORD, len_gstate, GSTATE,       &
+                    ITYPEV, INLIST, ITABLE, A, CSCALE, REALVL, DFAULT, field1, &
+                    field2, field3, value4, field5, value6, VNAMES, KEY,       &
+                    out, status )
       ELSE
         CALL SVAR1( nmax, length, nvar, colfie, ITYPEV, INLIST, ITABLE,        &
                     CSCALE, field2, field3, value4, VNAMES, KEY, status )
@@ -1949,9 +2228,12 @@
 !  ------------------------------
 
   450 CONTINUE
-      CALL SSTART( nmax, ngmax, nsmax, length, nlvars, ng, nstart, ncol,       &
-                   nrlndx, defaut, INLIST, ITABLE, VSTART, CSTART, REALVL,     &
-                   field1, field2, field3, value4, field5, value6, SNAMES,     &
+      CALL SSTART( nmax, length, nlvars, ng, nstart, ncol,       &
+                   nrlndx, defaut, INLIST, ITABLE,                      &
+                   len1_vstart, len2_vstart, VSTART,                     &
+                   len1_cstart, len2_cstart, CSTART, REALVL,                   &
+                   field1, field2, field3, value4, field5, value6,             &
+                   len_snames, SNAMES,     &
                    novals, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
@@ -1964,13 +2246,20 @@
 !  ------------------------
 
   455 CONTINUE
-      CALL SQHESS( negmax, ngmax, nlmax, nelmax, nevmax, netmax, nomax, nimax, &
-                   length, ng, nobj, ngrupe, novals, neln, ninn, nepn, neltyp, &
-                   nlisep, nlisev, nelnum, neling, qgroup, qsqr, qprod, IELV,  &
-                   IINV, IEPA, ITYPEG, IELING, ISTAEV, IELVAR, INLIST, ITABLE, &
-                   ISTATE, ITYPEE, ISTEP, iptype, istype, inrep, field1,       &
-                   field2, field3, value4, field5, value6, ENAMES, GNAMES,     &
-                   ETYPES, ONAMES, INAMES, lnames, WEIGHT, KEY, out, status )
+      CALL SQHESS( length, ng, nobj, ngrupe, novals, nevnames, &
+                   nivnames, nepnames, neltype,                                &
+                   nlisep, nelvar, nelnum, neling, qgroup, qsqr, qprod,        &
+                   len_elv, ELV, len_inv, INV, len_elp, ELP, len_gtype, GTYPE, &
+                   len_eling_el, ELING_el, len_eling_g, ELING_g,               &
+                   len_ev_ptr, EV_ptr,                                         &
+                   len_elvar, ELVAR, INLIST, ITABLE,                           &
+                   len_gstate, GSTATE, len_typee, TYPEE, len_ep_ptr, EP_ptr,   &
+                   len1_cstart, nstart, CSTART, len_rscale, RSCALE,            &
+                   iptype, istype, inrep,                                      &
+                   field1, field2, field3, value4, field5, value6,             &
+                   len_evnames, EVNAMES, len_ivnames, IVNAMES,                 &
+                   len_gnames, GNAMES, len_etypes, ETYPES, len_onames, ONAMES, &
+                   len_lnames, LNAMES, len_weight, WEIGHT, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -1982,10 +2271,13 @@
 !  -------------------------------
 
   460 CONTINUE
-      CALL SETYPE( nlmax, nimax, netmax, nepmax, length, novals, neln, ninn,   &
-                   nepn, neltyp, inrep, IELV, IINV, IEPA, INLIST, ITABLE,      &
-                   field1, field2, field3, field5, ENAMES, INAMES, EPNAME,     &
-                   ETYPES, KEY, out, status )
+      CALL SETYPE( length, novals, nevnames, nivnames, &
+                   nepnames, neltype, inrep, len_elv,                  &
+                   ELV, len_inv, INV, len_elp, ELP, INLIST, ITABLE,      &
+                   field1, field2, field3, field5,           &
+                   len_evnames, EVNAMES, len_ivnames, IVNAMES, &
+                   len_epnames, EPNAMES,  &
+                   len_etypes, ETYPES, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -1997,12 +2289,13 @@
 !  --------------------------------
 
   470 CONTINUE
-      CALL SEUSES( nlmax, nelmax, netmax, nevmax, nlisev, nlisep, novals,      &
-                   nepmax, nepvmx, length, nelnum, nelmnt, nmax, n, elmnt,     &
-                   IELV, IEPA, ITYPEE, IELVAR, INLIST, ITABLE, ISTAEV, ISTEP,  &
+      CALL SEUSES( neltype, nevnames, nepnames, nelvar, nlisep, novals,      &
+                   length, nelnum, nelmnt, nmax, n, elmnt,     &
+                   ELV, ELP, len_typee, TYPEE, len_elvar, ELVAR, &
+                   INLIST, ITABLE, len_ev_ptr, EV_ptr, len_ep_ptr, EP_ptr,  &
                    delset, detype, field1, field2, field3, value4, field5,     &
-                   value6, EPVALU, ENAMES, lnames, EPNAME, VNAMES, KEY, out,   &
-                   status )
+                   value6, len_ep_val, EP_val, EVNAMES, EPNAMES, len_lnames, LNAMES,   &
+                   VNAMES, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -2014,9 +2307,10 @@
 !  -----------------------------
 
   480 CONTINUE
-      CALL SGTYPE( ngrmax, ngpmax, novals, length, ngrtyp, ngpn, setana,       &
-                    INLIST, IGPA, ITABLE, field1, field2, field3, field5,      &
-                    ANAMES, GTYPES, GPNAME, KEY, out, status )
+      CALL SGTYPE( ngpmax, novals, length, ngtype, ngpn, setana,               &
+                  INLIST, len_gtypesp_ptr, GTYPESP_ptr, ITABLE, field1,        &
+                  field2, field3, field5, len_ganames, GANAMES, len_gtypes,    &
+                  GTYPES, GPNAME, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -2028,11 +2322,13 @@
 !  -----------------------------
 
   490 CONTINUE
-      CALL SGUSES( negmax, ngpmax, ngrmax, ngmax, ngpvmx, length, ng, ngrupe,  &
-                   nlisgp, novals, neling, ndtype, strtgu, grupe, IGPA,        &
-                   ITYPEG, IELING, INLIST, ITABLE, ISTGP, ISTATE, dgrset,      &
+      CALL SGUSES( ngpmax, length, ng, ngtype, ngrupe, nlisgp,         &
+                   novals, neling, ndtype, start_group_uses_section, grupe,   &
+                   len_gtypesp_ptr, GTYPESP_ptr,                               &
+                   GTYPE, len_eling_el, ELING_el, len_eling_g, ELING_g,   &
+                   INLIST, ITABLE, GP_ptr, GSTATE, dgrset,      &
                    dgtype, field1, field2, field3, value4, field5, value6,     &
-                   GPTEMP, GPNAME, WEIGHT, KEY, out, status )
+                   len_gp_val_orig, GP_val_orig, GPNAME, len_weight, WEIGHT, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -2103,43 +2399,39 @@
       IF ( debug .AND. out > 0 ) THEN
         WRITE( out, 3000 ) ( GNAMES( j ), j = 1, ng )
         WRITE( out, 3010 ) ( VNAMES( j ), j = 1, n )
-        WRITE( out, 3020 )                                                    &
+        WRITE( out, 3020 )                                                     &
             ( ICOORD( j, 1 ), ICOORD( j, 2 ), A( j ), j = 1, nnza )
-        WRITE( out, 3030 )                                                    &
-         ( ( i, j, BND( 1, j, i ), BND( 2, j, i ), j = 1, nlvars ),           &
-             i =1, nbnd )
-        WRITE( out, 3100 )                                                    &
+        WRITE( out, 3030 )                                                     &
+         ( ( i, j, BND( 1, j, i ), BND( 2, j, i ), j = 1, nlvars ), i = 1, nbnd)
+        WRITE( out, 3100 )                                                     &
          ( ( i, j, VSTART( j, i ), j = 1, nlvars ), i = 1, nstart )
         WRITE( out, 3040 ) ( RSCALE( j ), j = 1, ng )
         WRITE( out, 3050 ) ( CSCALE( j ), j = 1, n )
-        IF ( neltyp > 0 )                                                     &
-           WRITE( out, 3060 ) ( ETYPES( i ), IELV( i + 1 ) - IELV( I),        &
-                                 IINV( i + 1 ) - IINV( i ),                   &
-                                 IEPA( i + 1 ) - IEPA( i ),                   &
-                                 i = 1, neltyp )
-        IF ( ngrtyp > 0 )                                                     &
-           WRITE( out, 3110 ) ( GTYPES( i ), ANAMES( i ),                     &
-                                 IGPA( i + 1 ) - IGPA( i ),                   &
-                                 i = 1, ngrtyp )
+        IF ( neltype > 0 ) WRITE( out, 3060 )                                  &
+           ( ETYPES( i ), ELV( i + 1 ) - ELV( i ), INV( i + 1 ) - INV( i ),    &
+             ELP( i + 1 ) - ELP( i ), i = 1, neltype )
+        IF ( ngtype > 0 )                                                      &
+           WRITE( out, 3110 ) ( GTYPES( i ), GANAMES( i ),                     &
+             GTYPESP_ptr( i + 1 ) - GTYPESP_ptr( i ), i = 1, ngtype )
         WRITE( out, 3070 )
         DO i = 1, ng
-          k1 = ISTADG( i )
-          k2 = ISTADG( i + 1 ) - 1
-          is = ITYPEG( i )
+          k1 = ELING_ptr( i )
+          k2 = ELING_ptr( i + 1 ) - 1
+          is = GTYPE( i )
           IF ( k1 <= k2 ) THEN
             IF ( is == 0 ) THEN
               DO k = k1, k2
-                l = IELING( k, 1 )
+                l = ELING_el( k )
                 WRITE( out, 3080 ) GNAMES( i ), 'TRIVIAL   ', LNAMES( l ),     &
-                  ETYPES( ITYPEE( l ) ), ( VNAMES( IELVAR( j ) ),              &
-                  j = ISTAEV( l ), ISTAEV( l + 1 ) - 1 )
+                  ETYPES( TYPEE( l ) ), ( VNAMES( ELVAR( j ) ),                &
+                  j = EV_ptr( l ), EV_ptr( l + 1 ) - 1 )
               END DO
             ELSE
               DO k = k1, k2
-                l = IELING( k, 1 )
+                l = ELING_el( k )
                 WRITE( out, 3080 ) GNAMES( i ), GTYPES( is ), LNAMES( l ),     &
-                  ETYPES( ITYPEE( l ) ), ( VNAMES( IELVAR( j ) ),              &
-                  j = ISTAEV( l ), ISTAEV( l + 1 ) - 1 )
+                  ETYPES( TYPEE( l ) ), ( VNAMES( ELVAR( j ) ),                &
+                  j = EV_ptr( l ), EV_ptr( l + 1 ) - 1 )
               END DO
             END IF
           ELSE
@@ -2151,43 +2443,52 @@
           END IF
         END DO
       END IF
+
   960 CONTINUE
       IF ( debug .AND. out > 0 ) THEN
         DO i = 1, nusein
-           WRITE( out, 4000 ) i, NAMIIN( i ), INDVAL( i )
+          WRITE( out, 4000 ) i, NAMIIN( i ), INDVAL( i )
         END DO
         DO i = 1, nusere
-           WRITE( out, 4100 ) i, NAMRIN( i ), REALVL( i )
+          WRITE( out, 4100 ) i, NAMRIN( i ), REALVL( i )
         END DO
       END IF
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
 
  1000 FORMAT( A65 )
  1010 FORMAT( A160 )
- 2000 FORMAT( ' ** Exit from GPSMPS - insufficient space.',                    &
+ 2000 FORMAT( ' ** Exit from INTERPRET_gpsmps - insufficient space.',          &
               ' Increase size of ', A6 )
- 2010 FORMAT( ' ** Exit from GPSMPS - first card is not NAME ' )
- 2020 FORMAT( ' ** Exit from GPSMPS - indicator card not recognised ' )
- 2030 FORMAT( ' ** Exit from GPSMPS - index parameter name ', A10,             &
+ 2010 FORMAT( ' ** Exit from INTERPRET_gpsmps - first card is not NAME ' )
+ 2020 FORMAT( ' ** Exit from INTERPRET_gpsmps - indicator card not recognised' )
+ 2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
               ' not recognised ' )
- 2060 FORMAT( ' ** Exit from GPSMPS - non array defn. within do-loop ' )
- 2130 FORMAT( ' ** Exit from GPSMPS - do loop level greater than 3 ' )
- 2160 FORMAT( ' ** Exit from GPSMPS - element ', A10, ' variable ',            &
+ 2060 FORMAT( ' ** Exit from INTERPRET_gpsmps - non array defn. within do-loop')
+ 2130 FORMAT( ' ** Exit from INTERPRET_gpsmps - do loop level greater than 3 ' )
+ 2160 FORMAT( ' ** Exit from INTERPRET_gpsmps - element ', A10, ' variable ',  &
               A10, ' not set ' )
- 2210 FORMAT( ' ** Exit from GPSMPS -',                                        &
+ 2210 FORMAT( ' ** Exit from INTERPRET_gpsmps -',                              &
               ' groups and variables sections mixed')
- 2250 FORMAT( ' ** Exit from GPSMPS - no group-type arg. given ' )
- 2280 FORMAT( ' ** Exit from GPSMPS - element ', A10, ' parameter ',           &
+ 2250 FORMAT( ' ** Exit from INTERPRET_gpsmps - no group-type arg. given ' )
+ 2280 FORMAT( ' ** Exit from INTERPRET_gpsmps - element ', A10, ' parameter ', &
               A10, ' not set ' )
- 2340 FORMAT( ' ** Exit from GPSMPS - group ', A10, ' parameter ',             &
+ 2340 FORMAT( ' ** Exit from INTERPRET_gpsmps - group ', A10, ' parameter ',   &
               A10, ' not set ' )
- 2380 FORMAT( ' ** Exit from GPSMPS - do loop not completed ' )
- 2740 FORMAT( ' ** Exit from GPSMPS - data file empty ' )
- 2750 FORMAT( ' ** Exit from GPSMPS - data file incomplete.',                  &
+ 2380 FORMAT( ' ** Exit from INTERPRET_gpsmps - do loop not completed ' )
+ 2740 FORMAT( ' ** Exit from INTERPRET_gpsmps - data file empty ' )
+ 2750 FORMAT( ' ** Exit from INTERPRET_gpsmps - data file incomplete.',        &
               ' No ENDATA card ' )
- 2760 FORMAT( ' ** Exit from GPSMPS - #internal vars >= #elementals' )
+ 2760 FORMAT( ' ** Exit from INTERPRET_gpsmps - #internal vars >= #elementals' )
  2960 FORMAT( /, ' From within do loop ending on line ', i5,                   &
               ', current line is ', /,                                         &
               2X, A2, 1X, A10, A10, 1P, D12.4, 3X, A10, D12.4 )
@@ -2238,29 +2539,33 @@
               A10, /, '    value4 = ', 1P, D12.4, ' field5 = ', A10,           &
               ' value6 = ', 1P, D12.4 )
 
-!  end of subroutine GPSMPS
+!  end of subroutine INTERPRET_gpsmps
 
-      END SUBROUTINE GPSMPS
+      END SUBROUTINE INTERPRET_gpsmps
 
 !-*-*-*-*-*-*- S I F D E C O D E   S G R P 1   S U B R O U T I N E -*-*-*-*-*-*-
 
-      SUBROUTINE SGRP1( ng, ngmax, nomax, length, nobj, novals,                &
-                         INLIST, IDROWS, ISTATE, ITYPEG, ITABLE,               &
-                         RDROWS, RSCALE,                                       &
-                         field1, field2, field3, value4, field5, value6,       &
-                         GNAMES, ONAMES, KEY, out, status )
-      INTEGER :: out, status, length
-      INTEGER :: ng, ngmax, nomax
-      INTEGER :: nobj, novals
+      SUBROUTINE SGRP1( ng, length, nobj, novals,                              &
+                        INLIST, len2_idrows, IDROWS,                           &
+                        len_gstate, GSTATE, len_gtype, GTYPE, ITABLE,          &
+                        len2_rdrows, RDROWS, len_rscale, RSCALE,               &
+                        field1, field2, field3, value4, field5, value6,        &
+                        len_gnames, GNAMES, len_onames, ONAMES, KEY,           &
+                        out, status )
+      INTEGER :: ng, nobj, novals, length, out, status
+      INTEGER :: len2_idrows, len_gstate, len_gtype
+      INTEGER :: len2_rdrows, len_rscale, len_onames, len_gnames
       REAL ( KIND = wp ) :: value4, value6
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
-      INTEGER :: INLIST( length ), IDROWS( 2, ngmax )
-      INTEGER :: ISTATE( ngmax ), ITYPEG( ngmax )
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
+      INTEGER :: INLIST( length )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GSTATE, GTYPE
+      INTEGER, ALLOCATABLE, DIMENSION( : , : ) :: IDROWS
       INTEGER :: ITABLE ( length )
-      REAL ( KIND = wp ) :: RDROWS( 2, ngmax ), RSCALE( ngmax )
-      CHARACTER ( len = 10 ) :: GNAMES( ngmax ), ONAMES( nomax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RSCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : , : ) :: RDROWS
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GNAMES, ONAMES
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  --------------------------------------------------------
 !  indicator card is groups/rows/constraints
@@ -2271,7 +2576,10 @@
 !  local variables
 
       INTEGER :: i, ifree, ifield, is, j
-      CHARACTER ( len = 12 ) :: field
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      INTEGER :: used_length2, new_length2, min_length2
+      CHARACTER ( LEN = 12 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  ignore 'marker' cards
 
@@ -2281,47 +2589,113 @@
 
       CALL HASH_insert( length, 12, field2 // 'GR', KEY, ITABLE, ifree )
       IF ( ifree <= 0 ) THEN
-         IF ( ifree == 0 ) THEN
-            status = - 1
-            RETURN
-         END IF
+        IF ( ifree == 0 ) THEN
+          status = - 1
+          RETURN
+        END IF
 
 !  the group has appeared before as the j-th in the list
 
-         j = INLIST( - ifree )
-      ELSE
+        j = INLIST( - ifree )
 
 !  mark any objective function rows as special
 
-         IF ( field1 == 'N ' .OR. field1 == ' N' .OR.                          &
-              field1 == 'DN' .OR. field1 == 'XN' .OR.                          &
-              field1 == 'ZN' ) THEN
-            nobj = nobj + 1
-            IF( nobj > nomax ) THEN
-               status = - 5
-               RETURN
-            END IF
-            ONAMES ( nobj ) = field2
-         END IF
+      ELSE
+        IF ( field1 == 'N ' .OR. field1 == ' N' .OR.                           &
+             field1 == 'DN' .OR. field1 == 'XN' .OR. field1 == 'ZN' ) THEN
+          nobj = nobj + 1
+          IF ( nobj > len_onames ) THEN
+            used_length = nobj - 1 ; min_length = nobj
+            new_length = 3 * min_length / 2 + 1
+            CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,    &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+               bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
+            len_onames = new_length
+          END IF
+          ONAMES ( nobj ) = field2
+        END IF
 
-!  the group is the ng-th encountered
+!  the group is the ng-th encountered; ensure there is sufficient space
 
-         ng = ng + 1
-         IF ( ng >= ngmax ) THEN
-            status = - 6
-            RETURN
-         END IF
+        ng = ng + 1
+        IF ( ng >= len_gstate ) THEN
+          used_length = ng - 1 ; min_length = ng
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
+          len_gstate = new_length
+        END IF
+
+        IF ( ng >= len_gtype ) THEN
+          used_length = ng - 1 ; min_length = ng
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( GTYPE, len_gtype, used_length, new_length,        &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
+          len_gtype = new_length
+        END IF
+
+        IF ( ng >= len_gnames ) THEN
+          used_length = ng - 1 ; min_length = ng
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
+          len_gnames = new_length
+        END IF
+
+        IF ( ng >= len_rscale ) THEN
+          used_length = ng - 1 ; min_length = ng
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
+          len_rscale = new_length
+        END IF
+
+        IF ( ng >= len2_idrows ) THEN
+          used_length = 2 ; new_length = 2 ; min_length = 2
+          used_length2 = ng - 1 ; min_length2 = ng
+          new_length2 = 3 * min_length2 / 2 + 1 
+          CALL EXTEND_array( IDROWS, 2, len2_idrows, used_length,              &
+                             used_length2, new_length, new_length2,            &
+                             min_length, min_length2, buffer,                  &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'IDROWS' ; status = - 6 ; GO TO 980 ; END IF
+          len2_idrows = new_length2
+        END IF
+
+        IF ( ng >= len2_rdrows ) THEN
+          used_length = 2 ; new_length = 2 ; min_length = 2
+          used_length2 = ng - 1 ; min_length2 = ng
+          new_length2 = 3 * min_length2 / 2 + 1 
+          CALL EXTEND_array( RDROWS, 2, len2_rdrows, used_length,              &
+                             used_length2, new_length, new_length2,            &
+                             min_length, min_length2, buffer,                  &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'RDROWS' ; status = - 6 ; GO TO 980 ; END IF
+          len2_rdrows = new_length2
+        END IF
 
 !  record the position of the new group in the table, record its
 !  name and initialise its type as trivial
 
-         j = ng
-         INLIST( ifree ) = ng
-         GNAMES( ng ) = field2
-         ITYPEG( ng ) = - 1
-         is = 0
+        j = ng
+        INLIST( ifree ) = ng
+        GNAMES( ng ) = field2
+        GTYPE( ng ) = - 1
+        RSCALE( ng ) = one
+        is = 0
 
-!  record the status, istate, of the group. istate( ng ) = :
+!  record the status, GSTATE, of the group. GSTATE( ng ) = :
 !  1 the group is an objective function type
 !  2 the group is an equality function type
 !  3 the group is a less-than-or-equal-to type
@@ -2331,82 +2705,90 @@
 !  7 the group is of d-type and a less-than-or-equal-to type
 !  8 the group is of d-type and a greater-than-or-equal-to type
 
-         IF ( field1 == 'N ' .OR. field1 == ' N' .OR.                          &
-              field1 == 'XN' .OR. field1 == 'ZN' ) is = 1
-         IF ( field1 == 'E ' .OR. field1 == ' E' .OR.                          &
-              field1 == 'XE' .OR. field1 == 'ZE' ) is = 2
-         IF ( field1 == 'L ' .OR. field1 == ' L' .OR.                          &
-              field1 == 'XL' .OR. field1 == 'ZL' ) is = 3
-         IF ( field1 == 'G ' .OR. field1 == ' G' .OR.                          &
-              field1 == 'XG' .OR. field1 == 'ZG' ) is = 4
-         IF ( field1 == 'DN' ) is = 5
-         IF ( field1 == 'DE' ) is = 6
-         IF ( field1 == 'DL' ) is = 7
-         IF ( field1 == 'DG' ) is = 8
-         IF ( is == 0 ) THEN
-            status = 10
-            IF ( out > 0 ) WRITE( out, 2100 ) field1
-            RETURN
-         ENDIF
-         ISTATE( ng ) = is
+        IF ( field1 == 'N ' .OR. field1 == ' N' .OR.                           &
+             field1 == 'XN' .OR. field1 == 'ZN' ) is = 1
+        IF ( field1 == 'E ' .OR. field1 == ' E' .OR.                           &
+             field1 == 'XE' .OR. field1 == 'ZE' ) is = 2
+        IF ( field1 == 'L ' .OR. field1 == ' L' .OR.                           &
+             field1 == 'XL' .OR. field1 == 'ZL' ) is = 3
+        IF ( field1 == 'G ' .OR. field1 == ' G' .OR.                           &
+             field1 == 'XG' .OR. field1 == 'ZG' ) is = 4
+        IF ( field1 == 'DN' ) is = 5
+        IF ( field1 == 'DE' ) is = 6
+        IF ( field1 == 'DL' ) is = 7
+        IF ( field1 == 'DG' ) is = 8
+        IF ( is == 0 ) THEN
+          status = 10
+          IF ( out > 0 ) WRITE( out, 2100 ) field1
+          RETURN
+        ENDIF
+        GSTATE( ng ) = is
       END IF
 
 !  include group scale factors
 
-      IF ( field3 == '''SCALE''   ' .OR. field3                                &
-           == ' ''SCALE''  ' ) RSCALE( j ) = value4
+      IF ( field3 == '''SCALE''   ' .OR. field3 == ' ''SCALE''  ' )            &
+        RSCALE( j ) = value4
 
 !  mark 'd'-type groups and record their multiplicative factors
 !  idrows(1, ), idrows(2, ) give the numbers of the groups referred
 !  to by the new d-type group and rdrows(1, ) and rdrows(2, ) give
 !  the multiplicative factors
 
-      IF ( FIELD1( 1: 1 ) == 'D' ) THEN
-         IF ( ISTATE( j ) <= 4 ) THEN
-            status = 22
-            IF ( out > 0 ) WRITE( out, 2220 )
-            RETURN
-         END IF
-         DO 10 i = 1, 2
-            IF ( i > novals ) THEN
-               IDROWS( i, j ) = 1
-               RDROWS( i, j ) = zero
-            ELSE
+      IF ( field1( 1 : 1 ) == 'D' ) THEN
+        IF ( GSTATE( j ) <= 4 ) THEN
+          status = 22
+          IF ( out > 0 ) WRITE( out, 2220 )
+          RETURN
+        END IF
+        DO i = 1, 2
+          IF ( i > novals ) THEN
+            IDROWS( i, j ) = 1
+            RDROWS( i, j ) = zero
 
 !  check that the groups referred to when constructing a d-type
 !  group already exist
 
-               IF ( i == 1 ) THEN
-                  field = field3 // 'GR'
-               ELSE
-                  field = field5 // 'GR'
-               END IF
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               IF ( ifield > 0 ) THEN
-                  IDROWS( i, j ) = INLIST( ifield )
-                  IF ( i == 1 ) THEN
-                     RDROWS( i, j ) = value4
-                  ELSE
-                     RDROWS( i, j ) = value6
-                  END IF
-               ELSE
-                  status = 4
-                  IF ( out > 0 ) WRITE( out, 2040 ) FIELD( 1: 10 )
-                  RETURN
-               END IF
+          ELSE
+            IF ( i == 1 ) THEN
+              field = field3 // 'GR'
+            ELSE
+              field = field5 // 'GR'
             END IF
-   10    CONTINUE
+            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+            IF ( ifield > 0 ) THEN
+              IDROWS( i, j ) = INLIST( ifield )
+              IF ( i == 1 ) THEN
+                RDROWS( i, j ) = value4
+              ELSE
+                RDROWS( i, j ) = value6
+              END IF
+            ELSE
+              status = 4
+              IF ( out > 0 ) WRITE( out, 2040 ) FIELD( 1 : 10 )
+              RETURN
+            END IF
+          END IF
+        END DO
       END IF
       status = 0
       RETURN
 
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
 !  non-executable statements
 
- 2040 FORMAT( ' ** Exit from GPSMPS - group/row name not recognised:',         &
-              ' name is ', A10 )
- 2100 FORMAT( ' ** Exit from GPSMPS - field 1 ', A2,                           &
+ 2040 FORMAT( ' ** Exit from INTERPRET_gpsmps - group/row name not',           &
+              ' recognised: name is ', A10 )
+ 2100 FORMAT( ' ** Exit from INTERPRET_gpsmps - field 1 ', A2,                 &
               '  not recognised in GROUPS section ' )
- 2220 FORMAT( ' ** Exit from GPSMPS -',                                        &
+ 2220 FORMAT( ' ** Exit from INTERPRET_gpsmps -',                              &
               ' conflicting field 1 on GROUPS card')
 
 !  end of subroutine SGRP1
@@ -2415,25 +2797,30 @@
 
 !-*-*-*-*-*-*- S I F D E C O D E   S G R P 2   S U B R O U T I N E -*-*-*-*-*-*-
 
-      SUBROUTINE SGRP2 ( ng, ngmax, nomax, la, length,                         &
-                         nnza, nobj, novals, INLIST, IDROWS,                   &
-                         ISTATE, ITYPEG, ITABLE, ICOORD,                       &
-                         A, RDROWS, RSCALE,                                    &
-                         field1, field2, field3, value4, field5, value6,       &
-                         GNAMES, ONAMES, KEY, out, status )
-      INTEGER :: out, status, la, length
-      INTEGER :: ng, ngmax, nomax
-      INTEGER :: nnza, nobj, novals
+      SUBROUTINE SGRP2( ng, la, length,                          &
+                        nnza, nobj, novals, INLIST, len2_idrows, IDROWS,       &
+                        len_gstate, GSTATE, len_gtype, GTYPE,                  &
+                        ITABLE, ICOORD, A,                                     &
+                        len2_rdrows, RDROWS, len_rscale, RSCALE,               &
+                        field1, field2, field3, value4, field5, value6,        &
+                        len_gnames, GNAMES, len_onames, ONAMES, KEY,           &
+                        out, status )
+      INTEGER :: ng, nnza, nobj, novals, la, length, out, status
+      INTEGER :: len2_idrows, len_gstate, len_gtype
+      INTEGER :: len2_rdrows, len_rscale, len_onames, len_gnames
       REAL ( KIND = wp ) :: value4, value6
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
-      INTEGER :: INLIST( length ), IDROWS( 2, ngmax )
-      INTEGER :: ISTATE( ngmax ), ITYPEG( ngmax )
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
+      INTEGER :: INLIST( length )
+      INTEGER, ALLOCATABLE, DIMENSION( : , : ) :: IDROWS
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GSTATE, GTYPE
       INTEGER :: ITABLE ( length )
       INTEGER :: ICOORD( la, 2 )
-      REAL ( KIND = wp ) :: A( la ), RDROWS( 2, ngmax ), RSCALE( ngmax )
-      CHARACTER ( len = 10 ) :: GNAMES( ngmax ), ONAMES( nomax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      REAL ( KIND = wp ) :: A( la )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RSCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : , : ) :: RDROWS
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GNAMES, ONAMES
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  ------------------------------------------------------
 !  indicator card is groups/rows/constraints
@@ -2444,7 +2831,10 @@
 !  local variables
 
       INTEGER :: i, ifree, ifield, is, j
-      CHARACTER ( len = 12 ) :: field
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      INTEGER :: used_length2, new_length2, min_length2
+      CHARACTER ( LEN = 12 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  ignore 'marker' cards
 
@@ -2457,44 +2847,109 @@
 !  the name already exists. it is the j-th name in the list
 
       IF ( ifree <= 0 ) THEN
-         IF ( ifree == 0 ) THEN
-            status = - 1
-            RETURN
-         END IF
-         j = INLIST( - ifree )
-      ELSE
+        IF ( ifree == 0 ) THEN
+          status = - 1
+          RETURN
+        END IF
+        j = INLIST( - ifree )
 
 !  mark any objective function rows as special
 
-         IF ( field1 == 'N ' .OR. field1 == ' N' .OR.                          &
-              field1 == 'DN' .OR. field1 == 'XN' .OR.                          &
-              field1 == 'ZN' ) THEN
-            nobj = nobj + 1
-            IF( nobj > nomax ) THEN
-               status = - 5
-               RETURN
-            END IF
-            ONAMES ( nobj ) = field2
-         END IF
+      ELSE
+        IF ( field1 == 'N ' .OR. field1 == ' N' .OR.                           &
+             field1 == 'DN' .OR. field1 == 'XN' .OR. field1 == 'ZN' ) THEN
+          nobj = nobj + 1
+          IF ( nobj > len_onames ) THEN
+            used_length = nobj - 1 ; min_length = nobj
+            new_length = 3 * min_length / 2 + 1 
+            CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,    &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+               bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
+            len_onames = new_length
+          END IF
+          ONAMES ( nobj ) = field2
+        END IF
 
-!  the group is the ng-th encountered
+!  the group is the ng-th encountered; ensure there is sufficient space
 
-         ng = ng + 1
-         j = ng
-         IF ( ng >= ngmax ) THEN
-            status = - 6
-            RETURN
-         END IF
+        ng = ng + 1
+        IF ( ng >= len_gstate ) THEN
+          used_length = ng - 1 ; min_length = ng
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
+          len_gstate = new_length
+        END IF
+
+        IF ( ng >= len_gtype ) THEN
+          used_length = ng - 1 ; min_length = ng
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( GTYPE, len_gtype, used_length, new_length,        &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
+          len_gtype = new_length
+        END IF
+
+        IF ( ng >= len_gnames ) THEN
+          used_length = ng - 1 ; min_length = ng
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
+          len_gnames = new_length
+        END IF
+
+        IF ( ng >= len_rscale ) THEN
+          used_length = ng - 1 ; min_length = ng
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
+          len_rscale = new_length
+        END IF
+
+        IF ( ng >= len2_idrows ) THEN
+          used_length = 2 ; new_length = 2 ;  min_length = 2
+          used_length2 = ng - 1 ; min_length2 = ng
+          new_length2 = 3 * min_length2 / 2 + 1 
+          CALL EXTEND_array( IDROWS, 2, len2_idrows, used_length,              &
+                             used_length2, new_length, new_length2,            &
+                             min_length, min_length2, buffer,                  &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'IDROWS' ; status = - 6 ; GO TO 980 ; END IF
+          len2_idrows = new_length2
+        END IF
+
+        IF ( ng >= len2_rdrows ) THEN
+          used_length = 2 ; new_length = 2 ;  min_length = 2
+          used_length2 = ng - 1 ; min_length2 = ng
+          new_length2 = 3 * min_length2 / 2 + 1 
+          CALL EXTEND_array( RDROWS, 2, len2_rdrows, used_length,              &
+                             used_length2, new_length, new_length2,            &
+                             min_length, min_length2, buffer,                  &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'RDROWS' ; status = - 6 ; GO TO 980 ; END IF
+          len2_rdrows = new_length2
+        END IF
 
 !  record the position of the new group in the table, record its
 !  name and initialise its type as trivial
 
-         INLIST( ifree ) = ng
-         GNAMES( ng ) = field2
-         ITYPEG( ng ) = - 1
-         is = 0
+        j = ng
+        INLIST( ifree ) = ng
+        GNAMES( ng ) = field2
+        GTYPE( ng ) = - 1
+        is = 0
 
-!  record the status, istate, of the group. istate( ng ) = :
+!  record the status, GSTATE, of the group. GSTATE( ng ) = :
 !  1 the group is an objective function type
 !  2 the group is an equality function type
 !  3 the group is a less-than-or-equal-to type
@@ -2504,32 +2959,31 @@
 !  7 the group is of d-type and a less-than-or-equal-to type
 !  8 the group is of d-type and a greater-than-or-equal-to type
 
-         IF ( field1 == 'N ' .OR. field1 == ' N' .OR.                          &
-              field1 == 'XN' .OR. field1 == 'ZN' ) is = 1
-         IF ( field1 == 'E ' .OR. field1 == ' E' .OR.                          &
-              field1 == 'XE' .OR. field1 == 'ZE' ) is = 2
-         IF ( field1 == 'L ' .OR. field1 == ' L' .OR.                          &
-              field1 == 'XL' .OR. field1 == 'ZL' ) is = 3
-         IF ( field1 == 'G ' .OR. field1 == ' G' .OR.                          &
-              field1 == 'XG' .OR. field1 == 'ZG' ) is = 4
-         IF ( field1 == 'DN' ) is = 5
-         IF ( field1 == 'DE' ) is = 6
-         IF ( field1 == 'DL' ) is = 7
-         IF ( field1 == 'DG' ) is = 8
-         IF ( is == 0 ) THEN
-            status = 10
-            IF ( out > 0 ) WRITE( out, 2100 ) field1
-            RETURN
-         ENDIF
-         ISTATE( ng ) = is
+        IF ( field1 == 'N ' .OR. field1 == ' N' .OR.                           &
+             field1 == 'XN' .OR. field1 == 'ZN' ) is = 1
+        IF ( field1 == 'E ' .OR. field1 == ' E' .OR.                           &
+             field1 == 'XE' .OR. field1 == 'ZE' ) is = 2
+        IF ( field1 == 'L ' .OR. field1 == ' L' .OR.                           &
+             field1 == 'XL' .OR. field1 == 'ZL' ) is = 3
+        IF ( field1 == 'G ' .OR. field1 == ' G' .OR.                           &
+             field1 == 'XG' .OR. field1 == 'ZG' ) is = 4
+        IF ( field1 == 'DN' ) is = 5
+        IF ( field1 == 'DE' ) is = 6
+        IF ( field1 == 'DL' ) is = 7
+        IF ( field1 == 'DG' ) is = 8
+        IF ( is == 0 ) THEN
+          status = 10
+          IF ( out > 0 ) WRITE( out, 2100 ) field1
+          RETURN
+        ENDIF
+        GSTATE( ng ) = is
       END IF
 
 !  include group scale factors
 
-      IF ( field3 == '''SCALE''   ' .OR. field3                                &
-           == ' ''SCALE''  ' ) THEN
-         RSCALE( j ) = value4
-         RETURN
+      IF ( field3 == '''SCALE''   ' .OR. field3 == ' ''SCALE''  ' ) THEN
+        RSCALE( j ) = value4
+        RETURN
       END IF
 
 !  mark 'd'-type groups and record their multiplicative factors
@@ -2537,106 +2991,114 @@
 !  to by the new d-type group and rdrows(1, ) and rdrows(2, ) give
 !  the multiplicative factors
 
-      IF ( FIELD1( 1: 1 ) == 'D' ) THEN
-         IF ( ISTATE( j ) <= 4 ) THEN
-            status = 22
-            IF ( out > 0 ) WRITE( out, 2220 )
-            RETURN
-         END IF
-         DO 10 i = 1, 2
-            IF ( i > novals ) THEN
-               IDROWS( i, j ) = 1
-               RDROWS( i, j ) = zero
-            ELSE
+      IF ( field1( 1 : 1 ) == 'D' ) THEN
+        IF ( GSTATE( j ) <= 4 ) THEN
+          status = 22
+          IF ( out > 0 ) WRITE( out, 2220 )
+          RETURN
+        END IF
+        DO i = 1, 2
+          IF ( i > novals ) THEN
+            IDROWS( i, j ) = 1
+            RDROWS( i, j ) = zero
 
 !  check that the groups referred to when constructing a d-type
 !  group already exist
 
-               IF ( i == 1 ) THEN
-                  field = field3 // 'GR'
-               ELSE
-                  field = field5 // 'GR'
-               END IF
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               IF ( ifield > 0 ) THEN
-                  IDROWS( i, j ) = INLIST( ifield )
-                  IF ( i == 1 ) THEN
-                     RDROWS( i, j ) = value4
-                  ELSE
-                     RDROWS( i, j ) = value6
-                  END IF
-               ELSE
-                  status = 4
-                  IF ( out > 0 ) WRITE( out, 2040 ) FIELD( 1: 10 )
-                  RETURN
-               END IF
+          ELSE
+            IF ( i == 1 ) THEN
+              field = field3 // 'GR'
+            ELSE
+              field = field5 // 'GR'
             END IF
-   10    CONTINUE
+            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+            IF ( ifield > 0 ) THEN
+              IDROWS( i, j ) = INLIST( ifield )
+              IF ( i == 1 ) THEN
+                RDROWS( i, j ) = value4
+              ELSE
+                RDROWS( i, j ) = value6
+              END IF
+            ELSE
+              status = 4
+              IF ( out > 0 ) WRITE( out, 2040 ) FIELD( 1 : 10 )
+              RETURN
+            END IF
+          END IF
+        END DO
       ELSE
-         IF ( novals > 0 ) THEN
+        IF ( novals > 0 ) THEN
 
-!  check that data has not been specified for a 'd'-group
+!  check that data has not been specified for a 'D'-group
 
-            IF ( ISTATE( j ) >= 5 ) THEN
-               status = 8
-               IF ( out > 0 ) WRITE( out, 2080 )
-               RETURN
+          IF ( GSTATE( j ) >= 5 ) THEN
+            status = 8
+            IF ( out > 0 ) WRITE( out, 2080 )
+            RETURN
+          END IF
+
+!  entries for the linear element for group j are to be specified. Find the 
+!  variable numbers for the input entries
+
+          DO i = 1, novals
+            IF ( i == 1 ) THEN
+               field = field3 // 'VA'
+            ELSE
+               field = field5 // 'VA'
             END IF
-
-!  entries for the linear element for group j are to be specified
-!  find the variable numbers for the input entries
-
-            DO 20 i = 1, novals
-               IF ( i == 1 ) THEN
-                  field = field3 // 'VA'
-               ELSE
-                  field = field5 // 'VA'
-               END IF
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               IF ( ifield > 0 ) THEN
+            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
 
 !  the nnza-th nonzero has been specified
 
-                  nnza = nnza + 1
-                  IF ( nnza > la ) THEN
-                     status = - 2
-                    RETURN
-                  END IF
+            IF ( ifield > 0 ) THEN
+              nnza = nnza + 1
+              IF ( nnza > la ) THEN
+                status = - 2
+                RETURN
+              END IF
 
-!  the nonzero is for group icoord(,1) and variable icoord(,2)
-!  its value is given in a( )
+!  the nonzero is for group icoord(,1) and variable icoord(,2); its value 
+!  is given in a( )
 
-                  ICOORD( nnza, 1 ) = j
-                  ICOORD( nnza, 2 ) = INLIST( ifield )
-                  IF ( i == 1 ) THEN
-                     A( nnza ) = value4
-                  ELSE
-                     A( nnza ) = value6
-                  END IF
-               ELSE
+              ICOORD( nnza, 1 ) = j
+              ICOORD( nnza, 2 ) = INLIST( ifield )
+              IF ( i == 1 ) THEN
+                 A( nnza ) = value4
+              ELSE
+                 A( nnza ) = value6
+              END IF
+            ELSE
 
 !  the variable name is unknown
 
-                  status = 5
-                  IF ( out > 0 ) WRITE( out, 2050 ) FIELD( 1 : 10 )
-                  RETURN
-               END IF
-   20       CONTINUE
-         END IF
+              status = 5
+              IF ( out > 0 ) WRITE( out, 2050 ) FIELD( 1 : 10 )
+              RETURN
+            END IF
+          END DO
+        END IF
       END IF
       status = 0
       RETURN
 
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
 !  non-executable statements
 
- 2040 FORMAT( ' ** Exit from GPSMPS - group/row name not recognised:',         &
-              ' name is ', A10 )
- 2050 FORMAT( ' ** Exit from GPSMPS - column/var name not recognised:',        &
-              ' name is ', A10 )
- 2080 FORMAT( ' ** Exit from GPSMPS - ''D'' group/row contains data ' )
- 2100 FORMAT( ' ** Exit from GPSMPS - field 1 ', A2,                           &
+ 2040 FORMAT( ' ** Exit from INTERPRET_gpsmps - group/row name not',           &
+              ' recognised: name is ', A10 )
+ 2050 FORMAT( ' ** Exit from INTERPRET_gpsmps - column/var name not',          &
+              ' recognised: name is ', A10 )
+ 2080 FORMAT( ' ** Exit from INTERPRET_gpsmps - ''D'' group/row contains data' )
+ 2100 FORMAT( ' ** Exit from INTERPRET_gpsmps - field 1 ', A2,                 &
               '  not recognised in GROUPS section ' )
- 2220 FORMAT( ' ** Exit from GPSMPS -',                                        &
+ 2220 FORMAT( ' ** Exit from INTERPRET_gpsmps -',                              &
               ' conflicting field 1 on GROUPS card')
 
 !  end of subroutine SGRP2
@@ -2649,13 +3111,13 @@
                         CSCALE, field2, field3, value4, VNAMES, KEY, status )
       INTEGER :: status, length, nmax, nvar
       REAL ( KIND = wp ) :: value4
-      CHARACTER ( len = 2 ) :: colfie
-      CHARACTER ( len = 10 ) :: field2, field3
+      CHARACTER ( LEN = 2 ) :: colfie
+      CHARACTER ( LEN = 10 ) :: field2, field3
       INTEGER :: INLIST( length ),  ITABLE ( length )
       INTEGER :: ITYPEV( nmax )
       REAL ( KIND = wp ) :: CSCALE( nmax )
-      CHARACTER ( len = 10 ) :: VNAMES( nmax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ) :: VNAMES( nmax )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  -----------------------------------------------------------------
 !  indicator card is columns/variables, constants/rhs/rhs' or ranges
@@ -2675,35 +3137,34 @@
 !  if it has not already been entered
 
       CALL HASH_insert( length, 12, field2 // colfie, KEY, ITABLE, ifree )
-      IF ( ifree <= 0 ) THEN
 
 !  the variable name already exists. it is the j-th named variable
 
-         IF ( ifree == 0 ) THEN
-            status = - 1
-            RETURN
-         END IF
-         j = INLIST( - ifree )
-      ELSE
+      IF ( ifree <= 0 ) THEN
+        IF ( ifree == 0 ) THEN
+          status = - 1
+          RETURN
+        END IF
+        j = INLIST( - ifree )
 
 !  the variable name is new. the variable is the nvar-th encountered and
 !  it occurs in position ifree in the table
 
-         nvar = nvar + 1
-         IF ( nvar > nmax ) THEN
-            status = - 7
-            RETURN
-         END IF
-         j = nvar
-         INLIST( ifree ) = nvar
-         VNAMES( nvar ) = field2
+      ELSE
+        nvar = nvar + 1
+        IF ( nvar > nmax ) THEN
+          status = - 7
+          RETURN
+        END IF
+        j = nvar
+        INLIST( ifree ) = nvar
+        VNAMES( nvar ) = field2
       END IF
 
 !  include column scale factors if they are allowed
 
-      IF ( field3 == '''SCALE''   ' .OR. field3 == ' ''SCALE''  ' ) THEN
-         CSCALE( j ) = value4
-      END IF
+      IF ( field3 == '''SCALE''   ' .OR. field3 == ' ''SCALE''  ' )            &
+        CSCALE( j ) = value4
 
 !  mark zero-one and integer variables
 
@@ -2718,24 +3179,24 @@
 
 !-*-*-*-*-*-*- S I F D E C O D E   S V A R 2   S U B R O U T I N E -*-*-*-*-*-*-
 
-      SUBROUTINE SVAR2( nmax, ngmax, la, length, nnza, nvar, novals,           &
-                        nrlndx, varsec, colfie, ICOORD, ISTATE, ITYPEV,        &
+      SUBROUTINE SVAR2( nmax, la, length, nnza, nvar, novals, nrlndx,          &
+                        varsec, colfie, ICOORD, len_gstate, GSTATE, ITYPEV,    &
                         INLIST, ITABLE, A, CSCALE, REALVL, DFAULT,             &
                         field1, field2, field3, value4, field5, value6,        &
                         VNAMES, KEY, out, status )
       INTEGER :: out, status, la, length
-      INTEGER :: nmax, ngmax, nnza, nvar, novals, nrlndx
+      INTEGER :: nmax, len_gstate, nnza, nvar, novals, nrlndx
       REAL ( KIND = wp ) :: value4, value6
       LOGICAL :: varsec
-      CHARACTER ( len = 2 ) :: field1, colfie
-      CHARACTER ( len = 10 ) :: field2, field3, field5
-      INTEGER :: ICOORD( la, 2 ), ISTATE( ngmax )
+      CHARACTER ( LEN = 2 ) :: field1, colfie
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
+      INTEGER :: ICOORD( la, 2 ), GSTATE( len_gstate )
       INTEGER :: INLIST( length ), ITABLE ( length )
       INTEGER :: ITYPEV( nmax )
       REAL ( KIND = wp ) :: A( la ), CSCALE( nmax )
       REAL ( KIND = wp ) :: REALVL( nrlndx ), DFAULT( nmax )
-      CHARACTER ( len = 10 ) :: VNAMES( nmax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ) :: VNAMES( nmax )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  -----------------------------------------------------------------
 !  indicator card is columns/variables, constants/rhs/rhs' or ranges
@@ -2746,7 +3207,7 @@
 !  local variables
 
       INTEGER :: i, ifree, ifield, j
-      CHARACTER ( len = 12 ) :: field
+      CHARACTER ( LEN = 12 ) :: field
 
 !  ignore 'marker' cards
 
@@ -2760,141 +3221,138 @@
 !  the variable name already exists. it is the j-th named variable
 
       IF ( ifree <= 0 ) THEN
-         IF ( ifree == 0 ) THEN
-            status = - 1
-            RETURN
-         END IF
-         j = INLIST( - ifree )
-      ELSE
+        IF ( ifree == 0 ) THEN
+          status = - 1
+          RETURN
+        END IF
+        j = INLIST( - ifree )
 
 !  the variable name is new. the variable is the nvar-th encountered and
 !  it occurs in position ifree in the table
 
-         nvar = nvar + 1
-         IF ( nvar > nmax ) THEN
-            status = - 7
-            RETURN
-         END IF
-         j = nvar
-         INLIST( ifree ) = nvar
-         VNAMES( nvar ) = field2
-         IF ( colfie == 'CO' ) DFAULT( nvar ) = zero
-         IF ( colfie == 'RA' ) DFAULT( nvar ) = biginf
+      ELSE
+        nvar = nvar + 1
+        IF ( nvar > nmax ) THEN
+          status = - 7
+          RETURN
+        END IF
+        j = nvar
+        INLIST( ifree ) = nvar
+        VNAMES( nvar ) = field2
+        IF ( colfie == 'CO' ) DFAULT( nvar ) = zero
+        IF ( colfie == 'RA' ) DFAULT( nvar ) = biginf
       END IF
 
 !  include column scale factors if they are allowed
 
-      IF ( field3 == '''SCALE''   ' .OR.                                       &
-           field3 == ' ''SCALE''  ' ) THEN
-         IF ( .NOT. varsec ) THEN
-            status = 7
-            IF ( out > 0 ) WRITE( out, 2070 )
-         ELSE
-            CSCALE( j ) = value4
-         END IF
-         RETURN
+      IF ( field3 == '''SCALE''   ' .OR. field3 == ' ''SCALE''  ' ) THEN
+        IF ( .NOT. varsec ) THEN
+          status = 7
+          IF ( out > 0 ) WRITE( out, 2070 )
+        ELSE
+          CSCALE( j ) = value4
+        END IF
+        RETURN
       END IF
 
 !  mark zero-one and integer variables
 
       IF ( field3 == '''ZERO-ONE''' ) THEN
-         IF ( .NOT. varsec ) THEN
-            status = 7
-            IF ( out > 0 ) WRITE( out, 2060 )
-         ELSE
-            ITYPEV( j ) = 1
-         END IF
-         RETURN
+        IF ( .NOT. varsec ) THEN
+          status = 7
+          IF ( out > 0 ) WRITE( out, 2060 )
+        ELSE
+           ITYPEV( j ) = 1
+        END IF
+        RETURN
       END IF
       IF ( field3 == '''INTEGER'' ' ) THEN
-         IF ( .NOT. varsec ) THEN
-            status = 7
-            IF ( out > 0 ) WRITE( out, 2060 )
-         ELSE
-            ITYPEV( j ) = 2
-         END IF
-         RETURN
+        IF ( .NOT. varsec ) THEN
+          status = 7
+          IF ( out > 0 ) WRITE( out, 2060 )
+        ELSE
+          ITYPEV( j ) = 2
+        END IF
+        RETURN
       END IF
 
-!  a nontrivial default value has been specified for a constant or
-!  range vector
+!  a nontrivial default value has been specified for a constant or range vector
 
       IF ( field3 == '''DEFAULT'' ' .AND. .NOT. varsec ) THEN
-         IF ( field1 == 'Z ' ) THEN
-            CALL HASH_search( length, 12,  FIELD5( 1 : 10 ) // 'RI',                &
-                         KEY, ITABLE, ifield )
-            IF ( ifield <= 0 ) THEN
-               status = 3
-               IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
-               RETURN
-            END IF
-            value4 = REALVL( INLIST( ifield ) )
-         END IF
-         DFAULT( nvar ) = value4
-      ELSE
+        IF ( field1 == 'Z ' ) THEN
+          CALL HASH_search( length, 12,  FIELD5( 1 : 10 ) // 'RI',             &
+                            KEY, ITABLE, ifield )
+          IF ( ifield <= 0 ) THEN
+            status = 3
+            IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
+            RETURN
+          END IF
+          value4 = REALVL( INLIST( ifield ) )
+        END IF
+        DFAULT( nvar ) = value4
 
 !  find the group numbers for the input nonzero(s)
 
-         IF ( novals > 0 ) THEN
-            DO 10 i = 1, novals
-               IF ( i == 1 ) THEN
-                  field = field3 // 'GR'
-               ELSE
-                  field = field5 // 'GR'
-               END IF
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               IF ( ifield > 0 ) THEN
+      ELSE
+        IF ( novals > 0 ) THEN
+          DO i = 1, novals
+            IF ( i == 1 ) THEN
+              field = field3 // 'GR'
+            ELSE
+              field = field5 // 'GR'
+            END IF
+            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
 
 !  check that data has not been specified for a 'd'-group
 
-                  IF ( ISTATE( INLIST( ifield ) ) >= 5                         &
-                       .AND. varsec ) THEN
-                     status = 8
-                     IF ( out > 0 ) WRITE( out, 2080 )
-                     RETURN
-                  END IF
+            IF ( ifield > 0 ) THEN
+              IF ( GSTATE( INLIST( ifield ) ) >= 5 .AND. varsec ) THEN
+                status = 8
+                IF ( out > 0 ) WRITE( out, 2080 )
+                RETURN
+              END IF
 
 !  the nnza-th nonzero has been specified
 
-                  nnza = nnza + 1
-                  IF ( nnza > la ) THEN
-                     status = - 2
-                     RETURN
-                  END IF
+              nnza = nnza + 1
+              IF ( nnza > la ) THEN
+                status = - 2
+                RETURN
+              END IF
 
 !  the nonzero is for group icoord(,1) and variable icoord(,2)
 !  its value is given in a( )
 
-                  ICOORD( nnza, 1 ) = INLIST( ifield )
-                  ICOORD( nnza, 2 ) = j
-                  IF ( i == 1 ) THEN
-                     A( nnza ) = value4
-                  ELSE
-                     A( nnza ) = value6
-                  END IF
-               ELSE
+              ICOORD( nnza, 1 ) = INLIST( ifield )
+              ICOORD( nnza, 2 ) = j
+              IF ( i == 1 ) THEN
+                 A( nnza ) = value4
+              ELSE
+                 A( nnza ) = value6
+              END IF
+            ELSE
 
 !  the group name is unknown
 
-                  status = 4
-                  IF ( out > 0 ) WRITE( out, 2040 ) FIELD( 1: 10 )
-                  RETURN
-               END IF
-   10       CONTINUE
-         END IF
+              status = 4
+              IF ( out > 0 ) WRITE( out, 2040 ) FIELD( 1 : 10 )
+              RETURN
+            END IF
+          END DO
+        END IF
       END IF
       status = 0
       RETURN
 
 !  non-executable statements
 
- 2030 FORMAT( ' ** Exit from GPSMPS - index parameter name ', A10,             &
+ 2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
               ' not recognised ' )
- 2040 FORMAT( ' ** Exit from GPSMPS - group/row name not recognised:',         &
-              ' name is ', A10 )
- 2060 FORMAT( ' ** Exit from GPSMPS - type given for RHS or RANGES ' )
- 2070 FORMAT( ' ** Exit from GPSMPS - scale given for RHS or RANGES ' )
- 2080 FORMAT( ' ** Exit from GPSMPS - ''D'' group/row contains data ' )
+ 2040 FORMAT( ' ** Exit from INTERPRET_gpsmps - group/row name not',           &
+              ' recognised: name is ', A10 )
+ 2060 FORMAT( ' ** Exit from INTERPRET_gpsmps - type given for RHS or RANGES' )
+ 2070 FORMAT( ' ** Exit from INTERPRET_gpsmps - scale given for RHS or RANGES' )
+ 2080 FORMAT( ' ** Exit from INTERPRET_gpsmps - ''D'' group/row contains data' )
 
 !  end of subroutine SVAR2
 
@@ -2909,13 +3367,13 @@
       INTEGER :: out, status, length, nmax, nbmax, nlvars, nbnd, ncol, nrlndx
       LOGICAL :: defaut
       REAL ( KIND = wp ) :: value4
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
       INTEGER :: INLIST( length ), ITABLE ( length )
       REAL ( KIND = wp ) :: BND( 2, nmax, nbmax ), REALVL( nrlndx )
       REAL ( KIND = wp ) :: BNDFLT( 2, nbmax )
-      CHARACTER ( len = 10 ) :: BNAMES( nbmax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ) :: BNAMES( nbmax )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  ------------------------
 !  indicator card is bounds
@@ -2928,246 +3386,228 @@
 !  the first pair of bound vectors are to be assigned
 
       IF ( nbnd == 0 ) THEN
-         nbnd = 1
-         IF ( nbnd > nbmax ) THEN
-            status = - 13
-            RETURN
-         END IF
-         BNAMES( nbnd ) = field2
-         defaut = .TRUE.
-         BNDFLT( 1, nbnd ) = zero
-         BNDFLT( 2, nbnd ) = biginf
-         DO 10 i = 1, nlvars
-            BND( 1, i, nbnd ) = zero
-            BND( 2, i, nbnd ) = biginf
-   10    CONTINUE
+        nbnd = 1
+        IF ( nbnd > nbmax ) THEN
+          status = - 13
+          RETURN
+        END IF
+        BNAMES( nbnd ) = field2
+        defaut = .TRUE.
+        BNDFLT( 1, nbnd ) = zero
+        BNDFLT( 2, nbnd ) = biginf
+        DO i = 1, nlvars
+          BND( 1, i, nbnd ) = zero
+          BND( 2, i, nbnd ) = biginf
+        END DO
       END IF
 
 !  a new pair of bound vectors are to be assigned
 
       IF ( field2 /= BNAMES( nbnd ) ) THEN
-         nbnd = nbnd + 1
-         IF ( nbnd > nbmax ) THEN
-            status = - 13
-            RETURN
-         END IF
-         BNAMES( nbnd ) = field2
-         defaut = .TRUE.
-         BNDFLT( 1, nbnd ) = zero
-         BNDFLT( 2, nbnd ) = biginf
-         DO 20 i = 1, nlvars
-            BND( 1, i, nbnd ) = zero
-            BND( 2, i, nbnd ) = biginf
-   20    CONTINUE
+        nbnd = nbnd + 1
+        IF ( nbnd > nbmax ) THEN
+           status = - 13
+           RETURN
+        END IF
+        BNAMES( nbnd ) = field2
+        defaut = .TRUE.
+        BNDFLT( 1, nbnd ) = zero
+        BNDFLT( 2, nbnd ) = biginf
+        DO i = 1, nlvars
+          BND( 1, i, nbnd ) = zero
+          BND( 2, i, nbnd ) = biginf
+        END DO
       END IF
 
 !  ensure that default values are assigned first
 
       IF ( field3 == '''DEFAULT'' ' ) THEN
-         IF ( .NOT. defaut ) THEN
-            status = 20
-            IF ( out > 0 ) WRITE( out, 2200 )
+        IF ( .NOT. defaut ) THEN
+          status = 20
+          IF ( out > 0 ) WRITE( out, 2200 )
+          RETURN
+        END IF
+        IF ( field1 == 'ZL' .OR. field1 == 'ZU' .OR.                           &
+             field1 == 'ZX' ) THEN
+          CALL HASH_search( length, 12,  FIELD5( 1 : 10 ) // 'RI',             &
+                             KEY, ITABLE, ifield )
+          IF ( ifield <= 0 ) THEN
+            status = 3
+            IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
             RETURN
-         END IF
-         IF ( field1 == 'ZL' .OR. field1 == 'ZU' .OR.                          &
-              field1 == 'ZX' ) THEN
-            CALL HASH_search( length, 12,  FIELD5( 1 : 10 ) // 'RI',                &
-                         KEY, ITABLE, ifield )
-            IF ( ifield <= 0 ) THEN
-               status = 3
-               IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
-               RETURN
-            END IF
-            value4 = REALVL( INLIST( ifield ) )
-         END IF
-         IF ( field1 == 'LO' .OR. field1 == 'UP' .OR.                          &
-              field1 == 'FX' .OR. field1 == 'FR' .OR.                          &
-              field1 == 'MI' .OR. field1 == 'PL' .OR.                          &
-              field1 == 'XL' .OR. field1 == 'XU' .OR.                          &
-              field1 == 'XX' .OR. field1 == 'XR' .OR.                          &
-              field1 == 'XM' .OR. field1 == 'XP' .OR.                          &
-              field1 == 'ZL' .OR. field1 == 'ZU' .OR.                          &
-              field1 == 'ZX' ) THEN
+          END IF
+          value4 = REALVL( INLIST( ifield ) )
+        END IF
+        IF ( field1 == 'LO' .OR. field1 == 'UP' .OR. field1 == 'FX' .OR.       &
+             field1 == 'FR' .OR. field1 == 'MI' .OR. field1 == 'PL' .OR.       &
+             field1 == 'XL' .OR. field1 == 'XU' .OR. field1 == 'XX' .OR.       &
+             field1 == 'XR' .OR. field1 == 'XM' .OR. field1 == 'XP' .OR.       &
+             field1 == 'ZL' .OR. field1 == 'ZU' .OR. field1 == 'ZX' ) THEN
 
 !  assign default lower bounds for variables
 
-            IF ( ( FIELD1( 2 : 2 ) == 'L' .AND.                                &
-                   field1 /= 'PL' ) .OR.                                       &
-                 FIELD1( 2 : 2 ) == 'X' .OR.                                   &
-                 FIELD1( 2 : 2 ) == 'R' .OR.                                   &
-                 FIELD1( 2 : 2 ) == 'M' .OR.                                   &
-                 field1 == 'LO' .OR. field1 == 'MI' ) THEN
+          IF ( ( field1( 2 : 2 ) == 'L' .AND. field1 /= 'PL' ) .OR.            &
+                 field1( 2 : 2 ) == 'X' .OR. field1( 2 : 2 ) == 'R' .OR.       &
+                 field1( 2 : 2 ) == 'M' .OR. field1 == 'LO' .OR.               &
+                 field1 == 'MI' ) THEN
 
 !  a finite lower bound is specified
 
-               IF ( FIELD1( 2 : 2 ) == 'L' .OR.                                &
-                    FIELD1( 2 : 2 ) == 'X' .OR.                                &
-                    field1 == 'LO' ) THEN
-                  BNDFLT( 1, nbnd ) = value4
-                  DO 30 i = 1, nlvars
-                     BND( 1, i, nbnd ) = value4
-   30             CONTINUE
+            IF ( field1( 2 : 2 ) == 'L' .OR. field1( 2 : 2 ) == 'X' .OR.       &
+                 field1 == 'LO' ) THEN
+              BNDFLT( 1, nbnd ) = value4
+              DO i = 1, nlvars
+                BND( 1, i, nbnd ) = value4
+              END DO
 
 !  an infinite lower bound is specified
 
-               ELSE
-                  BNDFLT( 1, nbnd ) = - biginf
-                  DO 40 i = 1, nlvars
-                     BND( 1, i, nbnd ) = - biginf
-   40             CONTINUE
-                  IF ( FIELD1( 2 : 2 ) == 'M' .OR.                             &
-                       field1 == 'MI' ) THEN
-                     BNDFLT( 2, nbnd ) = zero
-                     DO 41 i = 1, nlvars
-                        BND( 2, i, nbnd ) = zero
-   41                CONTINUE
-                  END IF
-               END IF
+            ELSE
+              BNDFLT( 1, nbnd ) = - biginf
+              DO i = 1, nlvars
+                BND( 1, i, nbnd ) = - biginf
+              END DO
+              IF ( field1( 2 : 2 ) == 'M' .OR. field1 == 'MI' ) THEN
+                BNDFLT( 2, nbnd ) = zero
+                DO i = 1, nlvars
+                  BND( 2, i, nbnd ) = zero
+                END DO
+              END IF
             END IF
+          END IF
 
 !  assign default upper bounds for variables
 
-            IF ( FIELD1( 2 : 2 ) == 'U' .OR.                                   &
-                 FIELD1( 2 : 2 ) == 'X' .OR.                                   &
-                 FIELD1( 2 : 2 ) == 'R' .OR.                                   &
-                 FIELD1( 2 : 2 ) == 'P' ) THEN
+          IF ( field1( 2 : 2 ) == 'U' .OR. field1( 2 : 2 ) == 'X' .OR.         &
+               field1( 2 : 2 ) == 'R' .OR. field1( 2 : 2 ) == 'P' ) THEN
 
 !  a finite upper bound is specified
 
-               IF ( FIELD1( 2 : 2 ) == 'U' .OR.                                &
-                    FIELD1( 2 : 2 ) == 'X' .OR.                                &
-                    field1 == 'UP' ) THEN
-                  IF ( ( FIELD1( 2 : 2 ) == 'U' .OR.                           &
-                         field1 == 'UP' )                                      &
-                       .AND. value4 == zero                                    &
-                       .AND. BNDFLT( 1, nbnd ) == zero                         &
-                       .AND. BNDFLT( 2, nbnd ) == biginf ) THEN
-                     BNDFLT( 1, nbnd ) = - biginf
-                     DO 51 i = 1, nlvars
-                        BND( 1, i, nbnd ) = - biginf
-   51                CONTINUE
-                  END IF
-                  BNDFLT( 2, nbnd ) = value4
-                  DO 50 i = 1, nlvars
-                     BND( 2, i, nbnd ) = value4
-   50             CONTINUE
+            IF ( field1( 2 : 2 ) == 'U' .OR. field1( 2 : 2 ) == 'X' .OR.       &
+                 field1 == 'UP' ) THEN
+              IF ( ( field1( 2 : 2 ) == 'U' .OR. field1 == 'UP' ) .AND.        &
+                   value4 == zero .AND. BNDFLT( 1, nbnd ) == zero .AND.        &
+                   BNDFLT( 2, nbnd ) == biginf ) THEN
+                BNDFLT( 1, nbnd ) = - biginf
+                DO i = 1, nlvars
+                  BND( 1, i, nbnd ) = - biginf
+                END DO
+              END IF
+              BNDFLT( 2, nbnd ) = value4
+              DO i = 1, nlvars
+                BND( 2, i, nbnd ) = value4
+              END DO
 
 !  an infinite upper bound is specified
 
-               ELSE
-                  BNDFLT( 2, nbnd ) = biginf
-                  DO 60 i = 1, nlvars
-                     BND( 2, i, nbnd ) = biginf
-   60             CONTINUE
-               END IF
+            ELSE
+              BNDFLT( 2, nbnd ) = biginf
+              DO i = 1, nlvars
+                BND( 2, i, nbnd ) = biginf
+              END DO
             END IF
+          END IF
 
 !  field 1 is not recognised
 
-         ELSE
-            status = 10
-            IF ( out > 0 ) WRITE( out, 2100 ) field1
-            RETURN
-         END IF
+        ELSE
+          status = 10
+          IF ( out > 0 ) WRITE( out, 2100 ) field1
+          RETURN
+        END IF
       ELSE
 
 !  an individual bound is to be assigned
 
-         defaut = .FALSE.
-         IF ( field1 == 'LO' .OR. field1 == 'XL' .OR.                          &
-              field1 == 'UP' .OR. field1 == 'XU' .OR.                          &
-              field1 == 'FX' .OR. field1 == 'XX' .OR.                          &
-              field1 == 'FR' .OR. field1 == 'XR' .OR.                          &
-              field1 == 'MI' .OR. field1 == 'XM' .OR.                          &
-              field1 == 'PL' .OR. field1 == 'XP' .OR.                          &
-              field1 == 'ZL' .OR. field1 == 'ZU' .OR.                          &
-              field1 == 'ZX' ) THEN
+        defaut = .FALSE.
+        IF ( field1 == 'LO' .OR. field1 == 'XL' .OR. field1 == 'UP' .OR.       &
+             field1 == 'XU' .OR. field1 == 'FX' .OR. field1 == 'XX' .OR.       &
+             field1 == 'FR' .OR. field1 == 'XR' .OR. field1 == 'MI' .OR.       &
+             field1 == 'XM' .OR. field1 == 'PL' .OR. field1 == 'XP' .OR.       &
+             field1 == 'ZL' .OR. field1 == 'ZU' .OR. field1 == 'ZX' ) THEN
 
 !  find which variable is being assigned
 
-            CALL HASH_search( length, 12, FIELD3//'VA', KEY, ITABLE, ifield )
-            IF ( ifield > 0 ) THEN
-               ncol = INLIST( ifield )
+          CALL HASH_search( length, 12, FIELD3//'VA', KEY, ITABLE, ifield )
+          IF ( ifield > 0 ) THEN
+            ncol = INLIST( ifield )
 
 !  assign a lower bound for this variable
 
-               IF ( field1 == 'LO' .OR. field1 == 'XL' .OR.                    &
-                    field1 == 'FX' .OR. field1 == 'XX' .OR.                    &
-                    field1 == 'FR' .OR. field1 == 'XR' .OR.                    &
-                    field1 == 'MI' .OR. field1 == 'XM' .OR.                    &
-                    field1 == 'ZL' .OR. field1 == 'ZX' ) THEN
+            IF ( field1 == 'LO' .OR. field1 == 'XL' .OR. field1 == 'FX' .OR.   &
+                 field1 == 'XX' .OR. field1 == 'FR' .OR. field1 == 'XR' .OR.   &
+                 field1 == 'MI' .OR. field1 == 'XM' .OR. field1 == 'ZL' .OR.   &
+                 field1 == 'ZX' ) THEN
 
 !  a finite lower bound is specified
 
-                  IF ( field1 == 'LO' .OR. field1 == 'XL' .OR.                 &
-                       field1 == 'ZL' .OR. field1 == 'ZX' .OR.                 &
-                       field1 == 'FX' .OR. field1 == 'XX' ) THEN
-                     BND( 1, ncol, nbnd ) = value4
+              IF ( field1 == 'LO' .OR. field1 == 'XL' .OR. field1 == 'ZL' .OR. &
+                   field1 == 'ZX' .OR. field1 == 'FX' .OR. field1 == 'XX' ) THEN
+                BND( 1, ncol, nbnd ) = value4
 
 !  an infinite lower bound is specified
 
-                  ELSE
-                     IF ( ( field1 == 'MI' .OR. field1 == 'XM' )               &
-                            .AND. BND( 1, ncol, nbnd ) == zero                 &
-                            .AND. BND( 2, ncol, nbnd ) == biginf )             &
-                        BND( 2, ncol, nbnd ) = zero
-                     BND( 1, ncol, nbnd ) = - biginf
-                  END IF
-               END IF
+              ELSE
+                IF ( ( field1 == 'MI' .OR. field1 == 'XM' ) .AND.              &
+                       BND( 1, ncol, nbnd ) == zero  .AND.                     &
+                       BND( 2, ncol, nbnd ) == biginf )                        &
+                    BND( 2, ncol, nbnd ) = zero
+                BND( 1, ncol, nbnd ) = - biginf
+              END IF
+            END IF
 
 !  assign an upper bound for the variable
 
-               IF ( field1 == 'UP' .OR. field1 == 'XU' .OR.                    &
-                    field1 == 'FX' .OR. field1 == 'XX' .OR.                    &
-                    field1 == 'FR' .OR. field1 == 'XR' .OR.                    &
-                    field1 == 'PL' .OR. field1 == 'XP' .OR.                    &
-                    field1 == 'ZU' .OR. field1 == 'ZX' ) THEN
+            IF ( field1 == 'UP' .OR. field1 == 'XU' .OR. field1 == 'FX' .OR.   &
+                 field1 == 'XX' .OR. field1 == 'FR' .OR. field1 == 'XR' .OR.   &
+                 field1 == 'PL' .OR. field1 == 'XP' .OR. field1 == 'ZU' .OR.   &
+                 field1 == 'ZX' ) THEN
 
 !  a finite upper bound is specified
 
-                  IF ( field1 == 'UP' .OR. field1 == 'XU' .OR.                 &
-                       field1 == 'ZU' .OR. field1 == 'ZX' .OR.                 &
-                       field1 == 'FX' .OR. field1 == 'XX' ) THEN
-                     IF ( ( field1 == 'UP' .OR. field1 == 'XU' .OR.            &
-                            field1 == 'ZU' ) .AND. value4 == zero              &
-                            .AND. BND( 1, ncol, nbnd ) == zero                 &
-                            .AND. BND( 2, ncol, nbnd ) == biginf )             &
-                          BND( 1, ncol, nbnd ) = - biginf
-                     BND( 2, ncol, nbnd ) = value4
+              IF ( field1 == 'UP' .OR. field1 == 'XU' .OR.                     &
+                   field1 == 'ZU' .OR. field1 == 'ZX' .OR.                     &
+                   field1 == 'FX' .OR. field1 == 'XX' ) THEN
+                IF ( ( field1 == 'UP' .OR. field1 == 'XU' .OR.                 &
+                       field1 == 'ZU' ) .AND. value4 == zero .AND.             &
+                       BND( 1, ncol, nbnd ) == zero .AND.                      &
+                       BND( 2, ncol, nbnd ) == biginf )                        &
+                    BND( 1, ncol, nbnd ) = - biginf
+                BND( 2, ncol, nbnd ) = value4
 
 
 !  an infinite upper bound is specified
 
-                  ELSE
-                     BND( 2, ncol, nbnd ) = biginf
-                  END IF
-               END IF
-            ELSE
-               status = 5
-               IF ( out > 0 ) WRITE( out, 2050 ) field3
-               RETURN
+              ELSE
+                BND( 2, ncol, nbnd ) = biginf
+              END IF
             END IF
+          ELSE
+            status = 5
+            IF ( out > 0 ) WRITE( out, 2050 ) field3
+            RETURN
+          END IF
 
 !  field 1 is not recognised
 
-         ELSE
-            status = 10
-            IF ( out > 0 ) WRITE( out, 2100 ) field1
-            RETURN
-         END IF
+        ELSE
+          status = 10
+          IF ( out > 0 ) WRITE( out, 2100 ) field1
+          RETURN
+        END IF
       END IF
       status = 0
       RETURN
 
 !  non-executable statements
 
- 2030 FORMAT( ' ** Exit from GPSMPS - index parameter name ', A10,             &
+ 2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
               ' not recognised ' )
- 2050 FORMAT( ' ** Exit from GPSMPS - column/var name not recognised:',        &
-              ' name is ', A10 )
- 2100 FORMAT( ' ** Exit from GPSMPS - field 1 ', A2,                           &
+ 2050 FORMAT( ' ** Exit from INTERPRET_gpsmps - column/var name not',          &
+              ' recognised: name is ', A10 )
+ 2100 FORMAT( ' ** Exit from INTERPRET_gpsmps - field 1 ', A2,                 &
               '  not recognised in BOUNDS section ' )
- 2200 FORMAT( ' ** Exit from GPSMPS - default specified out of order ' )
+ 2200 FORMAT( ' ** Exit from INTERPRET_gpsmps - default specified out of order')
 
 !  end of subroutine SBOUND
 
@@ -3175,22 +3615,24 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S S T A R T    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SSTART( nmax, ngmax, nsmax, length, nlvars, ng,               &
+      SUBROUTINE SSTART( nmax, length, nlvars, ng,               &
                          nstart, ncol, nrlndx, defaut, INLIST, ITABLE,         &
-                         VSTART, CSTART, REALVL,                               &
+                         len1_vstart, len2_vstart, VSTART,     &
+                         len1_cstart, len2_cstart, CSTART, REALVL,     &
                          field1, field2, field3, value4, field5, value6,       &
-                         SNAMES, novals, KEY, out, status )
-      INTEGER :: out, status, length, novals, ng, ngmax
-      INTEGER :: nmax, nsmax, nlvars, nstart, ncol, nrlndx
+                         len_snames, SNAMES, novals, KEY, out, status )
+      INTEGER :: length, novals, ng, ncol, nrlndx, out, status
+      INTEGER :: nmax, nlvars, nstart, len1_vstart, len2_vstart
+      INTEGER :: len1_cstart, len2_cstart, len_snames
       LOGICAL :: defaut
       REAL ( KIND = wp ) :: value4, value6
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
       INTEGER :: INLIST( length ), ITABLE ( length )
-      REAL ( KIND = wp ) :: VSTART( nmax, nsmax ), CSTART( ngmax, nsmax )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : , : ) :: VSTART, CSTART
       REAL ( KIND = wp ) :: REALVL( nrlndx )
-      CHARACTER ( len = 10 ) :: SNAMES( nsmax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: SNAMES
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  -----------------------------
 !  indicator card is start point
@@ -3199,253 +3641,272 @@
 !  local variables
 
       INTEGER :: i, ifield
-      CHARACTER ( len = 10 ) :: field
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      INTEGER :: used_length2, new_length2, min_length2
+      CHARACTER ( LEN = 10 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  the starting vector is  to be assigned
 
       IF ( nstart == 0 ) THEN
-         nstart = 1
-         IF ( nstart > nsmax ) THEN
-            status = - 8
-            RETURN
-         END IF
-         SNAMES( nstart ) = field2
-         defaut = .TRUE.
-         DO 10 i = 1, nlvars
-            VSTART( i, nstart ) = zero
-   10    CONTINUE
-         DO 20 i = 1, ng
-            CSTART( i, nstart ) = zero
-   20    CONTINUE
+        nstart = 1
+        SNAMES( nstart ) = field2
+        defaut = .TRUE.
+        DO i = 1, nlvars
+          VSTART( i, nstart ) = zero
+        END DO
+        DO i = 1, ng
+          CSTART( i, nstart ) = zero
+        END DO
       END IF
 
-!  a new starting vector is to be assigned
+!  a new starting vector is to be assigned; ensure that there is enough space
 
       IF ( field2 /= SNAMES( nstart ) ) THEN
-         nstart = nstart + 1
-         IF ( nstart > nsmax ) THEN
-            status = - 8
-            RETURN
-         END IF
-         SNAMES( nstart ) = field2
-         defaut = .TRUE.
+        nstart = nstart + 1
+        IF ( nstart > len2_vstart ) THEN
+          used_length = nlvars ; min_length = len1_vstart
+          new_length = len1_vstart
+          used_length2 = nstart - 1 ; min_length2 = nstart
+          new_length2 = 3 * min_length2 / 2 + 1 
+          CALL EXTEND_array( VSTART, len1_vstart, len2_vstart, used_length,    &
+                             used_length2, new_length, new_length2,            &
+                             min_length, min_length2, buffer,                  &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'VSTART' ; status = - 8 ; GO TO 980 ; END IF
+          len2_vstart = new_length2
+        END IF
+        IF ( nstart > len2_cstart ) THEN
+          used_length = ng ; new_length = len1_cstart ; min_length = len1_cstart
+          used_length2 = nstart - 1 ; min_length2 = nstart
+          new_length2 = 3 * min_length2 / 2 + 1 
+          CALL EXTEND_array( CSTART, len1_cstart, len2_cstart, used_length,    &
+                             used_length2, new_length, new_length2,            &
+                             min_length, min_length2, buffer,                  &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'CSTART' ; status = - 8 ; GO TO 980 ; END IF
+          len2_cstart = new_length2
+        END IF
+        IF ( nstart > len_snames ) THEN
+          used_length = nstart - 1 ; min_length = nstart
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( SNAMES, len_snames, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'SNAMES' ; status = - 8 ; GO TO 980 ; END IF
+          len_snames = new_length
+        END IF
+        SNAMES( nstart ) = field2
+        defaut = .TRUE.
 
 !  assign a default value of zero to the variables
 
-         DO 30 i = 1, nlvars
-            VSTART( i, nstart ) = zero
-   30    CONTINUE
+        VSTART( : nlvars, nstart ) = zero
 
 !  assign a default value of zero to the lagrange multipliers
 
-         DO 40 i = 1, ng
-            CSTART( i, nstart ) = zero
-   40    CONTINUE
+        CSTART( : ng, nstart ) = zero
       END IF
 
 !  ensure that default values are assigned first
 
       IF ( field3 == '''DEFAULT'' ' ) THEN
-         IF ( .NOT. defaut ) THEN
-            status = 20
-            IF ( out > 0 ) WRITE( out, 2200 )
+        IF ( .NOT. defaut ) THEN
+          status = 20
+          IF ( out > 0 ) WRITE( out, 2200 )
+          RETURN
+        END IF
+        IF ( field1( 1 : 1 ) == 'Z' ) THEN
+          CALL HASH_search( length, 12,  FIELD5( 1 : 10 ) // 'RI',             &
+                             KEY, ITABLE, ifield )
+          IF ( ifield <= 0 ) THEN
+            status = 3
+            IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
             RETURN
-         END IF
-         IF ( FIELD1( 1: 1 ) == 'Z' ) THEN
-            CALL HASH_search( length, 12,  FIELD5( 1 : 10 ) // 'RI',                &
-                         KEY, ITABLE, ifield )
-            IF ( ifield <= 0 ) THEN
-               status = 3
-               IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
-               RETURN
-            END IF
-            value4 = REALVL( INLIST( ifield ) )
-         END IF
+          END IF
+          value4 = REALVL( INLIST( ifield ) )
+        END IF
 
 !  assign default values to the starting point
 
-         IF ( field1 == '  ' .OR. field1 == 'V ' .OR.                          &
-              field1 == 'X ' .OR. field1 == 'Z ' .OR.                          &
-              field1 == 'XV' .OR. field1 == 'ZV' ) THEN
-            DO 50 i = 1, nlvars
-               VSTART( i, nstart ) = value4
-   50       CONTINUE
-         END IF
+        IF ( field1 == '  ' .OR. field1 == 'V ' .OR. field1 == 'X ' .OR.       &
+             field1 == 'Z ' .OR. field1 == 'XV' .OR. field1 == 'ZV' )          &
+          VSTART( : nlvars, nstart ) = value4
 
 !  assign default values to the lagrange multipliers
 
-         IF ( field1 == '  ' .OR. field1 == 'M ' .OR.                          &
-              field1 == 'X ' .OR. field1 == 'Z ' .OR.                          &
-              field1 == 'XM' .OR. field1 == 'ZM' ) THEN
-            DO 60 i = 1, ng
-               CSTART( i, nstart ) = value4
-   60       CONTINUE
-         END IF
+        IF ( field1 == '  ' .OR. field1 == 'M ' .OR. field1 == 'X ' .OR.       &
+             field1 == 'Z ' .OR. field1 == 'XM' .OR. field1 == 'ZM' )          &
+          CSTART( : ng, nstart ) = value4
       ELSE
 
 !  an individual starting value is to be assigned
 
-         IF ( field1 == 'X ' .OR. field1 == '  ' .OR.                          &
-              field1 == 'Z ' ) THEN
+        IF ( field1 == 'X ' .OR. field1 == '  ' .OR. field1 == 'Z ' ) THEN
+          defaut = .FALSE.
+
+!  find which value is, or values are, being assigned
+
+          DO i = 1, novals
+            IF ( i == 1 ) THEN
+              field = field3
+            ELSE
+              field = field5
+            END IF
+
+!  see if the name belongs to a variable
+
+            CALL HASH_search( length, 12, field // 'VA', KEY, ITABLE, ifield )
+            IF ( ifield > 0 ) THEN
+              ncol = INLIST( ifield )
+
+!  assign the starting value for this variable
+
+              IF ( i == 1 ) THEN
+                VSTART( ncol, nstart ) = value4
+              ELSE
+                VSTART( ncol, nstart ) = value6
+              END IF
+
+!  see if the name belongs to a group
+
+            ELSE
+              CALL HASH_search( length, 12, field // 'GR', KEY, ITABLE, ifield )
+              IF ( ifield > 0 ) THEN
+                ncol = INLIST( ifield )
+
+!  assign the starting value for the lagrange multiplier for this group
+
+                IF ( i == 1 ) THEN
+                  CSTART( ncol, nstart ) = value4
+                ELSE
+                  CSTART( ncol, nstart ) = value6
+                END IF
+              ELSE
+                status = 5
+                IF ( i == 1 ) THEN
+                  IF ( out > 0 ) WRITE( out, 2050 ) field3
+                ELSE
+                  IF ( out > 0 ) WRITE( out, 2050 ) field5
+                END IF
+                RETURN
+              END IF
+            END IF
+          END DO
+        ELSE
+
+!  an individual starting value for a variable is to be assigned
+
+          IF ( field1 == 'V ' .OR. field1 == 'XV' .OR. field1 == 'ZV' ) THEN
             defaut = .FALSE.
 
 !  find which value is, or values are, being assigned
 
-            DO 70 i = 1, novals
-               IF ( i == 1 ) THEN
-                  field = field3
-               ELSE
-                  field = field5
-               END IF
+            DO i = 1, novals
+              IF ( i == 1 ) THEN
+                field = field3
+              ELSE
+                field = field5
+              END IF
 
 !  see if the name belongs to a variable
 
-               CALL HASH_search( length, 12, field // 'VA',                         &
-                            KEY, ITABLE, ifield )
-               IF ( ifield > 0 ) THEN
-                  ncol = INLIST( ifield )
+              CALL HASH_search( length, 12, field // 'VA', KEY, ITABLE, ifield )
+              IF ( ifield > 0 ) THEN
+                ncol = INLIST( ifield )
 
 !  assign the starting value for this variable
 
-                  IF ( i == 1 ) THEN
-                     VSTART( ncol, nstart ) = value4
-                  ELSE
-                     VSTART( ncol, nstart ) = value6
-                  END IF
-               ELSE
-
-!  see if the name belongs to a group
-
-                  CALL HASH_search( length, 12, field // 'GR',                      &
-                               KEY, ITABLE, ifield )
-                  IF ( ifield > 0 ) THEN
-                     ncol = INLIST( ifield )
-
-!  assign the starting value for the lagrange multiplier for this group
-
-                     IF ( i == 1 ) THEN
-                        CSTART( ncol, nstart ) = value4
-                     ELSE
-                        CSTART( ncol, nstart ) = value6
-                     END IF
-                  ELSE
-                     status = 5
-                     IF ( i == 1 ) THEN
-                        IF ( out > 0 ) WRITE( out, 2050 ) field3
-                     ELSE
-                        IF ( out > 0 ) WRITE( out, 2050 ) field5
-                     END IF
-                     RETURN
-                  END IF
-               END IF
-   70       CONTINUE
-         ELSE
-
-!  an individual starting value for a variable is to be assigned
-
-            IF ( field1 == 'V ' .OR. field1 == 'XV' .OR.                       &
-                 field1 == 'ZV' ) THEN
-               defaut = .FALSE.
-
-!  find which value is, or values are, being assigned
-
-               DO 80 i = 1, novals
-                  IF ( i == 1 ) THEN
-                     field = field3
-                  ELSE
-                     field = field5
-                  END IF
-
-!  see if the name belongs to a variable
-
-                  CALL HASH_search( length, 12, field // 'VA',                      &
-                               KEY, ITABLE, ifield )
-                  IF ( ifield > 0 ) THEN
-                     ncol = INLIST( ifield )
-
-!  assign the starting value for this variable
-
-                     IF ( i == 1 ) THEN
-                        VSTART( ncol, nstart ) = value4
-                     ELSE
-                        VSTART( ncol, nstart ) = value6
-                     END IF
-                  ELSE
-                     status = 4
-                     IF ( i == 1 ) THEN
-                        IF ( out > 0 ) WRITE( out, 2040 ) field3
-                     ELSE
-                        IF ( out > 0 ) WRITE( out, 2040 ) field5
-                     END IF
-                     RETURN
-                  END IF
-   80          CONTINUE
-            ELSE
+                IF ( i == 1 ) THEN
+                  VSTART( ncol, nstart ) = value4
+                ELSE
+                  VSTART( ncol, nstart ) = value6
+                END IF
+              ELSE
+                status = 4
+                IF ( i == 1 ) THEN
+                  IF ( out > 0 ) WRITE( out, 2040 ) field3
+                ELSE
+                  IF ( out > 0 ) WRITE( out, 2040 ) field5
+                END IF
+                RETURN
+              END IF
+            END DO
+          ELSE
 
 !  an individual starting lagrange multiplier value is to be assigned
 
-               IF ( field1 == 'M ' .OR. field1 == 'XM' .OR.                    &
-                    field1 == 'ZM' ) THEN
-                  defaut = .FALSE.
+            IF ( field1 == 'M ' .OR. field1 == 'XM' .OR. field1 == 'ZM' ) THEN
+              defaut = .FALSE.
 
 !  find which value is, or values are, being assigned
 
-                  DO 90 i = 1, novals
-                     IF ( i == 1 ) THEN
-                        field = field3
-                     ELSE
-                        field = field5
-                     END IF
+              DO i = 1, novals
+                IF ( i == 1 ) THEN
+                  field = field3
+                ELSE
+                  field = field5
+                END IF
 
 !  see if the name belongs to a group
 
-                     CALL HASH_search( length, 12, field // 'GR',                   &
-                                  KEY, ITABLE, ifield )
-                     IF ( ifield > 0 ) THEN
-                        ncol = INLIST( ifield )
+                CALL HASH_search( length, 12, field // 'GR', KEY, ITABLE,      &
+                                  ifield )
+                IF ( ifield > 0 ) THEN
+                  ncol = INLIST( ifield )
 
 !  assign the starting value for the lagrange multiplier for this group
 
-                        IF ( i == 1 ) THEN
-                           CSTART( ncol, nstart ) = value4
-                        ELSE
-                           CSTART( ncol, nstart ) = value6
-                        END IF
-                     ELSE
-                        status = 5
-                        IF ( i == 1 ) THEN
-                           IF ( out > 0 ) WRITE( out, 2050 ) field3
-                         ELSE
-                           IF ( out > 0 ) WRITE( out, 2050 ) field5
-                        END IF
-                        RETURN
-                     END IF
-   90             CONTINUE
+                  IF ( i == 1 ) THEN
+                     CSTART( ncol, nstart ) = value4
+                  ELSE
+                     CSTART( ncol, nstart ) = value6
+                  END IF
+                ELSE
+                  status = 5
+                  IF ( i == 1 ) THEN
+                    IF ( out > 0 ) WRITE( out, 2050 ) field3
+                   ELSE
+                    IF ( out > 0 ) WRITE( out, 2050 ) field5
+                  END IF
+                  RETURN
+                END IF
+              END DO
 
 !  field 1 is not recognised
 
-               ELSE
-                  status = 10
-                  IF ( out > 0 ) WRITE( out, 2100 ) field1
-                  RETURN
-               END IF
+            ELSE
+              status = 10
+              IF ( out > 0 ) WRITE( out, 2100 ) field1
+              RETURN
             END IF
-         END IF
+          END IF
+        END IF
       END IF
       status = 0
       RETURN
 
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
 !  non-executable statements
 
- 2030 FORMAT( ' ** Exit from GPSMPS - index parameter name ', A10,             &
+ 2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
               ' not recognised ' )
- 2040 FORMAT( ' ** Exit from GPSMPS - group/row name not recognised:',         &
-              ' name is ', A10 )
- 2050 FORMAT( ' ** Exit from GPSMPS - column/var name not recognised:',        &
-              ' name is ', A10 )
- 2100 FORMAT( ' ** Exit from GPSMPS - field 1 ', A2,                           &
+ 2040 FORMAT( ' ** Exit from INTERPRET_gpsmps - group/row name not',           &
+              ' recognised: name is ', A10 )
+ 2050 FORMAT( ' ** Exit from INTERPRET_gpsmps - column/var name not',          &
+              ' recognised: name is ', A10 )
+ 2100 FORMAT( ' ** Exit from INTERPRET_gpsmps - field 1 ', A2,                 &
               '  not recognised in START POINT section ' )
- 2200 FORMAT( ' ** Exit from GPSMPS - default specified out of order ' )
+ 2200 FORMAT( ' ** Exit from INTERPRET_gpsmps - default specified out of order')
 
 !  end of subroutine SSTART
 
@@ -3453,35 +3914,47 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S Q H E S S    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SQHESS( negmax, ngmax, nlmax, nelmax, nevmax, netmax,         &
-                         nomax, nimax, length, ng, nobj, ngrupe, novals,       &
-                         neln, ninn, nepn, neltyp, nlisep, nlisev,             &
-                         nelnum, neling, qgroup, qsqr, qprod, IELV,            &
-                         IINV, IEPA, ITYPEG, IELING, ISTAEV, IELVAR,           &
-                         INLIST, ITABLE, ISTATE, ITYPEE, ISTEP,                &
+      SUBROUTINE SQHESS( length, ng, nobj, ngrupe, novals,             &
+                         nevnames, nivnames, nepnames, neltype, nlisep, nelvar, nelnum,    &
+                         neling, qgroup, qsqr, qprod,     &
+                         len_elv, ELV, len_inv, INV, len_elp, ELP,        &
+                         len_gtype, GTYPE, len_eling_el, ELING_el, &
+                         len_eling_g, ELING_g,           &
+                         len_ev_ptr, EV_ptr, len_elvar, ELVAR,   &
+                         INLIST, ITABLE,                                       &
+                         len_gstate, GSTATE, len_typee, TYPEE,  &
+                         len_ep_ptr, EP_ptr,                    &
+                         len1_cstart, nstart, CSTART, len_rscale, RSCALE,      &
                          iptype, istype, inrep,                                &
                          field1, field2, field3, value4, field5, value6,       &
-                         ENAMES, GNAMES, ETYPES, ONAMES, INAMES,               &
-                         lnames, WEIGHT, KEY, out, status )
-      INTEGER :: out, status, length, iptype, istype, nimax
-      INTEGER :: negmax, ngmax, nobj, neln, ninn, nepn, neltyp
-      INTEGER :: ng, neling, novals, ngrupe, nlisep, nlisev
-      INTEGER :: nlmax, nelmax, nevmax, netmax, nomax, nelnum
+                         len_evnames, EVNAMES, len_ivnames, IVNAMES, &
+                         len_gnames, GNAMES, len_etypes, ETYPES,               &
+                         len_onames, ONAMES,                           &
+                         len_lnames, LNAMES, len_weight, WEIGHT,               &
+                         KEY, out, status )
+      INTEGER :: out, status, length, iptype, istype
+      INTEGER :: nobj, nevnames, nivnames, nepnames, neltype, nelnum
+      INTEGER :: ng, neling, novals, ngrupe, nlisep, len_elvar, nelvar
+      INTEGER :: len_elv, len_inv, len_elp, len_etypes
+      INTEGER :: len_evnames, len_ivnames
+      INTEGER :: len_gstate, len_gtype, len_gnames, len_onames, len_rscale
+      INTEGER :: len_lnames, len_ev_ptr, len_typee, len_ep_ptr
+      INTEGER :: len_eling_el, len_eling_g, len_weight
+      INTEGER :: len1_cstart, nstart
       REAL ( KIND = wp ) :: value4, value6
       LOGICAL :: qgroup, qsqr, qprod, inrep
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
-      INTEGER :: INLIST( length ), ITABLE ( length )
-      INTEGER :: IELV  ( nlmax ), IINV  ( nlmax ), IEPA( nlmax )
-      INTEGER :: IELING( negmax, 2 )
-      INTEGER :: ITYPEG( ngmax ), ITYPEE( nelmax ), ISTEP( nelmax )
-      INTEGER :: ISTATE( ngmax )
-      INTEGER :: IELVAR( nevmax ), ISTAEV( nelmax )
-      REAL ( KIND = wp ) :: WEIGHT( negmax )
-      CHARACTER ( len = 10 ) :: GNAMES( ngmax ), ONAMES( nomax )
-      CHARACTER ( len = 10 ) :: INAMES( nimax ), LNAMES( nelmax )
-      CHARACTER ( len = 10 ) :: ETYPES( nlmax ), ENAMES( netmax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
+      INTEGER :: INLIST( length ), ITABLE( length )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELV, INV, ELP
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GSTATE, GTYPE, ELING_el, ELING_g
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: EV_ptr, TYPEE, EP_ptr, ELVAR
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RSCALE, WEIGHT
+      REAL ( KIND = wp ), DIMENSION( len1_cstart, nstart  ) :: CSTART
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GNAMES, ONAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LNAMES, ETYPES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EVNAMES, IVNAMES
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  ---------------------------
 !  indicator card is quadratic
@@ -3489,331 +3962,616 @@
 
 !  local variables
 
-      INTEGER :: i, ifield, k, nevars
-      INTEGER :: ncol1, ncol2, nterms, ifree
+      INTEGER :: i, ifield, k, nevars, ncol1, ncol2, nterms, ifree
+      INTEGER :: used_length, new_length, min_length, alloc_status
       REAL ( KIND = wp ) :: value
-      CHARACTER ( len = 12 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
+      CHARACTER ( LEN = 12 ) :: field
 
 !  find the first variable
 
       CALL HASH_search( length, 12, field2 // 'VA', KEY, ITABLE, ifield )
       IF ( ifield > 0 ) THEN
-         ncol1 = INLIST( ifield )
+        ncol1 = INLIST( ifield )
       ELSE
-         status = 5
-         IF ( out > 0 ) WRITE( out, 2050 ) field2
-         RETURN
+        status = 5
+        IF ( out > 0 ) WRITE( out, 2050 ) field2
+        RETURN
       END IF
 
 !  find the second variable
 
       IF ( field1 == 'Z ' ) THEN
-         nterms = 1
+        nterms = 1
       ELSE
-         nterms = novals
+        nterms = novals
       END IF
 
 
-      DO 110 i = 1, nterms
-         IF ( i == 1 ) THEN
-            field = field3 // 'VA'
-            value = value4
-         ELSE
-            field = field5 // 'VA'
-            value = value6
-         END IF
-         IF ( value /= 0.0D+0 ) THEN
-            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-            IF ( ifield > 0 ) THEN
-               ncol2 = INLIST( ifield )
-            ELSE
-               status = 5
-               IF ( out > 0 ) WRITE( out, 2050 ) FIELD( 1 : 10 )
-               RETURN
-            END IF
-            IF ( .NOT. qgroup ) THEN
+      DO i = 1, nterms
+        IF ( i == 1 ) THEN
+          field = field3 // 'VA'
+          value = value4
+        ELSE
+          field = field5 // 'VA'
+          value = value6
+        END IF
+        IF ( value /= 0.0D+0 ) THEN
+          CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+          IF ( ifield > 0 ) THEN
+            ncol2 = INLIST( ifield )
+          ELSE
+            status = 5
+            IF ( out > 0 ) WRITE( out, 2050 ) FIELD( 1 : 10 )
+            RETURN
+          END IF
 
 !  this is the first Hessian term. make it a new group
 !  find a place to insert the new group name in the hash-table
 
-               CALL HASH_insert( length, 12, cqgrou // 'GR', KEY,                   &
-                            ITABLE, ifree )
-               IF ( ifree <= 0 ) THEN
-                  status = - 1
-                  RETURN
-               ELSE
+          IF ( .NOT. qgroup ) THEN
+            CALL HASH_insert( length, 12, cqgrou // 'GR', KEY, ITABLE, ifree )
+            IF ( ifree <= 0 ) THEN
+              status = - 1
+              RETURN
 
 !  mark this as an objective function group
 
-                  nobj = nobj + 1
-                  IF( nobj > nomax ) THEN
-                     status = - 5
-                     RETURN
-                  END IF
-                  ONAMES ( nobj ) =  cqgrou
+            ELSE
+              nobj = nobj + 1
+              IF ( nobj > len_onames ) THEN
+                used_length = nobj - 1 ; min_length = nobj
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,&
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
+                len_onames = new_length
+              END IF
+              ONAMES ( nobj ) =  cqgrou
 
-!  the group is the ng-th encountered
+!  the group is the ng-th encountered; ensure there is sufficient space
 
-                  ng = ng + 1
-                  IF ( ng >= ngmax ) THEN
-                     status = - 6
-                     RETURN
-                  END IF
+              ng = ng + 1
+              IF ( ng >= len_gstate ) THEN
+                used_length = ng - 1 ; min_length = ng
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( GSTATE, len_gstate, used_length,            &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
+                len_gstate = new_length
+              END IF
+              IF ( ng >= len_gtype ) THEN
+                used_length = ng - 1 ; min_length = ng
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( GTYPE, len_gtype, used_length,              &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
+                len_gtype = new_length
+              END IF
+              IF ( ng >= len_gnames ) THEN
+                used_length = ng - 1 ; min_length = ng
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( GNAMES, len_gnames, used_length,            &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
+                len_gnames = new_length
+              END IF
+              IF ( ng >= len_rscale ) THEN
+                used_length = ng - 1 ; min_length = ng
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( RSCALE, len_rscale, used_length,            &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
+                len_rscale = new_length
+              END IF
 
 !  record the position of the new group in the table, record its
 !  name and initialise its type as trivial
 
-                  ngrupe = ng
-                  INLIST( ifree ) = ng
-                  GNAMES( ng ) = cqgrou
-                  ITYPEG( ng ) = 0
-                  ISTATE( ng ) = 1
-                  qgroup = .TRUE.
-               END IF
+              ngrupe = ng
+              INLIST( ifree ) = ng
+              GNAMES( ng ) = cqgrou
+              GTYPE( ng ) = 0
+              GSTATE( ng ) = 1
+              RSCALE( ng ) = one
+              CSTART( ng, : nstart ) = zero
+              qgroup = .TRUE.
             END IF
-            IF ( ncol1 == ncol2 ) THEN
+          END IF
+          IF ( ncol1 == ncol2 ) THEN
 
 !  check if this is the first occurence of a diagonal term
 
-               IF ( .NOT. qsqr ) THEN
+            IF ( .NOT. qsqr ) THEN
 
 !  check if this is the first element type
 
-                  IF ( neltyp == 0 ) THEN
-                     istype = 1
-                     neln = 1
-                     ninn = 0
-                     nepn = 0
-                     neltyp = 1
-                  ELSE
-                     istype = 2
-                     neltyp = neltyp + 1
-                     IF ( neltyp > nlmax ) THEN
-                        status = - 3
-                        RETURN
-                     END IF
-                     neln = neln + 1
-                     IF ( neln > netmax ) THEN
-                        status = - 14
-                        RETURN
-                     END IF
-                  END IF
+              IF ( neltype == 0 ) THEN
+                istype = 1
+                nevnames = 1
+                nivnames = 0
+                nepnames = 0
+                neltype = 1
+              ELSE
+                istype = 2
+                neltype = neltype + 1
+                IF ( neltype > len_elv ) THEN
+                  used_length = neltype - 1 ; min_length = neltype + 1
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( ELV, len_elv, used_length, new_length,    &
+                                     min_length, buffer, status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
+                  len_elv = new_length
+                END IF
+
+                IF ( neltype > len_inv ) THEN
+                  used_length = neltype - 1 ; min_length = neltype + 1
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( INV, len_inv, used_length, new_length,    &
+                                     min_length, buffer, status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
+                  len_inv = new_length
+                END IF
+
+                IF ( neltype > len_elp ) THEN
+                  used_length = neltype - 1 ; min_length = neltype + 1
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( ELP, len_elp, used_length, new_length,    &
+                                     min_length, buffer, status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
+                  len_elp = new_length
+                END IF
+
+                IF ( neltype > len_etypes ) THEN
+                  used_length = neltype - 1 ; min_length = neltype
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( ETYPES, len_etypes, used_length,          &
+                                     new_length, min_length, buffer,           &
+                                     status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
+                  len_etypes = new_length
+                END IF
+
+                nevnames = nevnames + 1
+                IF ( nevnames > len_evnames ) THEN
+                  used_length = nevnames - 1 ; min_length = nevnames
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( EVNAMES, len_evnames, used_length,        &
+                                     new_length, min_length, buffer,           &
+                                     status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
+                  len_evnames = new_length
+                END IF
+              END IF
 
 !  input the names of the element type
 
-                  CALL HASH_insert( length, 12, cqsqr // 'ET', KEY,                 &
-                               ITABLE, ifree )
-                  IF ( ifree <= 0 ) THEN
-                     IF ( ifree == 0 ) THEN
-                        status = - 1
-                        RETURN
-                     END IF
-                     status = 18
-                     IF ( out > 0 ) WRITE( out, 2180 )
-                     RETURN
-                  END IF
-                  INLIST( ifree ) = neltyp
-                  IELV( neltyp ) = neln
-                  IINV( neltyp ) = ninn + 1
-                  IEPA( neltyp ) = nepn + 1
-                  ETYPES( neltyp ) = cqsqr
+              CALL HASH_insert( length, 12, cqsqr // 'ET', KEY, ITABLE, ifree )
+              IF ( ifree <= 0 ) THEN
+                IF ( ifree == 0 ) THEN
+                  status = - 1
+                  RETURN
+                END IF
+                status = 18
+                IF ( out > 0 ) WRITE( out, 2180 )
+                RETURN
+              END IF
+              INLIST( ifree ) = neltype
+              ELV( neltype ) = nevnames
+              INV( neltype ) = nivnames + 1
+              ELP( neltype ) = nepnames + 1
+              ETYPES( neltype ) = cqsqr
 
 !  insert the element variable
 
-                  ENAMES( neln ) = 'X         '
-                  ninn = ninn + 1
-                  IF ( ninn > nimax ) THEN
-                     status = - 16
-                     RETURN
-                  END IF
-                  INAMES( ninn ) = ENAMES( neln )
-                  inrep = .FALSE.
-                  qsqr = .TRUE.
-               END IF
-
-!  the new element is the nelnum-th nonlinear element
-
-               nelnum = nelnum + 1
-               IF ( nelnum > nelmax ) THEN
-                  status = - 9
-                  RETURN
-               END IF
-
-!  insert the name into the table
-
-               WRITE( UNIT = field, FMT = "( '%', I9, 'EL' )" )                &
-                      123456789 - nelnum
-               CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
-
-!  record the elements position in the table along with its name
-
-               INLIST( ifree ) = nelnum
-               LNAMES( nelnum ) = FIELD( 1 : 10 )
-
-!  determine the number of the element type, k, the starting
-!  addresses for the parameters and variables for the element
-!  and the number of parameters and variables involved
-
-               k = istype
-               ITYPEE( nelnum ) = k
-               ISTEP ( nelnum ) = nlisep + 1
-               ISTAEV( nelnum ) = nlisev + 1
-               nevars = 1
-               IF ( nlisev + nevars > nevmax ) THEN
-                  status = - 15
-                  RETURN
-               END IF
-               IELVAR( nlisev + 1 ) = ncol1
-               nlisev = nlisev + nevars
-
-!  assign the element as neling in group ngrupe
-
-               neling = neling + 1
-               IF ( neling > negmax ) THEN
-                  status = - 10
-                  RETURN
-               END IF
-
-!  the element is ieling(,1) and the group is given by ieling(,2)
-
-               IELING( neling, 1 ) = nelnum
-               IELING( neling, 2 ) = ngrupe
-
-!  the element is weighted by the constant weight()
-
-               WEIGHT( neling ) = value
-            ELSE
-               IF ( .NOT. qprod ) THEN
-
-!  check if this is the first element type
-
-                  IF ( neltyp == 0 ) THEN
-                     iptype = 1
-                     neln = 1
-                     ninn = 0
-                     nepn = 0
-                     neltyp = 1
-                  ELSE
-                     iptype = 2
-                     neltyp = neltyp + 1
-                     IF ( neltyp > nlmax ) THEN
-                        status = - 3
-                        RETURN
-                     END IF
-                     neln = neln + 1
-                     IF ( neln > netmax ) THEN
-                        status = - 14
-                        RETURN
-                     END IF
-                  END IF
-
-!  input the names of the element type
-
-                  CALL HASH_insert( length, 12, cqprod // 'ET', KEY,                &
-                               ITABLE, ifree )
-                  IF ( ifree <= 0 ) THEN
-                     IF ( ifree == 0 ) THEN
-                        status = - 1
-                        RETURN
-                     END IF
-                     status = 18
-                     IF ( out > 0 ) WRITE( out, 2180 )
-                     RETURN
-                  END IF
-                  INLIST( ifree ) = neltyp
-                  IELV( neltyp ) = neln
-                  IINV( neltyp ) = ninn + 1
-                  IEPA( neltyp ) = nepn + 1
-                  ETYPES( neltyp ) = cqprod
-
-!  insert the element variable
-
-                  ENAMES( neln ) = 'X         '
-                  ninn = ninn + 1
-                  IF ( ninn > nimax ) THEN
-                     status = - 16
-                     RETURN
-                  END IF
-                  INAMES( ninn ) = ENAMES( neln )
-                  neln = neln + 1
-                  IF ( neln > netmax ) THEN
-                     status = - 14
-                     RETURN
-                  END IF
-                  ENAMES( neln ) = 'Y         '
-                  ninn = ninn + 1
-                  IF ( ninn > nimax ) THEN
-                     status = - 16
-                     RETURN
-                  END IF
-                  INAMES( ninn ) = ENAMES( neln )
-                  inrep = .FALSE.
-                  qprod = .TRUE.
-               END IF
-
-!  the new element is the nelnum-th nonlinear element
-
-               nelnum = nelnum + 1
-               IF ( nelnum > nelmax ) THEN
-                  status = - 9
-                  RETURN
-               END IF
-
-!  insert the name into the table
-
-               WRITE( UNIT = field, FMT = "( '%', I9, 'EL' )" )                &
-                      123456789 - nelnum
-               CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
-
-!  record the elements position in the table along with its name
-
-               INLIST( ifree ) = nelnum
-               LNAMES( nelnum ) = FIELD( 1 : 10 )
-
-!  determine the number of the element type, k, the starting
-!  addresses for the parameters and variables for the element
-!  and the number of parameters and variables involved
-
-               k = iptype
-               ITYPEE( nelnum ) = k
-               ISTEP ( nelnum ) = nlisep + 1
-               ISTAEV( nelnum ) = nlisev + 1
-               nevars = 2
-               IF ( nlisev + nevars > nevmax ) THEN
-                  status = - 15
-                  RETURN
-               END IF
-               IELVAR( nlisev + 1 ) = ncol1
-               IELVAR( nlisev + 2 ) = ncol2
-               nlisev = nlisev + nevars
-
-!  assign the element as neling in group ngrupe
-
-               neling = neling + 1
-               IF ( neling > negmax ) THEN
-                  status = - 10
-                  RETURN
-               END IF
-
-!  the element is ieling(,1) and the group is given by ieling(,2)
-
-               IELING( neling, 1 ) = nelnum
-               IELING( neling, 2 ) = ngrupe
-
-!  the element is weighted by the constant weight()
-
-               WEIGHT( neling ) = value
+              EVNAMES( nevnames ) = 'X         '
+              nivnames = nivnames + 1
+              IF ( nivnames > len_ivnames ) THEN
+                used_length = nivnames - 1 ; min_length = nivnames
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( IVNAMES, len_ivnames, used_length,          &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 ; END IF
+                len_ivnames = new_length
+              END IF
+              IVNAMES( nivnames ) = EVNAMES( nevnames )
+              inrep = .FALSE.
+              qsqr = .TRUE.
             END IF
-         END IF 
-  110 CONTINUE   
+
+!  the new element is the nelnum-th nonlinear element
+
+            nelnum = nelnum + 1
+            IF ( nelnum > len_lnames ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
+              len_lnames = new_length
+            END IF
+
+            IF ( nelnum > len_typee ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
+              len_typee = new_length
+            END IF
+
+            IF ( nelnum + 1 > len_ep_ptr ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum + 1
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
+              len_ep_ptr = new_length
+            END IF
+
+            IF ( nelnum + 1 > len_ev_ptr ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum + 1
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
+              len_ev_ptr = new_length
+            END IF
+
+!  insert the name into the table
+
+            WRITE( UNIT = field, FMT = "( '%', I9, 'EL' )" ) 123456789 - nelnum
+            CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
+
+!  record the elements position in the table along with its name
+
+            INLIST( ifree ) = nelnum
+            LNAMES( nelnum ) = FIELD( 1 : 10 )
+
+!  determine the number of the element type, k, the starting addresses for the 
+!  parameters and variables for the element and the number of parameters and 
+!  variables involved
+
+            k = istype
+            TYPEE( nelnum ) = k
+            EP_ptr( nelnum ) = nlisep + 1
+            EV_ptr( nelnum ) = nelvar + 1
+
+            nevars = 1
+            IF ( nelvar + nevars > len_elvar ) THEN
+              used_length = nelvar ; min_length = nelvar + nevars
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length,    &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
+              len_elvar = new_length
+            END IF
+            ELVAR( nelvar + 1 ) = ncol1
+            nelvar = nelvar + nevars
+
+!  assign the element as neling in group ngrupe
+
+            neling = neling + 1
+            IF ( neling > len_eling_el ) THEN
+              used_length = neling - 1 ; min_length = neling
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( ELING_el, len_eling_el, used_length,          &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
+              len_eling_el = new_length
+            END IF
+
+            IF ( neling > len_eling_g ) THEN
+              used_length = neling - 1 ; min_length = neling
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( ELING_g, len_eling_g, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
+              len_eling_g = new_length
+            END IF
+
+            IF ( neling > len_weight ) THEN
+              used_length = neling - 1 ; min_length = neling
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( WEIGHT, len_weight, used_length,              &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
+              len_weight = new_length
+            END IF
+
+!  the element is ELING_el and the group is given by ELING_g
+
+            ELING_el( neling ) = nelnum
+            ELING_g( neling ) = ngrupe
+
+!  the element is weighted by the constant in WEIGHT
+
+            WEIGHT( neling ) = value
+          ELSE
+            IF ( .NOT. qprod ) THEN
+
+!  check if this is the first element type
+
+              IF ( neltype == 0 ) THEN
+                iptype = 1
+                nevnames = 1
+                nivnames = 0
+                nepnames = 0
+                neltype = 1
+              ELSE
+                iptype = 2
+                neltype = neltype + 1
+                IF ( neltype > len_elv ) THEN
+                  used_length = neltype - 1 ; min_length = neltype + 1
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( ELV, len_elv, used_length, new_length,    &
+                                     min_length, buffer, status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
+                  len_elv = new_length
+                END IF
+
+                IF ( neltype > len_inv ) THEN
+                  used_length = neltype - 1 ; min_length = neltype + 1
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( INV, len_inv, used_length, new_length,    &
+                                     min_length, buffer, status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
+                  len_inv = new_length
+                END IF
+
+                IF ( neltype > len_elp ) THEN
+                  used_length = neltype - 1 ; min_length = neltype + 1
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( ELP, len_elp, used_length, new_length,    &
+                                     min_length, buffer, status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
+                  len_elp = new_length
+                END IF
+
+                IF ( neltype > len_etypes ) THEN
+                  used_length = neltype - 1 ; min_length = neltype
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( ETYPES, len_etypes, used_length,          &
+                                     new_length, min_length, buffer,           &
+                                     status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
+                  len_etypes = new_length
+                END IF
+
+                nevnames = nevnames + 1
+                IF ( nevnames > len_evnames ) THEN
+                  used_length = nevnames - 1 ; min_length = nevnames
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( EVNAMES, len_evnames, used_length,        &
+                                     new_length, min_length, buffer,           &
+                                     status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
+                  len_evnames = new_length
+                END IF
+              END IF
+
+!  input the names of the element type
+
+              CALL HASH_insert( length, 12, cqprod // 'ET', KEY, ITABLE, ifree )
+              IF ( ifree <= 0 ) THEN
+                 IF ( ifree == 0 ) THEN
+                    status = - 1
+                    RETURN
+                 END IF
+                 status = 18
+                 IF ( out > 0 ) WRITE( out, 2180 )
+                 RETURN
+              END IF
+              INLIST( ifree ) = neltype
+              ELV( neltype ) = nevnames
+              INV( neltype ) = nivnames + 1
+              ELP( neltype ) = nepnames + 1
+              ETYPES( neltype ) = cqprod
+
+!  insert the element variable
+
+              EVNAMES( nevnames ) = 'X         '
+              nivnames = nivnames + 1
+              IF ( nivnames + 1 > len_ivnames ) THEN
+                used_length = nivnames - 1 ; min_length = nivnames + 1
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( IVNAMES, len_ivnames, used_length,          &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 ; END IF
+                len_ivnames = new_length
+              END IF
+              IVNAMES( nivnames ) = EVNAMES( nevnames )
+              nevnames = nevnames + 1
+              IF ( nevnames > len_evnames ) THEN
+                used_length = nevnames - 1 ; min_length = nevnames
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( EVNAMES, len_evnames, used_length,          &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
+                len_evnames = new_length
+              END IF
+              EVNAMES( nevnames ) = 'Y         '
+              nivnames = nivnames + 1
+              IVNAMES( nivnames ) = EVNAMES( nevnames )
+              inrep = .FALSE.
+              qprod = .TRUE.
+            END IF
+
+!  the new element is the nelnum-th nonlinear element
+
+            nelnum = nelnum + 1
+            IF ( nelnum > len_lnames ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
+              len_lnames = new_length
+            END IF
+
+            IF ( nelnum > len_typee ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
+              len_typee = new_length
+            END IF
+
+            IF ( nelnum + 1 > len_ep_ptr ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum + 1
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
+              len_ep_ptr = new_length
+            END IF
+
+            IF ( nelnum + 1 > len_ev_ptr ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum + 1
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
+              len_ev_ptr = new_length
+            END IF
+
+!  insert the name into the table
+
+            WRITE( UNIT = field, FMT = "( '%', I9, 'EL' )" ) 123456789 - nelnum
+            CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
+
+!  record the elements position in the table along with its name
+
+            INLIST( ifree ) = nelnum
+            LNAMES( nelnum ) = FIELD( 1 : 10 )
+
+!  determine the number of the element type, k, the starting
+!  addresses for the parameters and variables for the element
+!  and the number of parameters and variables involved
+
+            k = iptype
+            TYPEE( nelnum ) = k
+            EP_ptr ( nelnum ) = nlisep + 1
+            EV_ptr( nelnum ) = nelvar + 1
+
+            nevars = 2
+            IF ( nelvar + nevars > len_elvar ) THEN
+              used_length = nelvar ; min_length = nelvar + nevars
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length, &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
+              len_elvar = new_length
+            END IF
+            ELVAR( nelvar + 1 ) = ncol1
+            ELVAR( nelvar + 2 ) = ncol2
+            nelvar = nelvar + nevars
+
+!  assign the element as neling in group ngrupe
+
+            neling = neling + 1
+            IF ( neling > len_eling_el ) THEN
+              used_length = neling - 1 ; min_length = neling
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( ELING_el, len_eling_el, used_length,          &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
+              len_eling_el = new_length
+            END IF
+
+            IF ( neling > len_eling_g ) THEN
+              used_length = neling - 1 ; min_length = neling
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( ELING_g, len_eling_g, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
+              len_eling_g = new_length
+            END IF
+
+            IF ( neling > len_weight ) THEN
+              used_length = neling - 1 ; min_length = neling
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( WEIGHT, len_weight, used_length,              &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
+              len_weight = new_length
+            END IF
+
+!  the element is ELING_el and the group is given by ELING_g
+
+            ELING_el( neling ) = nelnum
+            ELING_g( neling ) = ngrupe
+
+!  the element is weighted by the constant in WEIGHT
+
+            WEIGHT( neling ) = value
+          END IF
+        END IF 
+      END DO
       status = 0
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
 
- 2050 FORMAT( ' ** Exit from GPSMPS - column/var name not recognised:',        &
-              ' name is ', A10 )
- 2180 FORMAT( ' ** Exit from GPSMPS - duplicate element-type name ' )
+ 2050 FORMAT( ' ** Exit from INTERPRET_gpsmps - column/var name not',          &
+              ' recognised: name is ', A10 )
+ 2180 FORMAT( ' ** Exit from INTERPRET_gpsmps - duplicate element-type name ' )
 
 !  end of subroutine SQHESS
 
@@ -3821,21 +4579,25 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S E T Y P E    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SETYPE( nlmax, nimax, netmax, nepmax, length, novals, neln,   &
-                         ninn, nepn, neltyp, inrep, IELV, IINV, IEPA, INLIST,  &
-                         ITABLE, field1, field2, field3, field5, ENAMES,       &
-                         INAMES, EPNAME, ETYPES, KEY, out, status )
+      SUBROUTINE SETYPE( length, novals,        &
+                         nevnames, nivnames, nepnames, neltype, inrep,         &
+                         len_elv, ELV, len_inv, INV, len_elp, ELP, INLIST,     &
+                         ITABLE, field1, field2, field3, field5, &
+                         len_evnames, EVNAMES, len_ivnames, IVNAMES,           &
+                         len_epnames, EPNAMES, len_etypes, ETYPES, KEY,        &
+                         out, status )
       INTEGER :: out, status, length
-      INTEGER :: nlmax, nimax, netmax, nepmax
-      INTEGER :: novals, neln, ninn, neltyp, nepn
+      INTEGER :: novals, nevnames, nivnames, neltype, nepnames
+      INTEGER :: len_elv, len_inv, len_elp, len_etypes
+      INTEGER :: len_evnames, len_ivnames, len_epnames
       LOGICAL :: inrep
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
       INTEGER :: INLIST( length ), ITABLE ( length )
-      INTEGER :: IELV  ( nlmax ), IINV  ( nlmax ), IEPA( nlmax )
-      CHARACTER ( len = 10 ) :: ETYPES( nlmax ), INAMES( nimax )
-      CHARACTER ( len = 10 ) :: EPNAME( nepmax ), ENAMES( netmax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELV, INV, ELP
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EVNAMES, IVNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EPNAMES, ETYPES
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  ------------------------------
 !  indicator card is element type
@@ -3844,208 +4606,279 @@
 !  local variables
 
       INTEGER :: i, ifree, k
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  check if this is the first element type
 
-      IF ( neltyp == 0 ) THEN
-         CALL HASH_insert( length, 12, field2 // 'ET', KEY, ITABLE, ifree )
-         IF ( ifree <= 0 ) THEN
-            IF ( ifree == 0 ) THEN
-               status = - 1
-               RETURN
-            END IF
-            status = 18
-            IF ( out > 0 ) WRITE( out, 2180 )
+      IF ( neltype == 0 ) THEN
+        CALL HASH_insert( length, 12, field2 // 'ET', KEY, ITABLE, ifree )
+        IF ( ifree <= 0 ) THEN
+          IF ( ifree == 0 ) THEN
+            status = - 1
             RETURN
-         END IF
-         neltyp = 1
-         neln = 0
-         ninn = 0
-         nepn = 0
-         inrep = .FALSE.
-         INLIST( ifree ) = neltyp
-         IELV( neltyp ) = neln + 1
-         IINV( neltyp ) = ninn + 1
-         IEPA( neltyp ) = nepn + 1
-         ETYPES( neltyp ) = field2
+          END IF
+          status = 18
+          IF ( out > 0 ) WRITE( out, 2180 )
+          RETURN
+        END IF
+        neltype = 1
+        nevnames = 0
+        nivnames = 0
+        nepnames = 0
+        inrep = .FALSE.
+        INLIST( ifree ) = neltype
+        ELV( neltype ) = nevnames + 1
+        INV( neltype ) = nivnames + 1
+        ELP( neltype ) = nepnames + 1
+        ETYPES( neltype ) = field2
       END IF
 
 !  check if the column is new
 
-      IF ( field2 /= ETYPES( neltyp ) ) THEN
-         IF ( ETYPES( neltyp ) /= cqsqr .AND.                                  &
-              ETYPES( neltyp ) /= cqprod ) THEN
+      IF ( field2 /= ETYPES( neltype ) ) THEN
 
-!  if the previous element has no explicit internal representation,
-!  use its elemental representation
+!  if the previous element has no explicit internal representation, use its
+!  elemental representation
 
-            IF ( .NOT. inrep ) THEN
-               DO 10 k = IELV( neltyp ), neln
-                  ninn = ninn + 1
-                  IF ( ninn > nimax ) THEN
-                     status = - 16
-                     RETURN
-                  END IF
-                  INAMES( ninn ) = ENAMES( k )
-   10          CONTINUE
-            ELSE
-              IF ( ninn - IINV( neltyp ) >=                                    &
-                   neln - IELV( neltyp ) ) THEN
-                 status = 76
-                 IF ( out > 0 ) WRITE( out, 2760 )
-                 RETURN
+        IF ( ETYPES( neltype ) /= cqsqr .AND. ETYPES( neltype ) /= cqprod ) THEN
+          IF ( .NOT. inrep ) THEN
+            i = nevnames - ELV( neltype ) + 1
+            IF ( nivnames + i > len_ivnames ) THEN
+              used_length = nivnames ; min_length = nivnames + i
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( IVNAMES, len_ivnames, used_length, new_length,&
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
               END IF
+              len_ivnames = new_length
             END IF
-         END IF
+
+            DO k = ELV( neltype ), nevnames
+              nivnames = nivnames + 1
+              IVNAMES( nivnames ) = EVNAMES( k )
+            END DO
+          ELSE
+            IF ( nivnames - INV( neltype ) >= nevnames - ELV( neltype ) ) THEN
+              status = 76
+              IF ( out > 0 ) WRITE( out, 2760 )
+              RETURN
+            END IF
+          END IF
+        END IF
 
 !  record the name and starting address of the new element type
 
-         CALL HASH_insert( length, 12, field2 // 'ET', KEY, ITABLE, ifree )
-         IF ( ifree <= 0 ) THEN
-            IF ( ifree == 0 ) THEN
-               status = - 1
-               RETURN
-            END IF
-            status = 18
-            IF ( out > 0 ) WRITE( out, 2180 )
+        CALL HASH_insert( length, 12, field2 // 'ET', KEY, ITABLE, ifree )
+        IF ( ifree <= 0 ) THEN
+          IF ( ifree == 0 ) THEN
+            status = - 1
             RETURN
-         END IF
-         neltyp = neltyp + 1
-         inrep = .FALSE.
-         IF ( neltyp > nlmax ) THEN
-            status = - 3
-            RETURN
-         END IF
-         INLIST( ifree ) = neltyp
-         IELV( neltyp ) = neln + 1
-         IINV( neltyp ) = ninn + 1
-         IEPA( neltyp ) = nepn + 1
-         ETYPES( neltyp ) = field2
+          END IF
+          status = 18
+          IF ( out > 0 ) WRITE( out, 2180 )
+          RETURN
+        END IF
+        neltype = neltype + 1
+        inrep = .FALSE.
+
+        IF ( neltype > len_elv ) THEN
+          used_length = neltype - 1 ; min_length = neltype + 1
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( ELV, len_elv, used_length, new_length,            &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
+          len_elv = new_length
+        END IF
+
+        IF ( neltype > len_inv ) THEN
+          used_length = neltype - 1 ; min_length = neltype + 1
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( INV, len_inv, used_length, new_length,            &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
+          len_inv = new_length
+        END IF
+
+        IF ( neltype > len_elp ) THEN
+          used_length = neltype - 1 ; min_length = neltype + 1
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( ELP, len_elp, used_length, new_length,            &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
+          len_elp = new_length
+        END IF
+
+        IF ( neltype > len_etypes ) THEN
+          used_length = neltype - 1 ; min_length = neltype
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( ETYPES, len_etypes, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
+          len_etypes = new_length
+        END IF
+
+        INLIST( ifree ) = neltype
+        ELV( neltype ) = nevnames + 1
+        INV( neltype ) = nivnames + 1
+        ELP( neltype ) = nepnames + 1
+        ETYPES( neltype ) = field2
       END IF
 
 !  input the name of an internal variable
 
       IF ( field1 == 'IV' ) THEN
-         IF ( novals > 0 ) THEN
-            inrep = .TRUE.
-            DO 30 i = 1, novals
+        IF ( novals > 0 ) THEN
+          inrep = .TRUE.
+
+          IF ( nivnames + novals > len_ivnames ) THEN
+            used_length = nivnames ; min_length = nivnames + novals
+            new_length = 3 * min_length / 2 + 1 
+            CALL EXTEND_array( IVNAMES, len_ivnames, used_length, new_length,  &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+               bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
+            END IF
+            len_ivnames = new_length
+          END IF
+
+          DO i = 1, novals
 
 !  check the name has not already been used in the current element
 
-                DO 20 k = IINV( neltyp ), ninn
-                   IF ( ( i == 1 .AND. field3 == INAMES( k ) )                 &
-                        .OR. ( i == 2 .AND. field5 == INAMES( k ) )            &
-                      ) THEN
-                      status = 12
-                      IF ( out > 0 ) WRITE( out, 2120 )
-                      RETURN
-                   END IF
-   20           CONTINUE
+            DO k = INV( neltype ), nivnames
+              IF ( ( i == 1 .AND. field3 == IVNAMES( k ) ) .OR.                &
+                   ( i == 2 .AND. field5 == IVNAMES( k ) ) ) THEN
+                status = 12
+                IF ( out > 0 ) WRITE( out, 2120 )
+                RETURN
+              END IF
+            END DO
 
-!  the name is new. record it in the array inames
+!  the name is new. record it in the array IVNAMES
 
-               ninn = ninn + 1
-               IF ( ninn > nimax ) THEN
-                  status = - 16
-                  RETURN
-               END IF
-               IF ( i == 1 ) THEN
-                  INAMES( ninn ) = field3
-               ELSE
-                  INAMES( ninn ) = field5
-               END IF
-   30       CONTINUE
-         END IF
+            nivnames = nivnames + 1
+            IF ( i == 1 ) THEN
+              IVNAMES( nivnames ) = field3
+            ELSE
+              IVNAMES( nivnames ) = field5
+            END IF
+          END DO
+        END IF
       ELSE
 
 !  input the name of an elemental variable
 
-         IF ( field1 == 'EV' ) THEN
-            IF ( novals > 0 ) THEN
-               DO 50 i = 1, novals
+        IF ( field1 == 'EV' ) THEN
+          IF ( novals > 0 ) THEN
+            DO i = 1, novals
 
 !  check the name has not already been used in the current element
 
-                  DO 40 k = IELV( neltyp ), neln
-                      IF ( ( i == 1 .AND. field3 == ENAMES( k ) )              &
-                      .OR. ( i == 2 .AND. field5 == ENAMES( k ) )              &
-                      ) THEN
-                        status = 11
-                        IF ( out > 0 ) WRITE( out, 2110 )
-                        RETURN
-                     END IF
-   40             CONTINUE
+              DO k = ELV( neltype ), nevnames
+                IF ( ( i == 1 .AND. field3 == EVNAMES( k ) ) .OR.              &
+                     ( i == 2 .AND. field5 == EVNAMES( k ) ) ) THEN
+                  status = 11
+                  IF ( out > 0 ) WRITE( out, 2110 )
+                  RETURN
+                END IF
+              END DO
 
-!  the name is new. record it in the array enames
+!  the name is new. record it in the array EVNAMES
 
-                  neln = neln + 1
-                  IF ( neln > netmax ) THEN
-                     status = - 14
-                     RETURN
-                  END IF
-                  IF ( i == 1 ) THEN
-                     ENAMES( neln ) = field3
-                  ELSE
-                     ENAMES( neln ) = field5
-                  END IF
-   50          CONTINUE
-            END IF
-         ELSE
+              nevnames = nevnames + 1
+              IF ( nevnames > len_evnames ) THEN
+                used_length = nevnames - 1 ; min_length = nevnames
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( EVNAMES, len_evnames, used_length,          &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
+                len_evnames = new_length
+              END IF
+              IF ( i == 1 ) THEN
+                EVNAMES( nevnames ) = field3
+              ELSE
+                EVNAMES( nevnames ) = field5
+              END IF
+            END DO
+          END IF
 
 !  input the name of an element parameter
 
-            IF ( field1 == 'EP' ) THEN
-               IF ( novals > 0 ) THEN
-                  DO 70 i = 1, novals
+        ELSE
+          IF ( field1 == 'EP' ) THEN
+            IF ( novals > 0 ) THEN
+              DO i = 1, novals
 
 !  check the name has not already been used in the current element
 
-                     DO 60 k = IEPA( neltyp ), nepn
-                         IF ( ( i == 1 .AND. field3 == EPNAME( k ) )           &
-                         .OR. ( i == 2 .AND. field5 == EPNAME( k ) )           &
-                         ) THEN
-                           status = 23
-                           IF ( out > 0 ) WRITE( out, 2230 )
-                           RETURN
-                        END IF
-   60                CONTINUE
+                DO k = ELP( neltype ), nepnames
+                  IF ( ( i == 1 .AND. field3 == EPNAMES( k ) ) .OR.            &
+                       ( i == 2 .AND. field5 == EPNAMES( k ) ) ) THEN
+                    status = 23
+                    IF ( out > 0 ) WRITE( out, 2230 )
+                    RETURN
+                  END IF
+                END DO
 
-!  the name is new. record it in the array epname
+!  the name is new. record it in the array EPNAMES
 
-                     nepn = nepn + 1
-                     IF ( nepn > nepmax ) THEN
-                        status = - 19
-                        RETURN
-                     END IF
-                     IF ( i == 1 ) THEN
-                        EPNAME( nepn ) = field3
-                     ELSE
-                        EPNAME( nepn ) = field5
-                     END IF
-   70             CONTINUE
-               END IF
+                nepnames = nepnames + 1
+                IF ( nepnames > len_epnames ) THEN
+                  used_length = nepnames - 1 ; min_length = nepnames
+                  new_length = 3 * min_length / 2 + 1 
+                  CALL EXTEND_array( EPNAMES, len_epnames, used_length,        &
+                                     new_length, min_length, buffer,           &
+                                     status, alloc_status )
+                  IF ( status /= 0 ) THEN
+                     bad_alloc = 'EPNAMES' ; status = - 19 ; GO TO 980 ; END IF
+                  len_epnames = new_length
+                END IF
+                IF ( i == 1 ) THEN
+                  EPNAMES( nepnames ) = field3
+                ELSE
+                  EPNAMES( nepnames ) = field5
+                END IF
+              END DO
+            END IF
 
 !  field1 not recognised
 
-            ELSE
-               status = 10
-               IF ( out > 0 ) WRITE( out, 2100 ) field1
-               RETURN
-            END IF
-         END IF
+          ELSE
+            status = 10
+            IF ( out > 0 ) WRITE( out, 2100 ) field1
+            RETURN
+          END IF
+        END IF
       END IF
       status = 0
       RETURN
 
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
 !  non-executable statements
 
- 2100 FORMAT( ' ** Exit from GPSMPS - field 1 ', A2,                           &
+ 2100 FORMAT( ' ** Exit from INTERPRET_gpsmps - field 1 ', A2,                 &
               '  not recognised in ELEMENT TYPE section ' )
- 2110 FORMAT( ' ** Exit from GPSMPS - duplicate elemental var. name ' )
- 2120 FORMAT( ' ** Exit from GPSMPS - duplicate internal var. name ' )
- 2180 FORMAT( ' ** Exit from GPSMPS - duplicate element-type name ' )
- 2230 FORMAT( ' ** Exit from GPSMPS - duplicate elemental param. name ')
- 2760 FORMAT( ' ** Exit from GPSMPS - #internal vars >= #elementals' )
+ 2110 FORMAT( ' ** Exit from INTERPRET_gpsmps - duplicate elemental var. name' )
+ 2120 FORMAT( ' ** Exit from INTERPRET_gpsmps - duplicate internal var. name ' )
+ 2180 FORMAT( ' ** Exit from INTERPRET_gpsmps - duplicate element-type name ' )
+ 2230 FORMAT( ' ** Exit from INTERPRET_gpsmps - duplicate elemental',          &
+              ' parameter name')
+ 2760 FORMAT( ' ** Exit from INTERPRET_gpsmps - #internal vars >= #elementals' )
 
 !  end of subroutine SETYPE
 
@@ -4053,29 +4886,33 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S E U S E S    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SEUSES( nlmax, nelmax, netmax, nevmax, nlisev, nlisep,        &
-                         novals, nepmax, nepvmx, length, nelnum, nelmnt,       &
-                         nmax, n, elmnt, IELV, IEPA, ITYPEE, IELVAR,           &
-                         INLIST, ITABLE, ISTAEV, ISTEP, delset, detype,        &
+      SUBROUTINE SEUSES( neltype, nevnames, nepnames, nelvar, nlisep,  &
+                         novals, length, nelnum, nelmnt,       &
+                         nmax, n, elmnt, ELV, ELP, len_typee, TYPEE,     &
+                         len_elvar, ELVAR, INLIST, ITABLE,    &
+                         len_ev_ptr, EV_ptr, len_ep_ptr, EP_ptr, &
+                         delset, detype,        &
                          field1, field2, field3, value4, field5, value6,       &
-                         EPVALU, ENAMES, lnames, EPNAME, VNAMES,               &
+                         len_ep_val, EP_val, EVNAMES, EPNAMES,   &
+                         len_lnames, LNAMES, VNAMES, &
                          KEY, out, status )
       INTEGER :: out, status, length
-      INTEGER :: nmax, nlmax, nelmax, netmax, nevmax
-      INTEGER :: nelnum, nlisep, nlisev
-      INTEGER :: novals, nepvmx, nepmax, nelmnt, n
+      INTEGER :: nmax, neltype, nevnames, nepnames, nelvar
+      INTEGER :: nelnum, nlisep, len_elvar, len_ep_val
+      INTEGER :: novals, nelmnt, n
+      INTEGER :: len_lnames, len_ev_ptr, len_typee, len_ep_ptr
       REAL ( KIND = wp ) :: value4, value6
       LOGICAL :: delset
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5, elmnt, detype
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5, elmnt, detype
       INTEGER :: INLIST( length ), ITABLE ( length )
-      INTEGER :: IELV( nlmax ), IEPA( nlmax )
-      INTEGER :: IELVAR( nevmax ), ITYPEE( nelmax )
-      INTEGER :: ISTAEV( nelmax ), ISTEP( nelmax )
-      REAL ( KIND = wp ) :: EPVALU( nepvmx )
-      CHARACTER ( len = 10 ) :: ENAMES( netmax ), LNAMES( nelmax )
-      CHARACTER ( len = 10 ) :: EPNAME( nepmax ), VNAMES( nmax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      INTEGER :: ELV( neltype + 1 ), ELP( neltype + 1 )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELVAR, TYPEE, EV_ptr, EP_ptr
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: EP_val
+      CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames )
+      CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), VNAMES( nmax )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LNAMES
 
 !  ------------------------------
 !  indicator card is element uses
@@ -4083,282 +4920,333 @@
 
 !  local variables
 
-      INTEGER :: i, ifree, ifield, ip, is, j, k, mlisep, mlisev
-      INTEGER :: nepars, nevars
-      CHARACTER ( len = 12 ) :: field
+      INTEGER :: i, ifree, ifield, ip, is, j, k, mlisep, mlisev, nepars, nevars
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      CHARACTER ( LEN = 12 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  the current card defines a default type
 
       IF ( field2 == '''DEFAULT'' ' ) THEN
-         IF ( delset ) THEN
-            status = 26
-            IF ( out > 0 ) WRITE( out, 2260 )
-         END IF
-         delset = .TRUE.
-         detype = field3
+        IF ( delset ) THEN
+          status = 26
+          IF ( out > 0 ) WRITE( out, 2260 )
+        END IF
+        delset = .TRUE.
+        detype = field3
       ELSE
 
 !  if the element named in field2 is not that of the previous card,
 !  determine the characteristics of the element
 
-         IF ( elmnt /= field2 ) THEN
+        IF ( elmnt /= field2 ) THEN
 
 !  look the name up in the dictionary to see if it already exists
 
-            CALL HASH_insert( length, 12, field2 // 'EL', KEY,                      &
-                         ITABLE, ifree )
+          CALL HASH_insert( length, 12, field2 // 'EL', KEY, ITABLE, ifree )
 
 !  if the element name is recognised, recover its characteristics
 
-            IF ( ifree <= 0 ) THEN
-               IF ( ifree == 0 ) THEN
-                  status = - 1
-                  RETURN
-               END IF
-               nelmnt = INLIST( - ifree )
-            ELSE
+          IF ( ifree <= 0 ) THEN
+            IF ( ifree == 0 ) THEN
+              status = - 1
+              RETURN
+            END IF
+            nelmnt = INLIST( - ifree )
 
 !  the new element is the nelnum-th nonlinear element
 
-               nelnum = nelnum + 1
-               IF ( nelnum > nelmax ) THEN
-                  status = - 9
-                  RETURN
-               END IF
+          ELSE
+            nelnum = nelnum + 1
+            IF ( nelnum > len_lnames ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
+              len_lnames = new_length
+            END IF
+
+            IF ( nelnum > len_typee ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
+              len_typee = new_length
+            END IF
+
+            IF ( nelnum + 1 > len_ep_ptr ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum + 1
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
+              len_ep_ptr = new_length
+            END IF
+
+            IF ( nelnum + 1 > len_ev_ptr ) THEN
+              used_length = nelnum - 1 ; min_length = nelnum + 1
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
+              len_ev_ptr = new_length
+            END IF
 
 !  record the elements position in the table along with its name
 
-               INLIST( ifree ) = nelnum
-               LNAMES( nelnum ) = field2
-               nelmnt = nelnum
-            END IF
+            INLIST( ifree ) = nelnum
+            LNAMES( nelnum ) = field2
+            nelmnt = nelnum
+          END IF
 
 !  record the nonlinear element's name
 
-            elmnt = field2
+          elmnt = field2
 
 !  if the element has not yet been allocated a type, set it
 
-            IF ( field1 == 'T ' .OR. field1 == 'XT'                            &
-                 .OR. ifree > 0 ) THEN
+          IF ( field1 == 'T ' .OR. field1 == 'XT' .OR. ifree > 0 ) THEN
 
 !  record the element type
 
-               IF ( field1 == 'T ' .OR. field1 == 'XT' ) THEN
-                  field = field3 // 'ET'
-               ELSE
-                  IF ( delset ) THEN
-                     field = detype // 'ET'
-                  ELSE
+            IF ( field1 == 'T ' .OR. field1 == 'XT' ) THEN
+              field = field3 // 'ET'
+            ELSE
+              IF ( delset ) THEN
+                field = detype // 'ET'
 
 !  the element name is new. check that if a default element type
 !  is required, a default has been set
 
-                     status = 41
-                     IF ( out > 0 ) WRITE( out, 2410 )
-                     RETURN
-                  END IF
+              ELSE
+                 status = 41
+                 IF ( out > 0 ) WRITE( out, 2410 )
+                 RETURN
                END IF
+            END IF
 
 !  if the group is non-trivial, determine its characteristics
 
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               IF ( ifield <= 0 ) THEN
-                  status = 9
-                  IF ( out > 0 ) WRITE( out, 2090 ) field3
-                  RETURN
-               END IF
+            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+            IF ( ifield <= 0 ) THEN
+              status = 9
+              IF ( out > 0 ) WRITE( out, 2090 ) field3
+              RETURN
+            END IF
 
-!  determine the number of the element type, k, the starting
-!  addresses for the parameters and variables for the element
-!  and the number of parameters and variables involved
+!  determine the number of the element type, k, the starting addresses for 
+!  the parameters and variables for the element and the number of parameters 
+!  and variables involved
 
-               k = INLIST( ifield )
-               ITYPEE( nelnum ) = k
-               ISTEP ( nelnum ) = nlisep + 1
-               ISTAEV( nelnum ) = nlisev + 1
-               nepars = IEPA( k + 1 ) - IEPA( k )
-               nevars = IELV( k + 1 ) - IELV( k )
-               IF ( nlisev + nevars > nevmax ) THEN
-                  status = - 15
-                  RETURN
-               END IF
-               IF ( nlisep + nepars > nepvmx ) THEN
-                  status = - 17
-                  RETURN
-               END IF
+            k = INLIST( ifield )
+            TYPEE( nelnum ) = k
+            EP_ptr ( nelnum ) = nlisep + 1
+            EV_ptr( nelnum ) = nelvar + 1
+
+            nepars = ELP( k + 1 ) - ELP( k )
+            nevars = ELV( k + 1 ) - ELV( k )
+            IF ( nelvar + nevars > len_elvar ) THEN
+              used_length = nelvar ; min_length = nelvar + nevars
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length,    &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
+              len_elvar = new_length
+            END IF
+
+            IF ( nlisep + nepars > len_ep_val ) THEN
+              used_length = nlisep ; min_length =  nlisep + nepars
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EP_val, len_ep_val, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EP_val' ; status = - 17 ; GO TO 980 ; END IF
+              len_ep_val = new_length
+            END IF
 
 !  initialize the set of problem variables
 
-               DO 10 i = 1, nevars
-                  IELVAR( nlisev + i ) = 0
-   10          CONTINUE
+            DO i = 1, nevars
+              ELVAR( nelvar + i ) = 0
+            END DO
 
 !  initialize the set of parameter values
 
-               DO 20 i = 1, nepars
-                  EPVALU( nlisep + i ) = biginf
-   20          CONTINUE
+            DO i = 1, nepars
+              EP_val( nlisep + i ) = biginf
+            END DO
 
 !  find the starting addresses for the lists of the elements
 !  parameters and variables
 
-               nlisep = nlisep + nepars
-               nlisev = nlisev + nevars
-               IF ( field1 == 'T ' .OR. field1 == 'XT' ) RETURN
-            END IF
-         END IF
+            nlisep = nlisep + nepars
+            nelvar = nelvar + nevars
+            IF ( field1 == 'T ' .OR. field1 == 'XT' ) RETURN
+          END IF
+        END IF
 
 !  check that the cards are in the correct order
 
-         IF ( field1 == 'T ' .OR. field1 == 'XT' ) THEN
-            status = 27
-            IF ( out > 0 ) WRITE( out, 2270 )
-            RETURN
-         END IF
+        IF ( field1 == 'T ' .OR. field1 == 'XT' ) THEN
+          status = 27
+          IF ( out > 0 ) WRITE( out, 2270 )
+          RETURN
+        END IF
 
 !  determine the number of the element type, k, the starting
 !  addresses for the parameters and variables for the element
 !  and the number of parameters and variables involved
 
-         k = ITYPEE( nelmnt )
-         nepars = IEPA( k + 1 ) - IEPA( k )
-         nevars = IELV( k + 1 ) - IELV( k )
-         mlisep = ISTEP( nelmnt ) - 1
-         mlisev = ISTAEV( nelmnt ) - 1
-         ip = IEPA( k ) - 1
-         is = IELV( k ) - 1
+        k = TYPEE( nelmnt )
+        nepars = ELP( k + 1 ) - ELP( k )
+        nevars = ELV( k + 1 ) - ELV( k )
+        mlisep = EP_ptr( nelmnt ) - 1
+        mlisev = EV_ptr( nelmnt ) - 1
+        ip = ELP( k ) - 1
+        is = ELV( k ) - 1
 
 !  the card contains names of elemental variables
 
-         IF ( field1 == 'V ' .OR. field1 == 'ZV' ) THEN
+        IF ( field1 == 'V ' .OR. field1 == 'ZV' ) THEN
 
 !  the elemental variable is defined in field3
 
-            DO 110 i = 1, nevars
-               IF ( field3 == ENAMES( is + i ) ) GO TO 120
-  110       CONTINUE
+          DO i = 1, nevars
+            IF ( field3 == EVNAMES( is + i ) ) GO TO 120
+          END DO
 
 !  the elemental variable name is not recognised
 
-            status = 15
-            IF ( out > 0 ) WRITE( out, 2150 )
-            RETURN
-  120       CONTINUE
+           status = 15
+           IF ( out > 0 ) WRITE( out, 2150 )
+           RETURN
 
 !  check that the variable has not already been set
 
-            IF ( IELVAR( mlisev + i ) /= 0 ) THEN
-               status = 30
-               IF ( out > 0 ) WRITE( out, 2300 )
-               RETURN
-            END IF
+  120      CONTINUE
+           IF ( ELVAR( mlisev + i ) /= 0 ) THEN
+             status = 30
+             IF ( out > 0 ) WRITE( out, 2300 )
+             RETURN
+           END IF
 
 !  search the table for the name of the input variable
 
-            CALL HASH_insert( length, 12, FIELD5//'VA', KEY, ITABLE, ifree )
-            IF ( ifree <= 0 ) THEN
-               IF ( ifree == 0 ) THEN
-                  status = - 1
-                  RETURN
-               END IF
+           CALL HASH_insert( length, 12, FIELD5//'VA', KEY, ITABLE, ifree )
+           IF ( ifree <= 0 ) THEN
+             IF ( ifree == 0 ) THEN
+               status = - 1
+               RETURN
+             END IF
 
 !  the variable has appeared before. store its number
 
-               IELVAR( mlisev + i ) = INLIST( - ifree )
-            ELSE
+             ELVAR( mlisev + i ) = INLIST( - ifree )
 
 !  the variable is completely new (and thus nonlinear)
 !  it will be recorded as variable n
 
-               n = n + 1
-               IF ( n > nmax ) THEN
-                  status = - 7
-                  RETURN
-               END IF
+           ELSE
+             n = n + 1
+             IF ( n > nmax ) THEN
+               status = - 7
+               RETURN
+             END IF
 
 !  record the position of the new group in the table, record its
 !  name, initialise its type as trivial and record its status as
 !  an equality group
 
-               INLIST( ifree ) = n
-               VNAMES( n ) = field5
-               IELVAR( mlisev + i ) = n
-            END IF
-         ELSE
+             INLIST( ifree ) = n
+             VNAMES( n ) = field5
+             ELVAR( mlisev + i ) = n
+           END IF
 
 !  the card contains names and values of elemental parameters
 
-            IF ( field1 == 'P ' .OR. field1 == 'XP' .OR.                       &
-                 field1 == 'ZP' ) THEN
-               IF ( novals > 0 ) THEN
-                  DO 230 j = 1, novals
+         ELSE
+           IF ( field1 == 'P ' .OR. field1 == 'XP' .OR. field1 == 'ZP' ) THEN
+             IF ( novals > 0 ) THEN
+               DO j = 1, novals
 
 !  check the name has not already been used in the current element
 !  the parameter name occurs in field3 or field5
 
-                     DO 210 i = 1, nepars
-                        IF (                                                   &
-                        ( j == 1 .AND. field3 == EPNAME( ip + i ) )            &
-                   .OR. ( j == 2 .AND. field5 == EPNAME( ip + i ) )            &
-                             ) GO TO 220
-  210                CONTINUE
+                 DO i = 1, nepars
+                   IF ( ( j == 1 .AND. field3 == EPNAMES( ip + i ) ) .OR.       &
+                        ( j == 2 .AND. field5 == EPNAMES( ip + i ) ) ) GO TO 220
+                 END DO
 
 !  the elemental parameter name is not recognised
 
-                     status = 28
-                     IF ( out > 0 ) WRITE( out, 2280 )                       &
-                        LNAMES( nelnum ), EPNAME( ip + i )
-                     RETURN
+                 status = 28
+                 IF ( out > 0 )                                                &
+                   WRITE( out, 2280 ) LNAMES( nelnum ), EPNAMES( ip + i )
+                 RETURN
 
 !  the elemental parameter name is the i-th parameter in the list
 
-  220                CONTINUE
+  220            CONTINUE
 
 !  check that the value has not already been set
 
-                     IF ( EPVALU( mlisep + i ) < biginf ) THEN
-                        status = 29
-                        IF ( out > 0 ) WRITE( out, 2290 )
-                        RETURN
-                     END IF
+                 IF ( EP_val( mlisep + i ) < biginf ) THEN
+                   status = 29
+                   IF ( out > 0 ) WRITE( out, 2290 )
+                   RETURN
+                 END IF
 
 !  read the associated value from field4 or field 6
 
-                     IF ( j == 1 ) THEN
-                        EPVALU( mlisep + i ) = value4
-                     ELSE
-                        EPVALU( mlisep + i ) = value6
-                     END IF
-  230             CONTINUE
-               END IF
+                 IF ( j == 1 ) THEN
+                    EP_val( mlisep + i ) = value4
+                 ELSE
+                    EP_val( mlisep + i ) = value6
+                 END IF
+               END DO
+             END IF
 
 !  field1 not recognised
 
-            ELSE
-               status = 10
-               IF ( out > 0 ) WRITE( out, 2100 ) field1
-               RETURN
-            END IF
-         END IF
+           ELSE
+             status = 10
+             IF ( out > 0 ) WRITE( out, 2100 ) field1
+             RETURN
+           END IF
+        END IF
       END IF
       status = 0
       RETURN
 
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
 !  non-executable statements
 
- 2090 FORMAT( ' ** Exit from GPSMPS - element type not recognised:',           &
+ 2090 FORMAT( ' ** Exit from INTERPRET_gpsmps - element type not recognised:', &
               ' name is ', A10 )
- 2100 FORMAT( ' ** Exit from GPSMPS - field 1 ', A2,                           &
+ 2100 FORMAT( ' ** Exit from INTERPRET_gpsmps - field 1 ', A2,                 &
               '  not recognised in ELEMENT USES section ' )
- 2150 FORMAT( ' ** Exit from GPSMPS - element variable unrecognised ' )
- 2260 FORMAT( ' ** Exit from GPSMPS - duplicate default element type ' )
- 2270 FORMAT( ' ** Exit from GPSMPS - type for element already set ' )
- 2280 FORMAT( ' ** Exit from GPSMPS - element ', A10, ' parameter ',           &
+ 2150 FORMAT( ' ** Exit from INTERPRET_gpsmps - element variable unrecognised' )
+ 2260 FORMAT( ' ** Exit from INTERPRET_gpsmps - duplicate default element type')
+ 2270 FORMAT( ' ** Exit from INTERPRET_gpsmps - type for element already set ' )
+ 2280 FORMAT( ' ** Exit from INTERPRET_gpsmps - element ', A10, ' parameter ', &
               A10, ' unrecognised ' )
- 2290 FORMAT( ' ** Exit from GPSMPS - element parameter already set ' )
- 2300 FORMAT( ' ** Exit from GPSMPS - element variable already set ' )
- 2410 FORMAT( ' ** Exit from GPSMPS - element type unrecognised ' )
+ 2290 FORMAT( ' ** Exit from INTERPRET_gpsmps - element parameter already set' )
+ 2300 FORMAT( ' ** Exit from INTERPRET_gpsmps - element variable already set' )
+ 2410 FORMAT( ' ** Exit from INTERPRET_gpsmps - element type unrecognised ' )
 
 !  end of subroutine SEUSES
 
@@ -4366,20 +5254,23 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S G T Y P E    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SGTYPE( ngrmax, ngpmax, novals, length, ngrtyp, ngpn,         &
-                         setana, INLIST, IGPA, ITABLE, field1, field2, field3, &
-                         field5, ANAMES, GTYPES, GPNAME, KEY, out, status )
+      SUBROUTINE SGTYPE( ngpmax, novals, length, ngtype, ngpn,                 &
+                         setana, INLIST, len_gtypesp_ptr, GTYPESP_ptr, ITABLE, &
+                         field1, field2, field3,                               &
+                         field5, len_ganames, GANAMES, len_gtypes, GTYPES,     &
+                         GPNAME, KEY, out, status )
       INTEGER :: out, status, novals, length
-      INTEGER :: ngrmax, ngpmax
-      INTEGER :: ngrtyp, ngpn
+      INTEGER :: ngpmax,ngpn
+      INTEGER :: ngtype, len_gtypesp_ptr, len_ganames, len_gtypes
       LOGICAL :: setana
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
-      INTEGER :: ITABLE ( length ), IGPA( ngrmax )
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
+      INTEGER :: ITABLE( length )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GTYPESP_ptr
       INTEGER :: INLIST( length )
-      CHARACTER ( len = 10 ) :: ANAMES( ngrmax ), GTYPES( ngrmax )
-      CHARACTER ( len = 10 ) :: GPNAME( NGPMAX)
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GANAMES, GTYPES
+      CHARACTER ( LEN = 10 ) :: GPNAME( NGPMAX )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  ----------------------------
 !  indicator card is group type
@@ -4388,119 +5279,153 @@
 !  local variables
 
       INTEGER :: i, ifree, k
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  check if this is the first group type
 
-      IF ( ngrtyp == 0 ) THEN
-         CALL HASH_insert( length, 12, field2 // 'GT', KEY, ITABLE, ifree )
-         IF ( ifree <= 0 ) THEN
-            IF ( ifree == 0 ) THEN
-               status = - 1
-               RETURN
-            END IF
-            status = 17
-            IF ( out > 0 ) WRITE( out, 2170 )
+      IF ( ngtype == 0 ) THEN
+        CALL HASH_insert( length, 12, field2 // 'GT', KEY, ITABLE, ifree )
+        IF ( ifree <= 0 ) THEN
+          IF ( ifree == 0 ) THEN
+            status = - 1
             RETURN
-         END IF
-         ngrtyp = 1
-         ngpn = 0
-         setana = .FALSE.
-         INLIST( ifree ) = ngrtyp
-         IGPA( ngrtyp ) = ngpn + 1
-         GTYPES( ngrtyp ) = field2
+          END IF
+          status = 17
+          IF ( out > 0 ) WRITE( out, 2170 )
+          RETURN
+        END IF
+        ngtype = 1
+        ngpn = 0
+        setana = .FALSE.
+        INLIST( ifree ) = ngtype
+        GTYPESP_ptr( ngtype ) = ngpn + 1
+        GTYPES( ngtype ) = field2
       END IF
 
 !  check if the group-type is new
 
-      IF ( field2 /= GTYPES( ngrtyp ) ) THEN
+      IF ( field2 /= GTYPES( ngtype ) ) THEN
 
 !  check that the argument for the previous group-type has been set
 
-         IF ( .NOT. setana ) THEN
-            status = 25
-            IF ( out > 0 ) WRITE( out, 2250 )
-            RETURN
-         END IF
+        IF ( .NOT. setana ) THEN
+          status = 25
+          IF ( out > 0 ) WRITE( out, 2250 )
+          RETURN
+        END IF
 
 !  record the name and starting address of the new group type
 
-         CALL HASH_insert( length, 12, field2 // 'GT', KEY, ITABLE, ifree )
-         IF ( ifree <= 0 ) THEN
-            IF ( ifree == 0 ) THEN
-               status = - 1
-               RETURN
-            END IF
-            status = 17
-            IF ( out > 0 ) WRITE( out, 2170 )
-            RETURN
-         END IF
-         ngrtyp = ngrtyp + 1
-         setana = .FALSE.
-         IF ( ngrtyp > ngrmax ) THEN
-            status = - 4
-            RETURN
-         END IF
-         INLIST( ifree ) = ngrtyp
-         IGPA( ngrtyp ) = ngpn + 1
-         GTYPES( ngrtyp ) = field2
+        CALL HASH_insert( length, 12, field2 // 'GT', KEY, ITABLE, ifree )
+        IF ( ifree <= 0 ) THEN
+           IF ( ifree == 0 ) THEN
+              status = - 1
+              RETURN
+           END IF
+           status = 17
+           IF ( out > 0 ) WRITE( out, 2170 )
+           RETURN
+        END IF
+        ngtype = ngtype + 1
+        setana = .FALSE.
+        IF ( ngtype > len_gtypesp_ptr ) THEN
+          used_length = ngtype ; min_length = ngtype
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr, used_length,        &
+                             new_length, min_length, buffer, status,           &
+                             alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
+          len_gtypesp_ptr = new_length
+        END IF
+        IF ( ngtype > len_gtypes ) THEN
+          used_length = ngtype ; min_length = ngtype
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( GTYPES, len_gtypes, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'GTYPES' ; status = - 4 ; GO TO 980 ; END IF
+          len_gtypes = new_length
+        END IF
+        IF ( ngtype > len_ganames ) THEN
+          used_length = ngtype ; min_length = ngtype
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( GANAMES, len_ganames, used_length, new_length,    &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+             bad_alloc = 'GANAMES' ; status = - 4 ; GO TO 980 ; END IF
+          len_ganames = new_length
+        END IF
+        INLIST( ifree ) = ngtype
+        GTYPESP_ptr( ngtype ) = ngpn + 1
+        GTYPES( ngtype ) = field2
       END IF
 
 !  input the name of the group-type argument
 
       IF ( field1 == 'GV' ) THEN
-         setana = .TRUE.
-         ANAMES( ngrtyp ) = field3
+        setana = .TRUE.
+        GANAMES( ngtype ) = field3
       ELSE
 
 !  input the name of an group parameter
 
-         IF ( field1 == 'GP' ) THEN
-            IF ( novals > 0 ) THEN
-               DO 20 i = 1, novals
+        IF ( field1 == 'GP' ) THEN
+          IF ( novals > 0 ) THEN
+            DO i = 1, novals
 
 !  check the name has not already been used in the current group
 
-                  DO 10 k = IGPA( ngrtyp ), ngpn
-                      IF ( ( i == 1 .AND. field3 == GPNAME( k ) )              &
-                      .OR. ( i == 2 .AND. field5 == GPNAME( k ) )              &
-                      ) THEN
-                        status = 24
-                        IF ( out > 0 ) WRITE( out, 2240 )
-                        RETURN
-                     END IF
-   10             CONTINUE
+              DO k = GTYPESP_ptr( ngtype ), ngpn
+                IF ( ( i == 1 .AND. field3 == GPNAME( k ) ) .OR.               &
+                     ( i == 2 .AND. field5 == GPNAME( k ) ) ) THEN
+                  status = 24
+                  IF ( out > 0 ) WRITE( out, 2240 )
+                  RETURN
+                END IF
+              END DO
 
 !  the name is new. record it in the array gpname
 
-                  ngpn = ngpn + 1
-                  IF ( ngpn > ngpmax ) THEN
-                     status = - 20
-                     RETURN
-                  END IF
-                  IF ( i == 1 ) THEN
-                     GPNAME( ngpn ) = field3
-                  ELSE
-                     GPNAME( ngpn ) = field5
-                  END IF
-   20          CONTINUE
-            END IF
+              ngpn = ngpn + 1
+              IF ( ngpn > ngpmax ) THEN
+                status = - 20
+                RETURN
+              END IF
+              IF ( i == 1 ) THEN
+                GPNAME( ngpn ) = field3
+              ELSE
+                GPNAME( ngpn ) = field5
+              END IF
+            END DO
+          END IF
 
 !  field1 not recognised
 
-         ELSE
-            status = 10
-            IF ( out > 0 ) WRITE( out, 2100 ) field1
-            RETURN
-         END IF
+        ELSE
+          status = 10
+          IF ( out > 0 ) WRITE( out, 2100 ) field1
+          RETURN
+        END IF
       END IF
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
 
 !  non-executable statements
 
- 2170 FORMAT( ' ** Exit from GPSMPS - duplicate group-type name ' )
- 2100 FORMAT( ' ** Exit from GPSMPS - field 1 ', A2,                           &
+ 2170 FORMAT( ' ** Exit from INTERPRET_gpsmps - duplicate group-type name ' )
+ 2100 FORMAT( ' ** Exit from INTERPRET_gpsmps - field 1 ', A2,                 &
               '  not recognised in GROUP TYPE section ' )
- 2240 FORMAT( ' ** Exit from GPSMPS - duplicate group param. name ' )
- 2250 FORMAT( ' ** Exit from GPSMPS - no group-type arg. given ' )
+ 2240 FORMAT( ' ** Exit from INTERPRET_gpsmps - duplicate group param. name ' )
+ 2250 FORMAT( ' ** Exit from INTERPRET_gpsmps - no group-type argument given ' )
  
 !  end of subroutine SGTYPE
 
@@ -4508,27 +5433,33 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S G U S E S    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SGUSES( negmax, ngpmax, ngrmax, ngmax, ngpvmx,                &
-                         length, ng, ngrupe, nlisgp, novals, neling,           &
-                         ndtype, strtgu, grupe, IGPA, ITYPEG, IELING,          &
-                         INLIST, ITABLE, ISTGP, ISTATE, dgrset, dgtype,        &
+      SUBROUTINE SGUSES( ngpmax,                       &
+                         length, ng, ngtype, ngrupe, nlisgp, novals, neling,   &
+                         ndtype, start_group_uses_section, grupe,              &
+                         len_gtypesp_ptr, GTYPESP_ptr,                         &
+                         GTYPE, len_eling_el, ELING_el, len_eling_g, ELING_g,  &
+                         INLIST, ITABLE, GP_ptr, GSTATE, dgrset, dgtype,       &
                          field1, field2, field3, value4, field5, value6,       &
-                         GPTEMP, GPNAME, WEIGHT,                               &
+                         len_gp_val_orig, GP_val_orig, GPNAME, &
+                         len_weight, WEIGHT,         &
                          KEY, out, status )
-      INTEGER :: out, status, length
-      INTEGER :: negmax, ngpmax, ngrmax, ngmax, ngpvmx
+      INTEGER :: ngpmax, length, out, status
       INTEGER :: ng, nlisgp, neling, novals, ngrupe, ndtype
+      INTEGER :: ngtype, len_gtypesp_ptr, len_gp_val_orig
+      INTEGER :: len_weight, len_eling_el, len_eling_g
       REAL ( KIND = wp ) :: value4, value6
-      LOGICAL :: dgrset, strtgu
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5, grupe, dgtype
+      LOGICAL :: dgrset, start_group_uses_section
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5, grupe, dgtype
       INTEGER :: INLIST( length ), ITABLE ( length )
-      INTEGER :: IGPA( ngrmax ), IELING( negmax, 2 )
-      INTEGER :: ITYPEG( ngmax )
-      INTEGER :: ISTGP( ngmax ), ISTATE( ngmax )
-      REAL ( KIND = wp ) :: GPTEMP( ngpvmx ), WEIGHT( negmax )
-      CHARACTER ( len = 10 ) :: GPNAME( ngpmax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      INTEGER :: GTYPESP_ptr( ngtype + 1 )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELING_el, ELING_g
+      INTEGER :: GTYPE( ng )
+      INTEGER :: GP_ptr( ng + 1 ), GSTATE( ng )
+      CHARACTER ( LEN = 10 ) :: GPNAME( ngpmax )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: GP_val_orig
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: WEIGHT
 
 !  ----------------------------
 !  indicator card is group uses
@@ -4537,275 +5468,319 @@
 !  local variables
 
       INTEGER :: i, ifield, ip, j, k, mlisgp, ngpars
-      CHARACTER ( len = 12 ) :: field
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      CHARACTER ( LEN = 12 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  the current card defines a default type
 
       IF ( field2 == '''DEFAULT'' ' ) THEN
-         IF ( dgrset ) THEN
-            status = 42
-            IF ( out > 0 ) WRITE( out, 2420 )
-            RETURN
-         END IF
-         dgrset = .TRUE.
-         dgtype = field3
+        IF ( dgrset ) THEN
+          status = 42
+          IF ( out > 0 ) WRITE( out, 2420 )
+          RETURN
+        END IF
+        dgrset = .TRUE.
+        dgtype = field3
 
 !  find the number allocated to the group type
 
-         CALL HASH_search( length, 12, dgtype // 'GT', KEY, ITABLE, ifield )
-         IF ( ifield <= 0 ) THEN
-            status = 19
-            IF ( out > 0 ) WRITE( out, 2190 ) field3
-            RETURN
-         END IF
+        CALL HASH_search( length, 12, dgtype // 'GT', KEY, ITABLE, ifield )
+        IF ( ifield <= 0 ) THEN
+          status = 19
+          IF ( out > 0 ) WRITE( out, 2190 ) field3
+          RETURN
+        END IF
 
 !  reset the defaults for each of the groups allocated in previous
 !  sections
 
-         ndtype = INLIST( ifield )
-         DO 10 i = 1, ng
-            IF ( ITYPEG( i ) == - 1 ) ITYPEG( i ) = - ndtype - 1
-   10    CONTINUE
-         RETURN
+        ndtype = INLIST( ifield )
+        DO i = 1, ng
+          IF ( GTYPE( i ) == - 1 ) GTYPE( i ) = - ndtype - 1
+        END DO
+        RETURN
       END IF
 
 !  if the group named in field2 is not that of the previous card,
 !  determine the characteristics of the group
 
-      IF ( .NOT. strtgu .OR. grupe /= field2 ) THEN
-         strtgu = .TRUE.
+      IF ( .NOT. start_group_uses_section .OR. grupe /= field2 ) THEN
+        start_group_uses_section = .TRUE.
 
 !  look the name up in the dictionary to see if it exists
 
-         CALL HASH_search( length, 12, field2 // 'GR', KEY,                         &
-                      ITABLE, ifield )
-         IF ( ifield > 0 ) THEN
-            ngrupe = INLIST( ifield )
-            ISTATE( ngrupe ) = - ABS( ISTATE( ngrupe ) )
-         ELSE
+        CALL HASH_search( length, 12, field2 // 'GR', KEY, ITABLE, ifield )
+        IF ( ifield > 0 ) THEN
+          ngrupe = INLIST( ifield )
+          GSTATE( ngrupe ) = - ABS( GSTATE( ngrupe ) )
 
 !  the group name is unknown
 
-            IF ( out > 0 ) WRITE( out, 2040 ) field2
-            status = 4
-            RETURN
-         END IF
+        ELSE
+          IF ( out > 0 ) WRITE( out, 2040 ) field2
+          status = 4
+          RETURN
+        END IF
 
 !  record the group's name
 
-         grupe = field2
+        grupe = field2
 
 !  record the group type
 
-         IF ( field1 == 'T ' .OR. field1 == 'XT' ) THEN
-            field = field3 // 'GT'
+        IF ( field1 == 'T ' .OR. field1 == 'XT' ) THEN
+          field = field3 // 'GT'
 
 !  if the group is non-trivial, determine its characteristics
 
-            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-            IF ( ifield <= 0 ) THEN
-               status = 19
-               IF ( out > 0 ) WRITE( out, 2190 ) field3
-               RETURN
-            END IF
-
-!  determine the number of the group type, k, the starting
-!  addresses for the parameters for the group and the
-!  number of parameters involved
-
-            k = INLIST( ifield )
-            IF ( k == 0 ) THEN
-              ngpars = 0
-            ELSE
-              ngpars = IGPA( k + 1 ) - IGPA( k )
-            END IF
-            ITYPEG( ngrupe ) = k
-            ISTGP ( ngrupe ) = nlisgp + 1
-            IF ( nlisgp + ngpars > ngpvmx ) THEN
-               status = - 18
-               RETURN
-            END IF
-
-!  initialize the set of parameter values
-
-            DO 50 i = 1, ngpars
-               GPTEMP( nlisgp + i ) = biginf
-   50       CONTINUE
-
-!  find the starting addresses for the lists of the group parameters
-
-            nlisgp = nlisgp + ngpars
+          CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+          IF ( ifield <= 0 ) THEN
+            status = 19
+            IF ( out > 0 ) WRITE( out, 2190 ) field3
             RETURN
-         ELSE
+          END IF
 
-!  the group is new and of default type. determine the starting
-!  addresses for the parameters for the group and the
-!  number of parameters involved
+!  determine the number of the group type, k, the starting addresses for the 
+!  parameters for the group and the number of parameters involved
 
-            k = ndtype
-            IF ( k == 0 ) THEN
-              ngpars = 0
-            ELSE
-              ngpars = IGPA( k + 1 ) - IGPA( k )
-            END IF
-            ITYPEG( ngrupe ) = k
-            ISTGP ( ngrupe ) = nlisgp + 1
-            IF ( nlisgp + ngpars > ngpvmx ) THEN
-               status = - 18
-               RETURN
-            END IF
+          k = INLIST( ifield )
+          IF ( k == 0 ) THEN
+            ngpars = 0
+          ELSE
+            ngpars = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
+          END IF
+          GTYPE( ngrupe ) = k
+          GP_ptr( ngrupe ) = nlisgp + 1
+          IF ( nlisgp + ngpars > len_gp_val_orig ) THEN
+            used_length = nlisgp ; min_length = nlisgp + ngpars
+            new_length = 3 * min_length / 2 + 1     
+            CALL EXTEND_array( GP_val_orig, len_gp_val_orig, used_length,      &
+                               new_length, min_length, buffer,                 &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+               bad_alloc = 'GTYPES' ; status = - 18 ; GO TO 980 ; END IF
+            len_gp_val_orig = new_length
+          END IF
 
 !  initialize the set of parameter values
 
-            DO 55 i = 1, ngpars
-               GPTEMP( nlisgp + i ) = biginf
-   55       CONTINUE
+          DO i = 1, ngpars
+            GP_val_orig( nlisgp + i ) = biginf
+          END DO
 
 !  find the starting addresses for the lists of the group parameters
 
-            nlisgp = nlisgp + ngpars
-         END IF
+          nlisgp = nlisgp + ngpars
+          RETURN
+
+!  the group is new and of default type. determine the starting addresses for 
+!  the parameters for the group and the number of parameters involved
+
+        ELSE
+          k = ndtype
+          IF ( k == 0 ) THEN
+            ngpars = 0
+          ELSE
+            ngpars = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
+          END IF
+          GTYPE( ngrupe ) = k
+          GP_ptr ( ngrupe ) = nlisgp + 1
+
+          IF ( nlisgp + ngpars > len_gp_val_orig ) THEN
+            used_length = nlisgp ; min_length = nlisgp + ngpars
+            new_length = 3 * min_length / 2 + 1     
+            CALL EXTEND_array( GP_val_orig, len_gp_val_orig, used_length,      &
+                               new_length, min_length, buffer,                 &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+               bad_alloc = 'GTYPES' ; status = - 18 ; GO TO 980 ; END IF
+            len_gp_val_orig = new_length
+          END IF
+
+!  initialize the set of parameter values
+
+          DO i = 1, ngpars
+            GP_val_orig( nlisgp + i ) = biginf
+          END DO
+
+!  find the starting addresses for the lists of the group parameters
+
+          nlisgp = nlisgp + ngpars
+        END IF
       END IF
 
 !  check that the cards are in the correct order
 
       IF ( field1 == 'T ' .OR. field1 == 'XT' ) THEN
-         status = 31
-         IF ( out > 0 ) WRITE( out, 2310 )
-         RETURN
+        status = 31
+        IF ( out > 0 ) WRITE( out, 2310 )
+        RETURN
       END IF
 
 !  the card contains names of nonlinear elements
 
       IF ( field1 == 'E ' .OR. field1 == 'XE' .OR.                             &
            field1 == 'ZE' ) THEN
-         IF ( novals > 0 ) THEN
+        IF ( novals > 0 ) THEN
 
 !  check the name has not already been used in the current element
 !  the parameter name occurs in field3 or field5
 
-            DO 110 i = 1, novals
-               IF ( i == 1 ) THEN
-                  field = field3 // 'EL'
-               ELSE
-                  field = field5 // 'EL'
-               END IF
-               CALL HASH_search( length, 12, field, KEY, ITABLE, IFIELD)
-               IF ( ifield > 0 ) THEN
+          DO i = 1, novals
+            IF ( i == 1 ) THEN
+               field = field3 // 'EL'
+            ELSE
+               field = field5 // 'EL'
+            END IF
+            CALL HASH_search( length, 12, field, KEY, ITABLE, IFIELD)
 
 !  the neling-th element has been assigned
 
-                  neling = neling + 1
-                  IF ( neling > negmax ) THEN
-                     status = - 10
-                     RETURN
-                  END IF
+            IF ( ifield > 0 ) THEN
+              neling = neling + 1
+              IF ( neling > len_eling_el ) THEN
+                used_length = neling - 1 ; min_length = neling
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( ELING_el, len_eling_el, used_length,        &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
+                len_eling_el = new_length
+              END IF
 
-!  the element is ieling(,1) and the group is given by ieling(,2)
+              IF ( neling > len_eling_g ) THEN
+                used_length = neling - 1 ; min_length = neling
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( ELING_g, len_eling_g, used_length,          &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
+                len_eling_g = new_length
+              END IF
 
-                  IELING( neling, 1 ) = INLIST( ifield )
-                  IELING( neling, 2 ) = ngrupe
+              IF ( neling > len_weight ) THEN
+                used_length = neling - 1 ; min_length = neling
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( WEIGHT, len_weight, used_length,            &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                   bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
+                len_weight = new_length
+              END IF
 
-!  the element is weighted by the constant weight()
+!  the element is ELING_el and the group is given by ELING_g
 
-                  IF ( i == 1 ) THEN
-                     WEIGHT( neling ) = value4
-                  ELSE
-                     WEIGHT( neling ) = value6
-                  END IF
+              ELING_el( neling ) = INLIST( ifield )
+              ELING_g( neling ) = ngrupe
+
+!  the element is weighted by the constant in WEIGHT
+
+              IF ( i == 1 ) THEN
+                WEIGHT( neling ) = value4
+              ELSE
+                WEIGHT( neling ) = value6
+              END IF
 
 !  the element name is unknown
 
-               ELSE
-                  status = 43
-                  IF ( out > 0 ) WRITE( out, 2430 )
-                  RETURN
-               END IF
-  110       CONTINUE
-         END IF
-      ELSE
+            ELSE
+              status = 43
+              IF ( out > 0 ) WRITE( out, 2430 )
+              RETURN
+            END IF
+          END DO
+        END IF
 
 !  the card contains names and values of elemental parameters
 
-         IF ( field1 == 'P ' .OR. field1 == 'XP' .OR.                          &
-              field1 == 'ZP' ) THEN
+      ELSE
+        IF ( field1 == 'P ' .OR. field1 == 'XP' .OR. field1 == 'ZP' ) THEN
 
 !  determine the number of the group type, k, the starting
 !  addresses for the parameters for the group and the
 !  number of parameters involved
 
-            IF ( ITYPEG( ngrupe ) < 0 )                                        &
-              ITYPEG( ngrupe ) = - ITYPEG( ngrupe ) - 1
-            ITYPEG( ngrupe ) = ABS( ITYPEG( ngrupe ) )
-            k = ITYPEG( ngrupe )
-            ngpars = IGPA( k + 1 ) - IGPA( k )
-            ip = IGPA( k ) - 1
-            mlisgp = ISTGP( ngrupe ) - 1
-            IF ( novals > 0 ) THEN
-               DO 230 j = 1, novals
+          IF ( GTYPE( ngrupe ) < 0 ) GTYPE( ngrupe ) = - GTYPE( ngrupe ) - 1
+          GTYPE( ngrupe ) = ABS( GTYPE( ngrupe ) )
+          k = GTYPE( ngrupe )
+          ngpars = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
+          ip = GTYPESP_ptr( k ) - 1
+          mlisgp = GP_ptr( ngrupe ) - 1
+          IF ( novals > 0 ) THEN
 
 !  check the name has not already been used in the current element
 !  the parameter name occurs in field3 or field5
 
-                  DO 210 i = 1, ngpars
-                     IF (                                                      &
-                     ( j == 1 .AND. field3 == GPNAME( ip + i ) )               &
-                .OR. ( j == 2 .AND. field5 == GPNAME( ip + i ) )               &
-                          ) GO TO 220
-  210             CONTINUE
+            DO j = 1, novals
+              DO i = 1, ngpars
+                IF ( ( j == 1 .AND. field3 == GPNAME( ip + i ) ) .OR.          &
+                     ( j == 2 .AND. field5 == GPNAME( ip + i ) ) ) GO TO 220
+              END DO
 
 !  the group parameter name is not recognised
 
-                  status = 33
-                  IF ( out > 0 ) WRITE( out, 2330 )
-                  RETURN
+              status = 33
+              IF ( out > 0 ) WRITE( out, 2330 )
+              RETURN
 
 !  the group parameter name is the i-th parameter in the list
 
-  220             CONTINUE
+  220         CONTINUE
 
 !  check that the value has not already been set
 
-                  IF ( GPTEMP( mlisgp + i ) < biginf ) THEN
-                     status = 32
-                     IF ( out > 0 ) WRITE( out, 2320 )
-                     RETURN
-                  END IF
+              IF ( GP_val_orig( mlisgp + i ) < biginf ) THEN
+                status = 32
+                IF ( out > 0 ) WRITE( out, 2320 )
+                RETURN
+              END IF
 
 !  read the associated value from field4 or field 6
 
-                  IF ( j == 1 ) THEN
-                     GPTEMP( mlisgp + i ) = value4
-                  ELSE
-                     GPTEMP( mlisgp + i ) = value6
-                  END IF
-  230          CONTINUE
-            END IF
+              IF ( j == 1 ) THEN
+                GP_val_orig( mlisgp + i ) = value4
+              ELSE
+                GP_val_orig( mlisgp + i ) = value6
+              END IF
+            END DO
+          END IF
 
 !  field1 not recognised
 
-         ELSE
-            status = 10
-            IF ( out > 0 ) WRITE( out, 2100 ) field1
-            RETURN
-         END IF
+        ELSE
+          status = 10
+          IF ( out > 0 ) WRITE( out, 2100 ) field1
+          RETURN
+        END IF
       END IF
       status = 0
       RETURN
 
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
 !  non-executable statements
 
- 2040 FORMAT( ' ** Exit from GPSMPS - group/row name not recognised:',         &
-              ' name is ', A10 )
- 2100 FORMAT( ' ** Exit from GPSMPS - field 1 ', A2,                           &
+ 2040 FORMAT( ' ** Exit from INTERPRET_gpsmps - group/row name not',           &
+              ' recognised: name is ', A10 )
+ 2100 FORMAT( ' ** Exit from INTERPRET_gpsmps - field 1 ', A2,                 &
               '  not recognised in GROUP USES section' )
- 2190 FORMAT( ' ** Exit from GPSMPS - group type not recognised:',             &
+ 2190 FORMAT( ' ** Exit from INTERPRET_gpsmps - group type not recognised:',   &
               ' name is ', A10 )
- 2310 FORMAT( ' ** Exit from GPSMPS - type for group already set ' )
- 2320 FORMAT( ' ** Exit from GPSMPS - group parameter already set ' )
- 2330 FORMAT( ' ** Exit from GPSMPS - group parameter unrecognised ' )
- 2420 FORMAT( ' ** Exit from GPSMPS - default group type already set ' )
- 2430 FORMAT( ' ** Exit from GPSMPS - element name not recognised ' )
+ 2310 FORMAT( ' ** Exit from INTERPRET_gpsmps - type for group already set' )
+ 2320 FORMAT( ' ** Exit from INTERPRET_gpsmps - group parameter already set' )
+ 2330 FORMAT( ' ** Exit from INTERPRET_gpsmps - group parameter unrecognised' )
+ 2420 FORMAT( ' ** Exit from INTERPRET_gpsmps - default group type already set')
+ 2430 FORMAT( ' ** Exit from INTERPRET_gpsmps - element name not recognised' )
 
 !  end of subroutine SGUSES
 
@@ -4819,12 +5794,12 @@
       INTEGER :: out, status, length, nobbnd, nobmax, nrlndx
       REAL ( KIND = wp ) :: value4
       LOGICAL :: single
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field5
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field5
       INTEGER :: INLIST( length ), ITABLE ( length )
       REAL ( KIND = wp ) :: FBOUND( 2, nobmax ), REALVL( nrlndx )
-      CHARACTER ( len = 10 ) :: OBNAME( nobmax )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ) :: OBNAME( nobmax )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  ------------------------------
 !  indicator card is object bound
@@ -4848,87 +5823,87 @@
 !  the name already exists. it is the j-th name in the list
 
       IF ( ifree <= 0 ) THEN
-         IF ( ifree == 0 ) THEN
-            status = - 1
-            RETURN
-         END IF
-         j = INLIST( - ifree )
+        IF ( ifree == 0 ) THEN
+          status = - 1
+          RETURN
+        END IF
+        j = INLIST( - ifree )
       ELSE
 
 !  the objective function bound is the nobbnd-th specified
 
-         nobbnd = nobbnd + 1
-         IF( nobbnd > nobmax ) THEN
-            status = - 23
-            RETURN
-         END IF
-         j = nobbnd
+        nobbnd = nobbnd + 1
+        IF( nobbnd > nobmax ) THEN
+          status = - 23
+          RETURN
+        END IF
+        j = nobbnd
 
 !  record the default bounds
 
-         FBOUND( 1, nobbnd ) = - big
-         FBOUND( 2, nobbnd ) = big
+        FBOUND( 1, nobbnd ) = - big
+        FBOUND( 2, nobbnd ) = big
 
 !  record the position of the new bound in the table and record its
 
-         INLIST( ifree ) = nobbnd
-         OBNAME( nobbnd ) = field2
+        INLIST( ifree ) = nobbnd
+        OBNAME( nobbnd ) = field2
       END IF
 
 !  record the bound given
 
-      IF ( FIELD1( 1: 1 ) == 'Z' ) THEN
-         CALL HASH_search( length, 12,  FIELD5( 1 : 10 ) // 'RI',                   &
-                      KEY, ITABLE, ifield )
-         IF ( ifield <= 0 ) THEN
-            status = 3
-            IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
-            RETURN
-         END IF
-         value4 = REALVL( INLIST( ifield ) )
+      IF ( field1( 1 : 1 ) == 'Z' ) THEN
+        CALL HASH_search( length, 12,  FIELD5( 1 : 10 ) // 'RI', KEY, ITABLE,  &
+                          ifield )
+        IF ( ifield <= 0 ) THEN
+          status = 3
+          IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
+          RETURN
+        END IF
+        value4 = REALVL( INLIST( ifield ) )
       END IF
-      IF ( field1 == 'XL' .OR. field1 == 'ZL' .OR.                             &
-           field1 == 'LO' ) FBOUND( 1, j ) = value4
-      IF ( field1 == 'XU' .OR. field1 == 'ZU' .OR.                             &
-           field1 == 'UP' ) FBOUND( 1, j ) = value4
+      IF ( field1 == 'XL' .OR. field1 == 'ZL' .OR. field1 == 'LO' )            &
+        FBOUND( 1, j ) = value4
+      IF ( field1 == 'XU' .OR. field1 == 'ZU' .OR. field1 == 'UP' )            &
+        FBOUND( 1, j ) = value4
       status = 0
       RETURN
 
 !  non-executable statements
 
- 2030 FORMAT( ' ** Exit from GPSMPS - index parameter name ', A10,             &
+ 2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
               ' not recognised ' )
 
 !  end of subroutine SOBBND
 
       END SUBROUTINE SOBBND
 
-!-*-*-*-*-*- S I F D E C O D E   P R O C A I    S U B R O U T I N E -*-*-*-*-*-
+!-   D E C O D E _ s c a l a r _ i n s t r u c t i o n    S U B R O U T I N E  -
 
-      SUBROUTINE PROCAI( nindex, nrlndx, length, nusein, nusere,               &
-                         status, out, level, ninstr,                           &
-                         debug, rvalue, INLIST, ITABLE,                        &
+      SUBROUTINE DECODE_scalar_instruction(                                    &
+                         nindex, nrlndx, length, nusein, nusere, status,       &
+                         out, level, ninstr, debug, rvalue, INLIST, ITABLE,    &
                          NAMIIN, NAMRIN, INSTR, KEY,                           &
                          field1, field2, field3, field5, field4 )
       INTEGER :: nindex, nrlndx, length, nusein, nusere
       INTEGER :: status, out, level, ninstr
       LOGICAL :: debug
       REAL ( KIND = wp ) :: rvalue
-      CHARACTER ( len =  2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
-      CHARACTER ( len = 12 ) :: field4
+      CHARACTER ( LEN =  2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
+      CHARACTER ( LEN = 12 ) :: field4
       INTEGER :: INSTR( 5 ), INLIST( length ), ITABLE ( length )
-      CHARACTER ( len = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
-!  --------------------------------------------------------------------
-!  construct a list of do-loop integer and real arithmetic instructions
-!  --------------------------------------------------------------------
+!  ------------------------------------------------------
+!  decode scalar integer and real arithmetic instructions
+!  ------------------------------------------------------
 
 !  local variables
 
       INTEGER :: i, ifield, ifree
-      CHARACTER ( len = 12 ) :: field
+      CHARACTER ( LEN = 12 ) :: field
 
 !  decide what sort of instruction is to be performed: integer instructions
 
@@ -4938,288 +5913,276 @@
            field1 == 'I=' .OR. field1 == 'I+' .OR.                             &
            field1 == 'I-' .OR. field1 == 'I*' .OR.                             &
            field1 == 'I/' ) THEN
-         IF ( field1 == 'IE' ) INSTR( 1 ) = 21
-         IF ( field1 == 'IA' ) INSTR( 1 ) = 22
-         IF ( field1 == 'IS' ) INSTR( 1 ) = 23
-         IF ( field1 == 'IM' ) INSTR( 1 ) = 24
-         IF ( field1 == 'ID' ) INSTR( 1 ) = 25
-         IF ( field1 == 'IR' ) INSTR( 1 ) = 26
-         IF ( field1 == 'I=' ) INSTR( 1 ) = 31
-         IF ( field1 == 'I+' ) INSTR( 1 ) = 32
-         IF ( field1 == 'I-' ) INSTR( 1 ) = 33
-         IF ( field1 == 'I*' ) INSTR( 1 ) = 34
-         IF ( field1 == 'I/' ) INSTR( 1 ) = 35
-         IF ( field1 == 'IE' .OR. field1 == 'IA' .OR.                          &
-              field1 == 'IS' .OR. field1 == 'IM' .OR.                          &
-              field1 == 'ID' ) THEN
+        IF ( field1 == 'IE' ) INSTR( 1 ) = 21
+        IF ( field1 == 'IA' ) INSTR( 1 ) = 22
+        IF ( field1 == 'IS' ) INSTR( 1 ) = 23
+        IF ( field1 == 'IM' ) INSTR( 1 ) = 24
+        IF ( field1 == 'ID' ) INSTR( 1 ) = 25
+        IF ( field1 == 'IR' ) INSTR( 1 ) = 26
+        IF ( field1 == 'I=' ) INSTR( 1 ) = 31
+        IF ( field1 == 'I+' ) INSTR( 1 ) = 32
+        IF ( field1 == 'I-' ) INSTR( 1 ) = 33
+        IF ( field1 == 'I*' ) INSTR( 1 ) = 34
+        IF ( field1 == 'I/' ) INSTR( 1 ) = 35
 
 !  read the integer value, ivalue, from field 4
 
-            CALL GETINT( field4, INSTR( 4 ) )
-         ELSE
+        IF ( field1 == 'IE' .OR. field1 == 'IA' .OR. field1 == 'IS' .OR.       &
+             field1 == 'IM' .OR. field1 == 'ID' ) THEN
+          CALL GETINT( field4, INSTR( 4 ) )
 
 !  obtain the integer value, ivalue, as the value of the index in
 !  field 5, first ensuring that the index exists
 
-            IF ( field1 /= 'I=' .AND. field1 /= 'IR' ) THEN
-               field = FIELD5( 1 : 10 ) // 'II'
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               IF ( ifield <= 0 ) THEN
-                  status = 3
-                  IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-                  RETURN
-               END IF
-               INSTR( 4 ) = INLIST( ifield )
+        ELSE
+          IF ( field1 /= 'I=' .AND. field1 /= 'IR' ) THEN
+            field = FIELD5( 1 : 10 ) // 'II'
+            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+            IF ( ifield <= 0 ) THEN
+              status = 3
+              IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+              RETURN
             END IF
-         END IF
+            INSTR( 4 ) = INLIST( ifield )
+          END IF
+        END IF
 
 !  if a definition is to be made from a previously defined index,
 !  ensure that the index exists
 
-         IF ( field1 /= 'IE' ) THEN
-            IF ( field1 /= 'IR' ) THEN
-               field = FIELD3( 1 : 10 ) // 'II'
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               IF ( ifield <= 0 ) THEN
-                  status = 3
-                  IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-                  RETURN
-               END IF
-               INSTR( 3 ) = INLIST( ifield )
-            ELSE
-               field = FIELD3( 1 : 10 ) // 'RI'
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               IF ( ifield <= 0 ) THEN
-                  status = 3
-                  IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-                  RETURN
-               END IF
-               INSTR( 3 ) = INLIST( ifield )
+        IF ( field1 /= 'IE' ) THEN
+          IF ( field1 /= 'IR' ) THEN
+            field = FIELD3( 1 : 10 ) // 'II'
+            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+            IF ( ifield <= 0 ) THEN
+              status = 3
+              IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+              RETURN
             END IF
-         END IF
+            INSTR( 3 ) = INLIST( ifield )
+          ELSE
+            field = FIELD3( 1 : 10 ) // 'RI'
+            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+            IF ( ifield <= 0 ) THEN
+              status = 3
+              IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+              RETURN
+            END IF
+            INSTR( 3 ) = INLIST( ifield )
+          END IF
+        END IF
 
 !  record the address of the index which is to be set
 
-         field = FIELD2( 1 : 10 ) // 'II'
-         CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
-         IF ( ifree <= 0 ) THEN
-            IF ( ifree == 0 ) THEN
-               status = - 1
-               RETURN
-            END IF
-            ifree = - ifree
-         ELSE
-            nusein = nusein + 1
-            IF ( nusein > nindex ) THEN
-               status = - 21
-               RETURN
-            END IF
-            INLIST( ifree ) = nusein
-            NAMIIN( nusein ) = FIELD( 1 : 10 )
-         END IF
-         INSTR( 2 ) = INLIST( ifree )
+        field = FIELD2( 1 : 10 ) // 'II'
+        CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
+        IF ( ifree <= 0 ) THEN
+          IF ( ifree == 0 ) THEN
+            status = - 1
+            RETURN
+          END IF
+          ifree = - ifree
+        ELSE
+          nusein = nusein + 1
+          IF ( nusein > nindex ) THEN
+            status = - 21
+            RETURN
+          END IF
+          INLIST( ifree ) = nusein
+          NAMIIN( nusein ) = FIELD( 1 : 10 )
+        END IF
+        INSTR( 2 ) = INLIST( ifree )
 
 !  print details of the instruction
 
-         IF ( debug .AND. out > 0 ) THEN
-            IF ( INSTR( 1 ) == 21 )                                            &
-               WRITE( out, 4030 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), INSTR( 4 )
-            IF ( INSTR( 1 ) == 22 )                                            &
-               WRITE( out, 4040 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), INSTR( 4 )
-            IF ( INSTR( 1 ) == 23 )                                            &
-               WRITE( out, 4041 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), INSTR( 4 )
-            IF ( INSTR( 1 ) == 24 )                                            &
-               WRITE( out, 4050 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), INSTR( 4 )
-            IF ( INSTR( 1 ) == 25 )                                            &
-               WRITE( out, 4051 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), INSTR( 4 ), NAMIIN( INSTR( 3 ) )
-            IF ( INSTR( 1 ) == 26 )                                            &
-               WRITE( out, 4055 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) )
-            IF ( INSTR( 1 ) == 31 )                                            &
-               WRITE( out, 4059 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) )
-            IF ( INSTR( 1 ) == 32 )                                            &
-               WRITE( out, 4060 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ),                     &
-               NAMIIN( INSTR( 4 ) )
-            IF ( INSTR( 1 ) == 33 )                                            &
-               WRITE( out, 4061 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 4 ) ),                     &
-               NAMIIN( INSTR( 3 ) )
-            IF ( INSTR( 1 ) == 34 )                                            &
-               WRITE( out, 4070 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ),                     &
-               NAMIIN( INSTR( 4 ) )
-            IF ( INSTR( 1 ) == 35 )                                            &
-               WRITE( out, 4071 ) level, ninstr,                               &
-               NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ),                     &
-               NAMIIN( INSTR( 4 ) )
-         END IF
-      ELSE
+        IF ( debug .AND. out > 0 ) THEN
+          IF ( INSTR( 1 ) == 21 )                                              &
+             WRITE( out, 4030 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), INSTR( 4 )
+          IF ( INSTR( 1 ) == 22 )                                              &
+             WRITE( out, 4040 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), INSTR( 4 )
+          IF ( INSTR( 1 ) == 23 )                                              &
+             WRITE( out, 4041 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), INSTR( 4 )
+          IF ( INSTR( 1 ) == 24 )                                              &
+             WRITE( out, 4050 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), INSTR( 4 )
+          IF ( INSTR( 1 ) == 25 )                                              &
+             WRITE( out, 4051 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), INSTR( 4 ), NAMIIN( INSTR( 3 ) )
+          IF ( INSTR( 1 ) == 26 )                                              &
+             WRITE( out, 4055 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) )
+          IF ( INSTR( 1 ) == 31 )                                              &
+             WRITE( out, 4059 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) )
+          IF ( INSTR( 1 ) == 32 )                                              &
+             WRITE( out, 4060 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), NAMIIN( INSTR( 4 ) )
+          IF ( INSTR( 1 ) == 33 )                                              &
+             WRITE( out, 4061 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 4 ) ), NAMIIN( INSTR( 3 ) )
+          IF ( INSTR( 1 ) == 34 )                                              &
+             WRITE( out, 4070 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), NAMIIN( INSTR( 4 ) )
+          IF ( INSTR( 1 ) == 35 )                                              &
+             WRITE( out, 4071 ) level, ninstr,                                 &
+             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), NAMIIN( INSTR( 4 ) )
+        END IF
 
 !  real instructions
 
-         IF ( field1 == 'RE' ) INSTR( 1 ) = 51
-         IF ( field1 == 'RA' ) INSTR( 1 ) = 52
-         IF ( field1 == 'RS' ) INSTR( 1 ) = 53
-         IF ( field1 == 'RM' ) INSTR( 1 ) = 54
-         IF ( field1 == 'RD' ) INSTR( 1 ) = 55
-         IF ( field1 == 'RI' ) INSTR( 1 ) = 56
-         IF ( field1 == 'RF' ) INSTR( 1 ) = 57
-         IF ( field1 == 'R=' ) INSTR( 1 ) = 61
-         IF ( field1 == 'R+' ) INSTR( 1 ) = 62
-         IF ( field1 == 'R-' ) INSTR( 1 ) = 63
-         IF ( field1 == 'R*' ) INSTR( 1 ) = 64
-         IF ( field1 == 'R/' ) INSTR( 1 ) = 65
-         IF ( field1 == 'R(' ) INSTR( 1 ) = 67
-         IF ( field1 == 'RE' .OR. field1 == 'RA' .OR.                          &
-              field1 == 'RS' .OR. field1 == 'RM' .OR.                          &
-              field1 == 'RD' .OR. field1 == 'RF' ) THEN
+      ELSE
+        IF ( field1 == 'RE' ) INSTR( 1 ) = 51
+        IF ( field1 == 'RA' ) INSTR( 1 ) = 52
+        IF ( field1 == 'RS' ) INSTR( 1 ) = 53
+        IF ( field1 == 'RM' ) INSTR( 1 ) = 54
+        IF ( field1 == 'RD' ) INSTR( 1 ) = 55
+        IF ( field1 == 'RI' ) INSTR( 1 ) = 56
+        IF ( field1 == 'RF' ) INSTR( 1 ) = 57
+        IF ( field1 == 'R=' ) INSTR( 1 ) = 61
+        IF ( field1 == 'R+' ) INSTR( 1 ) = 62
+        IF ( field1 == 'R-' ) INSTR( 1 ) = 63
+        IF ( field1 == 'R*' ) INSTR( 1 ) = 64
+        IF ( field1 == 'R/' ) INSTR( 1 ) = 65
+        IF ( field1 == 'R(' ) INSTR( 1 ) = 67
 
 !  read the real value, rvalue, from field 4
 
-            CALL GETVAL( field4, rvalue )
-         END IF
-         IF ( field1 == 'R+' .OR. field1 == 'R-' .OR.                          &
-              field1 == 'R*' .OR. field1 == 'R/' .OR.                          &
-              field1 == 'R(' ) THEN
+        IF ( field1 == 'RE' .OR. field1 == 'RA' .OR. field1 == 'RS' .OR.       &
+             field1 == 'RM' .OR. field1 == 'RD' .OR. field1 == 'RF' )          &
+          CALL GETVAL( field4, rvalue )
 
 !  obtain the real value, rvalue, as the value associated with the real
 !  index in field 5, first ensuring that the index exists
 
-            field = FIELD5( 1 : 10 ) // 'RI'
-            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-            IF ( ifield <= 0 ) THEN
-               status = 3
-               IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-               RETURN
-            END IF
-            INSTR( 4 ) = INLIST( ifield )
-         END IF
+        IF ( field1 == 'R+' .OR. field1 == 'R-' .OR. field1 == 'R*' .OR.       &
+             field1 == 'R/' .OR. field1 == 'R(' ) THEN
+          field = FIELD5( 1 : 10 ) // 'RI'
+          CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+          IF ( ifield <= 0 ) THEN
+            status = 3
+            IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+            RETURN
+          END IF
+          INSTR( 4 ) = INLIST( ifield )
+        END IF
 
 !  if a definition is to be made from a previously defined index,
 !  ensure that the index exists
 
-         IF ( field1 == 'RI' ) THEN
-            field = FIELD3( 1 : 10 ) // 'II'
-            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-            IF ( ifield <= 0 ) THEN
-               status = 3
-               IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-               RETURN
-            END IF
-            INSTR( 3 ) = INLIST( ifield )
-         ELSE
-            IF ( field1 /= 'RF' .AND. field1 /= 'R(' .AND.                     &
-                 field1 /= 'RE' ) THEN
-               field = FIELD3( 1 : 10 ) // 'RI'
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               IF ( ifield <= 0 ) THEN
-                  status = 3
-                  IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-                  RETURN
-               END IF
-               INSTR( 3 ) = INLIST( ifield )
-            ELSE
+        IF ( field1 == 'RI' ) THEN
+          field = FIELD3( 1 : 10 ) // 'II'
+          CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+          IF ( ifield <= 0 ) THEN
+            status = 3
+            IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+            RETURN
+          END IF
+          INSTR( 3 ) = INLIST( ifield )
+        ELSE
+          IF ( field1 /= 'RF' .AND. field1 /= 'R(' .AND.                     &
+               field1 /= 'RE' ) THEN
+             field = FIELD3( 1 : 10 ) // 'RI'
+             CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+             IF ( ifield <= 0 ) THEN
+                status = 3
+                IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+                RETURN
+             END IF
+             INSTR( 3 ) = INLIST( ifield )
 
 !  the value is to be obtained using a special function. determine
 !  which one
 
-               IF ( field1 /= 'RE' ) THEN
-                  DO i = 1, nfunct
-                    IF ( FIELD3( 1 : 10 ) == FUNCTN( i ) ) GO TO 20
-                  END DO
-                  status = 39
-                  IF ( out > 0 ) WRITE( out, 2390 ) FIELD3( 1 : 10)
-                  RETURN
-   20             CONTINUE
-                  INSTR( 3 ) = i
-               END IF
+          ELSE
+            IF ( field1 /= 'RE' ) THEN
+              DO i = 1, nfunct
+                IF ( FIELD3( 1 : 10 ) == FUNCTN( i ) ) GO TO 20
+              END DO
+              status = 39
+              IF ( out > 0 ) WRITE( out, 2390 ) FIELD3( 1 : 10 )
+              RETURN
+   20         CONTINUE
+              INSTR( 3 ) = i
             END IF
-         END IF
+          END IF
+        END IF
 
 !  record the address of the index which is to be set
 
-         field = FIELD2( 1 : 10 ) // 'RI'
-         CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
-         IF ( ifree <= 0 ) THEN
-            IF ( ifree == 0 ) THEN
-               status = - 1
-               RETURN
-            END IF
-            ifree = - ifree
-         ELSE
-            nusere = nusere + 1
-            IF ( nusere > nrlndx ) THEN
-               status = - 22
-               RETURN
-            END IF
-            INLIST( ifree ) = nusere
-            NAMRIN( nusere ) = FIELD( 1 : 10 )
-         END IF
-         INSTR( 2 ) = INLIST( ifree )
+        field = FIELD2( 1 : 10 ) // 'RI'
+        CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
+        IF ( ifree <= 0 ) THEN
+          IF ( ifree == 0 ) THEN
+            status = - 1
+            RETURN
+          END IF
+          ifree = - ifree
+        ELSE
+          nusere = nusere + 1
+          IF ( nusere > nrlndx ) THEN
+            status = - 22
+            RETURN
+          END IF
+          INLIST( ifree ) = nusere
+          NAMRIN( nusere ) = FIELD( 1 : 10 )
+        END IF
+        INSTR( 2 ) = INLIST( ifree )
 
 !  print details of the instruction
 
-         IF ( debug .AND. out > 0 ) THEN
-            IF ( INSTR( 1 ) == 51 )                                            &
-               WRITE( out, 4130 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), rvalue
-            IF ( INSTR( 1 ) == 52 )                                            &
-               WRITE( out, 4140 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), rvalue
-            IF ( INSTR( 1 ) == 53 )                                            &
-               WRITE( out, 4141 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), rvalue
-            IF ( INSTR( 1 ) == 54 )                                            &
-               WRITE( out, 4150 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), rvalue
-            IF ( INSTR( 1 ) == 55 )                                            &
-               WRITE( out, 4151 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), rvalue, NAMRIN( INSTR( 3 ) )
-            IF ( INSTR( 1 ) == 56 )                                            &
-               WRITE( out, 4180 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) )
-            IF ( INSTR( 1 ) == 57 )                                            &
-               WRITE( out, 4110 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), FUNCTN( INSTR( 3 ) ), rvalue
-            IF ( INSTR( 1 ) == 61 )                                            &
-               WRITE( out, 4159 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) )
-            IF ( INSTR( 1 ) == 62 )                                            &
-               WRITE( out, 4160 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ),                     &
-               NAMRIN( INSTR( 4 ) )
-            IF ( INSTR( 1 ) == 63 )                                            &
-               WRITE( out, 4161 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 4 ) ),                     &
-               NAMRIN( INSTR( 3 ) )
-            IF ( INSTR( 1 ) == 64 )                                            &
-               WRITE( out, 4170 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ),                     &
-               NAMRIN( INSTR( 4 ) )
-            IF ( INSTR( 1 ) == 65 )                                            &
-               WRITE( out, 4171 ) level, ninstr,                               &
-               NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ),                     &
-               NAMRIN( INSTR( 4 ) )
-            IF ( INSTR( 1 ) == 67 )                                            &
-               WRITE( out, 4120 ) level, ninstr, NAMRIN( INSTR( 2 ) ),         &
-               FUNCTN( INSTR( 3 ) ), NAMRIN( INSTR( 4 ) )
-         END IF
+        IF ( debug .AND. out > 0 ) THEN
+          IF ( INSTR( 1 ) == 51 )                                              &
+             WRITE( out, 4130 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), rvalue
+          IF ( INSTR( 1 ) == 52 )                                              &
+             WRITE( out, 4140 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), rvalue
+          IF ( INSTR( 1 ) == 53 )                                              &
+             WRITE( out, 4141 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), rvalue
+          IF ( INSTR( 1 ) == 54 )                                              &
+             WRITE( out, 4150 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), rvalue
+          IF ( INSTR( 1 ) == 55 )                                              &
+             WRITE( out, 4151 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), rvalue, NAMRIN( INSTR( 3 ) )
+          IF ( INSTR( 1 ) == 56 )                                              &
+             WRITE( out, 4180 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) )
+          IF ( INSTR( 1 ) == 57 )                                              &
+             WRITE( out, 4110 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), FUNCTN( INSTR( 3 ) ), rvalue
+          IF ( INSTR( 1 ) == 61 )                                              &
+             WRITE( out, 4159 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) )
+          IF ( INSTR( 1 ) == 62 )                                              &
+             WRITE( out, 4160 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), NAMRIN( INSTR( 4 ) )
+          IF ( INSTR( 1 ) == 63 )                                              &
+             WRITE( out, 4161 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 4 ) ), NAMRIN( INSTR( 3 ) )
+          IF ( INSTR( 1 ) == 64 )                                              &
+             WRITE( out, 4170 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), NAMRIN( INSTR( 4 ) )
+          IF ( INSTR( 1 ) == 65 )                                              &
+             WRITE( out, 4171 ) level, ninstr,                                 &
+             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), NAMRIN( INSTR( 4 ) )
+          IF ( INSTR( 1 ) == 67 )                                              &
+             WRITE( out, 4120 ) level, ninstr, NAMRIN( INSTR( 2 ) ),           &
+             FUNCTN( INSTR( 3 ) ), NAMRIN( INSTR( 4 ) )
+        END IF
       END IF
       RETURN
 
 !  non-executable statements
 
- 2030 FORMAT( ' ** Exit from GPSMPS - index parameter name ', A10,             &
+ 2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
               ' not recognised ' )
- 2390 FORMAT( ' ** Exit from GPSMPS - specified function name ', A10,          &
-              ' not recognised ' )
+ 2390 FORMAT( ' ** Exit from INTERPRET_gpsmps - specified function name ',     &
+              A10, ' not recognised ' )
  4030 FORMAT( ' Level ', i2, ' instruction ', i4, ' set ', A10,                &
               ' to the value ', i6 )
  4040 FORMAT( ' Level ', i2, ' instruction ', i4, ' set ', A10,                &
@@ -5269,71 +6232,49 @@
  4180 FORMAT( ' Level ', i2, ' instruction ', i4, ' set ', A10,                &
               ' to the fl. pt. value of ', A10 )
 
-!  end of subroutine PROCAI
+!  end of subroutine DECODE_scalar_instruction
 
-      END SUBROUTINE PROCAI
+      END SUBROUTINE DECODE_scalar_instruction
 
-!-*-*-*-*-*- S I F D E C O D E   P R O C A D    S U B R O U T I N E -*-*-*-*-*-
+!-   D E C O D E _ a r r a y _ i n s t r u c t i o n    S U B R O U T I N E   -
 
-      SUBROUTINE PROCAD( nindex, nrlndx, level, ninstr, nusere,                &
-                         length, narray, intype, status, out,                  &
-                         debug, grp1st,                                        &
-                         field1, field2, field3, field5,                       &
-                         field4, field6,                                       &
-                         INLIST, INSTR, ITABLE, IARRAY,                        &
-                         VARRAY, farray, NAMIIN, NAMRIN,                       &
-                         ARRAY, CARRAY, KEY )
+      SUBROUTINE DECODE_array_instruction(                                     &
+                         nindex, nrlndx, level, ninstr, nusere, length,        &
+                         narray, intype, status, out, debug, grp1st,           &
+                         field1, field2, field3, field5, field4, field6,       &
+                         INLIST, INSTR, ITABLE, IARRAY, VARRAY, farray,        &
+                         NAMIIN, NAMRIN, ARRAY, CARRAY, KEY )
       INTEGER :: nindex, nrlndx, level, length, status, out
       INTEGER :: ninstr, nusere, intype, narray
       LOGICAL :: debug, grp1st
-      CHARACTER ( len =  2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
-      CHARACTER ( len = 12 ) :: field4, field6
+      CHARACTER ( LEN =  2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
+      CHARACTER ( LEN = 12 ) :: field4, field6
       INTEGER :: INSTR( 5 ), IARRAY( 5, 3 )
       INTEGER :: INLIST( length ), ITABLE ( length )
       REAL ( KIND = wp ) :: VARRAY( 2 )
-      CHARACTER ( len =  2 ) :: farray
-      CHARACTER ( len = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
-      CHARACTER ( len = 10 ) :: ARRAY( 3 ), CARRAY( 2 )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN =  2 ) :: farray
+      CHARACTER ( LEN = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
+      CHARACTER ( LEN = 10 ) :: ARRAY( 3 ), CARRAY( 2 )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
-!  ---------------------------------------------
-!  construct a list of do-loop array definitions
-!  ---------------------------------------------
+!  -----------------------------------------
+!  decode array real arithmetic instructions
+!  -----------------------------------------
+
+!  parameter definitions
+
+      INTEGER, PARAMETER :: mblank = 1, mfixed = 2, mfree = 3, mname = 4
+      INTEGER, PARAMETER :: mrows = 5, mgroup = 6, mcnstr =  7, mcols =  8
+      INTEGER, PARAMETER :: mvars =  9, mconst = 10, mrhs = 11, mrhsp = 12
+      INTEGER, PARAMETER :: mrange = 13, mbound = 14, mstart = 15, mqhess = 16
+      INTEGER, PARAMETER :: mquadr = 17, mquads = 18, mquado = 19, mqsect = 20
+      INTEGER, PARAMETER :: mqmatr = 21, metype = 22, meuses = 23, mgtype = 24
+      INTEGER, PARAMETER :: mguses = 25, mobbnd = 26, mendat = 27
 
 !  local variables
 
       INTEGER :: i, kindar, ifree
-
-!  parameter definitions
-
-      INTEGER, PARAMETER :: mblank = 1
-      INTEGER, PARAMETER :: mfixed = 2
-      INTEGER, PARAMETER :: mfree = 3
-      INTEGER, PARAMETER :: mname =  4
-      INTEGER, PARAMETER :: mrows =  5
-      INTEGER, PARAMETER :: mgroup =  6
-      INTEGER, PARAMETER :: mcnstr =  7
-      INTEGER, PARAMETER :: mcols =  8
-      INTEGER, PARAMETER :: mvars =  9
-      INTEGER, PARAMETER :: mconst = 10
-      INTEGER, PARAMETER :: mrhs = 11
-      INTEGER, PARAMETER :: mrhsp = 12
-      INTEGER, PARAMETER :: mrange = 13
-      INTEGER, PARAMETER :: mbound = 14
-      INTEGER, PARAMETER :: mstart = 15
-      INTEGER, PARAMETER :: mqhess = 16
-      INTEGER, PARAMETER :: mquadr = 17
-      INTEGER, PARAMETER :: mquads = 18
-      INTEGER, PARAMETER :: mquado = 19
-      INTEGER, PARAMETER :: mqsect = 20
-      INTEGER, PARAMETER :: mqmatr = 21
-      INTEGER, PARAMETER :: metype = 22
-      INTEGER, PARAMETER :: meuses = 23
-      INTEGER, PARAMETER :: mgtype = 24
-      INTEGER, PARAMETER :: mguses = 25
-      INTEGER, PARAMETER :: mobbnd = 26
-      INTEGER, PARAMETER :: mendat = 27
 
 !  determine how much information must be saved by determining
 !  the kind of array definition being made
@@ -5349,258 +6290,250 @@
            field1 == 'A-' .OR. field1 == 'A*' .OR.                             &
            field1 == 'A/' .OR. field1 == 'AF' .OR.                             &
            field1 == 'A(' ) THEN
-         IF ( field1 == 'AE' ) kindar = 107
-         IF ( field1 == 'AF' ) kindar = 108
-         IF ( field1 == 'A(' ) kindar = 105
-         IF ( field1 == 'AA' ) kindar = 101
-         IF ( field1 == 'AS' ) kindar = 101
-         IF ( field1 == 'AM' ) kindar = 101
-         IF ( field1 == 'AD' ) kindar = 101
-         IF ( field1 == 'A=' ) kindar = 103
-         IF ( field1 == 'A+' ) kindar = 104
-         IF ( field1 == 'A-' ) kindar = 104
-         IF ( field1 == 'A*' ) kindar = 104
-         IF ( field1 == 'A/' ) kindar = 104
-         IF ( field1 == 'AI' ) kindar = 106
-      ELSE
+        IF ( field1 == 'AE' ) kindar = 107
+        IF ( field1 == 'AF' ) kindar = 108
+        IF ( field1 == 'A(' ) kindar = 105
+        IF ( field1 == 'AA' ) kindar = 101
+        IF ( field1 == 'AS' ) kindar = 101
+        IF ( field1 == 'AM' ) kindar = 101
+        IF ( field1 == 'AD' ) kindar = 101
+        IF ( field1 == 'A=' ) kindar = 103
+        IF ( field1 == 'A+' ) kindar = 104
+        IF ( field1 == 'A-' ) kindar = 104
+        IF ( field1 == 'A*' ) kindar = 104
+        IF ( field1 == 'A/' ) kindar = 104
+        IF ( field1 == 'AI' ) kindar = 106
 
 !  groups section
 
-         IF ( intype == mrows  .OR. intype == mgroup .OR.                      &
-              intype == mcnstr ) THEN
-            IF ( FIELD1( 2: 2 ) == 'N' .OR.                                    &
-                 FIELD1( 2: 2 ) == 'G' .OR.                                    &
-                 FIELD1( 2: 2 ) == 'L' .OR.                                    &
-                 FIELD1( 2: 2 ) == 'E' ) THEN
-               IF ( grp1st ) THEN
-                  IF ( FIELD3( 1: 7 ) == '''SCALE''' ) THEN
-                     IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-                        kindar = 115
-                     ELSE
-                        kindar = 108
-                     END IF
+      ELSE
+        IF ( intype == mrows  .OR. intype == mgroup .OR. intype == mcnstr ) THEN
+          IF ( field1( 2 : 2 ) == 'N' .OR. field1( 2 : 2 ) == 'G' .OR.       &
+               field1( 2 : 2 ) == 'L' .OR. field1( 2 : 2 ) == 'E' ) THEN
+            IF ( grp1st ) THEN
+              IF ( FIELD3( 1 : 7 ) == '''SCALE''' ) THEN
+                IF ( field1( 1 : 1 )  == 'Z' ) THEN
+                  kindar = 115
+                ELSE
+                  kindar = 108
+                END IF
+              ELSE
+                kindar = 100
+              END IF
+            ELSE
+              IF ( FIELD3( 1 : 7 ) == '''SCALE''' ) THEN
+                IF ( field1( 1 : 1 )  == 'Z' ) THEN
+                  kindar = 115
+                ELSE
+                   kindar = 108
+                END IF
+              ELSE
+                IF ( FIELD3( 1 : 10 ) == '          ' ) THEN
+                  kindar = 100
+                ELSE
+                  IF ( field1( 1 : 1 )  == 'Z' ) THEN
+                    kindar = 113
                   ELSE
-                     kindar = 100
+                    IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+                      kindar = 101
+                    ELSE
+                      kindar = 102
+                    END IF
                   END IF
-               ELSE
-                  IF ( FIELD3( 1: 7 ) == '''SCALE''' ) THEN
-                     IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-                        kindar = 115
-                     ELSE
-                        kindar = 108
-                     END IF
-                  ELSE
-                     IF ( FIELD3( 1: 10 ) == '          ' ) THEN
-                        kindar = 100
-                     ELSE
-                        IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-                           kindar = 113
-                        ELSE
-                           IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                              kindar = 101
-                           ELSE
-                              kindar = 102
-                           END IF
-                        END IF
-                     END IF
-                  END IF
-               END IF
+                END IF
+              END IF
             END IF
-         END IF
+          END IF
+        END IF
 
 !  variables section
 
-         IF ( intype == mcols  .OR. intype == mvars ) THEN
-            IF ( grp1st ) THEN
-               IF ( FIELD3( 1: 7 ) == '''SCALE''' ) THEN
-                  IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-                     kindar = 115
-                  ELSE
-                     kindar = 108
-                  END IF
-               ELSE IF ( field3 == '''ZERO-ONE''' .OR.                         &
-                         field3 == '''INTEGER'' ' ) THEN
-                  kindar = 106
-               ELSE
-                  IF ( FIELD3( 1: 10 ) == '          ' ) THEN
-                     kindar = 100
-                  ELSE
-                     IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-                        kindar = 113
-                     ELSE
-                        IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                           kindar = 101
-                        ELSE
-                           kindar = 102
-                        END IF
-                     END IF
-                  END IF
-               END IF
+        IF ( intype == mcols  .OR. intype == mvars ) THEN
+          IF ( grp1st ) THEN
+            IF ( FIELD3( 1 : 7 ) == '''SCALE''' ) THEN
+              IF ( field1( 1 : 1 )  == 'Z' ) THEN
+                kindar = 115
+              ELSE
+                kindar = 108
+              END IF
+            ELSE IF ( field3 == '''ZERO-ONE''' .OR. field3 == '''INTEGER'' ' ) &
+                THEN
+              kindar = 106
             ELSE
-               IF ( FIELD3( 1: 7 ) == '''SCALE''' ) THEN
-                  IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-                     kindar = 115
+              IF ( FIELD3( 1 : 10 ) == '          ' ) THEN
+                kindar = 100
+              ELSE
+                IF ( field1( 1 : 1 )  == 'Z' ) THEN
+                  kindar = 113
+                ELSE
+                  IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+                    kindar = 101
                   ELSE
-                     kindar = 108
+                    kindar = 102
                   END IF
-               ELSE IF ( field3 == '''ZERO-ONE''' .OR.                         &
-                         field3 == '''INTEGER'' ' ) THEN
-                  kindar = 106
-               ELSE
-                  kindar = 100
-               END IF
+                END IF
+              END IF
             END IF
-         END IF
+          ELSE
+            IF ( FIELD3( 1 : 7 ) == '''SCALE''' ) THEN
+               IF ( field1( 1 : 1 )  == 'Z' ) THEN
+                  kindar = 115
+               ELSE
+                  kindar = 108
+               END IF
+            ELSE IF ( field3 == '''ZERO-ONE''' .OR. field3 == '''INTEGER'' ' ) &
+                THEN
+              kindar = 106
+            ELSE
+              kindar = 100
+            END IF
+          END IF
+        END IF
 
 !  constants section
 
-         IF ( intype == mconst .OR. intype == mrhs  .OR.                       &
-              intype == mrhsp  ) THEN
-            IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-               kindar = 116
+        IF ( intype == mconst .OR. intype == mrhs  .OR. intype == mrhsp  ) THEN
+          IF ( field1( 1 : 1 )  == 'Z' ) THEN
+            kindar = 116
+          ELSE
+            IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+              kindar = 111
             ELSE
-               IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                  kindar = 111
-               ELSE
-                  kindar = 112
-               END IF
+              kindar = 112
             END IF
-         END IF
+          END IF
+        END IF
 
 !  ranges section
 
-         IF ( intype == mrange ) THEN
-            IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-               kindar = 116
+        IF ( intype == mrange ) THEN
+          IF ( field1( 1 : 1 )  == 'Z' ) THEN
+            kindar = 116
+          ELSE
+            IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+              kindar = 111
             ELSE
-               IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                  kindar = 111
-               ELSE
-                  kindar = 112
-               END IF
+              kindar = 112
             END IF
-         END IF
+          END IF
+        END IF
 
 !  bounds section
 
-         IF ( intype == mbound ) THEN
-            IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-               kindar = 116
-            ELSE
-               IF ( FIELD1( 2: 2 ) == 'R' .OR.                                 &
-                    FIELD1( 2: 2 ) == 'M' .OR.                                 &
-                    FIELD1( 2: 2 ) == 'P' ) kindar = 110
-               IF ( FIELD1( 2: 2 ) == 'L' .OR.                                 &
-                    FIELD1( 2: 2 ) == 'U' .OR.                                 &
-                    FIELD1( 2: 2 ) == 'X' ) kindar = 111
-            END IF
-         END IF
+        IF ( intype == mbound ) THEN
+          IF ( field1( 1 : 1 )  == 'Z' ) THEN
+            kindar = 116
+          ELSE
+            IF ( field1( 2 : 2 ) == 'R' .OR. field1( 2 : 2 ) == 'M' .OR.       &
+                 field1( 2 : 2 ) == 'P' ) kindar = 110
+            IF ( field1( 2 : 2 ) == 'L' .OR. field1( 2 : 2 ) == 'U' .OR.       &
+                 field1( 2 : 2 ) == 'X' ) kindar = 111
+          END IF
+        END IF
 
 !  start point section
 
-         IF ( intype == mstart ) THEN
-            IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-               kindar = 116
+        IF ( intype == mstart ) THEN
+          IF ( field1( 1 : 1 )  == 'Z' ) THEN
+            kindar = 116
+          ELSE
+            IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+              kindar = 111
             ELSE
-               IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                  kindar = 111
-               ELSE
-                  kindar = 112
-               END IF
+              kindar = 112
             END IF
-         END IF
+          END IF
+        END IF
 
 !  Hessian section
 
-         IF ( intype == mquadr .OR. intype == mquads .OR.                      &
-              intype == mquado .OR. intype == mqsect .OR.                      &
-              intype == mqhess .OR. intype == MQMATR) THEN
-            IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-               kindar = 113
+        IF ( intype == mquadr .OR. intype == mquads .OR. intype == mquado .OR. &
+             intype == mqsect .OR. intype == mqhess .OR. intype == MQMATR) THEN
+          IF ( field1( 1 : 1 )  == 'Z' ) THEN
+            kindar = 113
+          ELSE
+            IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+              kindar = 101
             ELSE
-               IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                  kindar = 101
-               ELSE
-                  kindar = 102
-               END IF
+              kindar = 102
             END IF
-         END IF
+          END IF
+        END IF
 
 !  element uses section
 
-         IF ( intype == meuses ) THEN
-            IF ( FIELD1( 2: 2 ) == 'T' ) kindar = 106
-            IF ( FIELD1( 2: 2 ) == 'V' ) kindar = 105
-            IF ( FIELD1( 2: 2 ) == 'P' ) THEN
-               IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-                  kindar = 115
-               ELSE
-                  IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                     kindar = 108
-                  ELSE
-                     kindar = 109
-                  END IF
-               END IF
+        IF ( intype == meuses ) THEN
+          IF ( field1( 2 : 2 ) == 'T' ) kindar = 106
+          IF ( field1( 2 : 2 ) == 'V' ) kindar = 105
+          IF ( field1( 2 : 2 ) == 'P' ) THEN
+            IF ( field1( 1 : 1 )  == 'Z' ) THEN
+              kindar = 115
+            ELSE
+              IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+                kindar = 108
+              ELSE
+                kindar = 109
+              END IF
             END IF
-         END IF
+          END IF
+        END IF
 
 !  group uses section
 
-         IF ( intype == mguses ) THEN
-            IF ( FIELD1( 2: 2 ) == 'T' ) kindar = 106
-            IF ( FIELD1( 2: 2 ) == 'E' ) THEN
-               IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-                  kindar = 113
-               ELSE
-                  IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                     kindar = 101
-                  ELSE
-                     kindar = 102
-                     IF ( FIELD6( 1: 12 ) == '            ' )                  &
-                          FIELD6( 1: 3 ) = '1.0'
-                  END IF
-                  IF ( FIELD4( 1: 12 ) == '            ' )                     &
-                       FIELD4( 1: 3 ) = '1.0'
-               END IF
+        IF ( intype == mguses ) THEN
+          IF ( field1( 2 : 2 ) == 'T' ) kindar = 106
+          IF ( field1( 2 : 2 ) == 'E' ) THEN
+            IF ( field1( 1 : 1 )  == 'Z' ) THEN
+              kindar = 113
+            ELSE
+              IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+                kindar = 101
+              ELSE
+                kindar = 102
+                IF ( FIELD6( 1 : 12 ) == '            ' )                     &
+                       FIELD6( 1 : 3 ) = '1.0'
+              END IF
+              IF ( FIELD4( 1 : 12 ) == '            ' ) FIELD4( 1 : 3 ) = '1.0'
             END IF
-            IF ( FIELD1( 2: 2 ) == 'P' ) THEN
-               IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-                  kindar = 115
-               ELSE
-                  IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                     kindar = 108
-                  ELSE
-                     kindar = 109
-                  END IF
-               END IF
+          END IF
+          IF ( field1( 2 : 2 ) == 'P' ) THEN
+            IF ( field1( 1 : 1 )  == 'Z' ) THEN
+              kindar = 115
+            ELSE
+              IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+                kindar = 108
+              ELSE
+                kindar = 109
+              END IF
             END IF
-         END IF
+          END IF
+        END IF
 
 !  ranges section
 
-         IF ( intype == mobbnd ) THEN
-            IF ( FIELD1( 1: 1 )  == 'Z' ) THEN
-               kindar = 116
+        IF ( intype == mobbnd ) THEN
+          IF ( field1( 1 : 1 )  == 'Z' ) THEN
+            kindar = 116
+          ELSE
+            IF ( FIELD5( 1 : 10 ) == '          ' ) THEN
+              kindar = 111
             ELSE
-               IF ( FIELD5( 1: 10 ) == '          ' ) THEN
-                  kindar = 111
-               ELSE
-                  kindar = 112
-               END IF
+              kindar = 112
             END IF
-         END IF
+          END IF
+        END IF
       END IF
 
 !  check that the type of array definition has been recognised
 
       IF ( kindar < 0 ) THEN
-         IF ( out > 0 ) WRITE( out, 2140 )
-         status = 14
-         RETURN
+        IF ( out > 0 ) WRITE( out, 2140 )
+        status = 14
+        RETURN
       ELSE
-         farray = field1
-         INSTR( 1 ) = kindar
-         INSTR( 2 ) = narray
+        farray = field1
+        INSTR( 1 ) = kindar
+        INSTR( 2 ) = narray
       END IF
 
 !  an array name occurs in field 2. interpret the contents of this
@@ -5608,128 +6541,107 @@
 
       IF ( ( kindar >= 100 .AND. kindar <= 109 ) .OR.                          &
            ( kindar >= 113 .AND. kindar <= 115 ) ) THEN
-         CALL INTFIE( length, 12, KEY, ITABLE, INLIST,                         &
-                      field2, ARRAY( 1 ),                                      &
-                      IARRAY( 1, 1 ), out, status )
-         IF ( status /= 0 ) RETURN
-         IF ( debug .AND. out > 0 ) WRITE( out, 4080 ) level,                  &
-                          ninstr, ARRAY( 1 ),                                  &
-                         ( NAMIIN( IARRAY( 2 + i, 1 ) ),                       &
-                            i = 1, IARRAY( 2, 1 ) )
+        CALL INTFIE( length, 12, KEY, ITABLE, INLIST, field2, ARRAY( 1 ),      &
+                     IARRAY( 1, 1 ), out, status )
+        IF ( status /= 0 ) RETURN
+        IF ( debug .AND. out > 0 ) WRITE( out, 4080 ) level, ninstr,           &
+           ARRAY( 1 ), ( NAMIIN( IARRAY( 2 + i, 1 ) ), i = 1, IARRAY( 2, 1 ) )
 
 !  if the array name is just a scalar name, record its name
 
-         IF ( field1 == 'AE' .OR. field1 == 'AA' .OR.                          &
-              field1 == 'AS' .OR. field1 == 'AM' .OR.                          &
-              field1 == 'AD' .OR. field1 == 'AI' .OR.                          &
-              field1 == 'A=' .OR. field1 == 'A+' .OR.                          &
-              field1 == 'A-' .OR. field1 == 'A*' .OR.                          &
-              field1 == 'A/' .OR. field1 == 'AF' .OR.                          &
-              field1 == 'A(' ) THEN
-            IF ( IARRAY( 2, 1 ) == 0 ) THEN
-               CALL HASH_insert( length, 12, ARRAY( 1 ) // 'RI',                    &
-                            KEY, ITABLE, ifree )
-               IF ( ifree <= 0 ) THEN
-                  IF ( ifree == 0 ) THEN
-                     status = - 1
-                     RETURN
-                  END IF
-               ELSE
-                  nusere = nusere + 1
-                  IF ( nusere > nrlndx ) THEN
-                     status = - 22
-                     RETURN
-                  END IF
-                  INLIST( ifree ) = nusere
-                  NAMRIN( nusere ) = ARRAY( 1 )
-               END IF
+        IF ( field1 == 'AE' .OR. field1 == 'AA' .OR. field1 == 'AS' .OR.       &
+             field1 == 'AM' .OR. field1 == 'AD' .OR. field1 == 'AI' .OR.       &
+             field1 == 'A=' .OR. field1 == 'A+' .OR. field1 == 'A-' .OR.       &
+             field1 == 'A*' .OR. field1 == 'A/' .OR. field1 == 'AF' .OR.       &
+             field1 == 'A(' ) THEN
+          IF ( IARRAY( 2, 1 ) == 0 ) THEN
+            CALL HASH_insert( length, 12, ARRAY( 1 ) // 'RI', KEY, ITABLE,     &
+                              ifree )
+            IF ( ifree <= 0 ) THEN
+              IF ( ifree == 0 ) THEN
+                status = - 1
+                RETURN
+              END IF
+            ELSE
+              nusere = nusere + 1
+              IF ( nusere > nrlndx ) THEN
+                status = - 22
+                RETURN
+              END IF
+              INLIST( ifree ) = nusere
+              NAMRIN( nusere ) = ARRAY( 1 )
             END IF
-         END IF
+          END IF
+        END IF
       END IF
 
-!  an array name occurs in field 3. interpret the contents of this
-!  field
+!  an array name occurs in field 3. interpret the contents of this field
 
       IF ( ( kindar >= 101 .AND. kindar <= 104 ) .OR.                          &
            ( kindar >= 110 .AND. kindar <= 112 ) .OR.                          &
              kindar == 113 .OR.  kindar == 116 ) THEN
-         CALL INTFIE( length, 12, KEY, ITABLE, INLIST,                         &
-                      field3, ARRAY( 2 ),                                      &
-                      IARRAY( 1, 2 ), out, status )
-         IF ( status /= 0 ) RETURN
-         IF ( debug .AND. out > 0 ) WRITE( out, 4090 ) level,                  &
-                          ninstr, ARRAY( 2 ),                                  &
-                         ( NAMIIN( IARRAY( 2 + i, 2 ) ),                       &
-                            i = 1, IARRAY( 2, 2 ) )
+        CALL INTFIE( length, 12, KEY, ITABLE, INLIST, field3, ARRAY( 2 ),      &
+                     IARRAY( 1, 2 ), out, status )
+        IF ( status /= 0 ) RETURN
+        IF ( debug .AND. out > 0 ) WRITE( out, 4090 ) level, ninstr,           &
+          ARRAY( 2 ), ( NAMIIN( IARRAY( 2 + i, 2 ) ), i = 1, IARRAY( 2, 2 ) )
       END IF
 
-!  an array name occurs in field 5. interpret the contents of this
-!  field
+!  an array name occurs in field 5. interpret the contents of this field
 
       IF ( kindar == 102 .OR.  kindar == 104 .OR.                              &
            kindar == 105 .OR.  kindar == 112 .OR.                              &
          ( kindar >= 113 .AND. kindar <= 116 ) ) THEN
-         CALL INTFIE( length, 12, KEY, ITABLE, INLIST,                         &
-                      field5, ARRAY( 3 ),                                      &
+        CALL INTFIE( length, 12, KEY, ITABLE, INLIST, field5, ARRAY( 3 ),      &
                       IARRAY( 1, 3 ), out, status )
-         IF ( status /= 0 ) RETURN
-         IF ( debug .AND. out > 0 ) WRITE( out, 4100 ) level,                  &
-                          ninstr, ARRAY( 3 ),                                  &
-                         ( NAMIIN( IARRAY( 2 + i, 3 ) ),                       &
-                           i = 1, IARRAY( 2, 3 ) )
+        IF ( status /= 0 ) RETURN
+        IF ( debug .AND. out > 0 ) WRITE( out, 4100 ) level, ninstr,           &
+          ARRAY( 3 ), ( NAMIIN( IARRAY( 2 + i, 3 ) ), i = 1, IARRAY( 2, 3 ) )
       END IF
 
 !  an name occurs in field 2
 
-      IF ( ( kindar >= 110 .AND. kindar <= 112 ) .OR.                          &
-             kindar == 116 ) THEN
-         CARRAY( 1 ) = field2
-         IF ( debug .AND. out > 0 ) WRITE( out, 4110 ) level,                  &
-                          ninstr, CARRAY( 1 )
+      IF ( ( kindar >= 110 .AND. kindar <= 112 ) .OR. kindar == 116 ) THEN
+        CARRAY( 1 ) = field2
+        IF ( debug .AND. out > 0 ) WRITE( out, 4110 ) level, ninstr, CARRAY( 1 )
       END IF
 
 !  an name occurs in field 3
 
-      IF ( kindar == 105 .OR. kindar == 106 .OR.                               &
-           kindar == 108 .OR. kindar == 109 .OR.                               &
-           kindar == 115 ) THEN
-         CARRAY( 1 ) = field3
-         IF ( debug .AND. out > 0 ) WRITE( out, 4120 ) level,                  &
-                          ninstr, CARRAY( 1 )
+      IF ( kindar == 105 .OR. kindar == 106 .OR. kindar == 108 .OR.            &
+           kindar == 109 .OR. kindar == 115 ) THEN
+        CARRAY( 1 ) = field3
+        IF ( debug .AND. out > 0 ) WRITE( out, 4120 ) level, ninstr, CARRAY( 1 )
       END IF
 
 !  an name occurs in field 5
 
       IF ( kindar == 109 ) THEN
-         CARRAY( 2 ) = field5
-         IF ( debug .AND. out > 0 ) WRITE( out, 4130 ) level,                  &
-                          ninstr, CARRAY( 2 )
+        CARRAY( 2 ) = field5
+        IF ( debug .AND. out > 0 ) WRITE( out, 4130 ) level, ninstr, CARRAY( 2 )
       END IF
 
 !  a numerical value occurs in field 4
 
-      IF ( kindar == 101 .OR. kindar == 102 .OR.                               &
-           kindar == 107 .OR. kindar == 108 .OR.                               &
-           kindar == 109 .OR. kindar == 111 .OR.                               &
+      IF ( kindar == 101 .OR. kindar == 102 .OR. kindar == 107 .OR.            &
+           kindar == 108 .OR. kindar == 109 .OR. kindar == 111 .OR.            &
            kindar == 112 ) THEN
-         CALL GETVAL( field4, VARRAY( 1 ) )
-         IF ( debug .AND. out > 0 ) WRITE( out, 4140 ) level,                  &
-                          ninstr, VARRAY( 1 )
+        CALL GETVAL( field4, VARRAY( 1 ) )
+        IF ( debug .AND. out > 0 ) WRITE( out, 4140 ) level, ninstr, VARRAY( 1 )
       END IF
 
 !  a numerical value occurs in field 6
 
-      IF ( kindar == 102 .OR. kindar == 109 .OR.                               &
-           kindar == 112 ) THEN
-         CALL GETVAL( field6, VARRAY( 2 ) )
-         IF ( debug .AND. out > 0 ) WRITE( out, 4150 ) level,                  &
-                          ninstr, VARRAY( 2 )
+      IF ( kindar == 102 .OR. kindar == 109 .OR. kindar == 112 ) THEN
+        CALL GETVAL( field6, VARRAY( 2 ) )
+        IF ( debug .AND. out > 0 ) WRITE( out, 4150 ) level, ninstr, VARRAY( 2 )
       END IF
       RETURN
 
 !  non-executable statements
 
- 2140 FORMAT( ' ** Exit from GPSMPS - type of array defn. unrecognised')
+ 2140 FORMAT( ' ** Exit from INTERPRET_gpsmps - type of array definition',     &
+              ' unrecognised')
  4080 FORMAT( ' Level ', i2, ' instruction ', i4, ' field 2 array ',           &
                 A10, ' indices ', 3( A10, 1X ) )
  4090 FORMAT( ' Level ', i2, ' instruction ', i4, ' field 3 array ',           &
@@ -5744,25 +6656,26 @@
  4150 FORMAT( ' Level ', i2, ' instruction ', i4, ' field 6 value ',           &
               1P, D12.4 )
 
-!  end of subroutine PROCAD
+!  end of subroutine DECODE_array_instruction
 
-      END SUBROUTINE PROCAD
+      END SUBROUTINE DECODE_array_instruction
 
-!-*-*-*-*-*- S I F D E C O D E   P R O C A A    S U B R O U T I N E -*-*-*-*-*-
+!-   E X E C U T E _ a r r a y _ i n s t r u c t i o n    S U B R O U T I N E  -
 
-      SUBROUTINE PROCAA( nindex, length, nusere, status, out, nrlndx, INLIST,  &
+      SUBROUTINE EXECUTE_array_instruction(                                    &
+                         nindex, length, nusere, status, out, nrlndx, INLIST,  &
                          ITABLE, NAMRIN, KEY, INDVAL, REALVL, field1, field2,  &
                          field3, field5, rvalue )
       INTEGER :: nindex, length, nusere, status, out
       INTEGER :: nrlndx
       REAL ( KIND = wp ) :: rvalue
-      CHARACTER ( len =  2 ) :: field1
-      CHARACTER ( len = 10 ) :: field2, field3, field5
+      CHARACTER ( LEN =  2 ) :: field1
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
       INTEGER :: INLIST( length ), ITABLE ( length )
       INTEGER :: INDVAL( nindex )
       REAL ( KIND = wp ) :: REALVL( nrlndx )
-      CHARACTER ( len = 10 ) :: NAMRIN( nrlndx )
-      CHARACTER ( len = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ) :: NAMRIN( nrlndx )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  --------------------------------------------------------------------------
 !  construct and execute a list of do-loop real array arithmetic instructions
@@ -5771,64 +6684,62 @@
 !  local variables
 
       INTEGER :: i, ifield, ifree, instr2, instr3, instr4
-      CHARACTER ( len = 12 ) :: field
+      CHARACTER ( LEN = 12 ) :: field
 
-      IF ( field1 == 'A+' .OR. field1 == 'A-' .OR.                             &
-           field1 == 'A*' .OR. field1 == 'A/' .OR.                             &
-           field1 == 'A(' ) THEN
+      IF ( field1 == 'A+' .OR. field1 == 'A-' .OR. field1 == 'A*' .OR.         &
+           field1 == 'A/' .OR. field1 == 'A(' ) THEN
 
 !  obtain the real value, rvalue, as the value associated with the real
 !  index in field 5, first ensuring that the index exists
 
-         field = FIELD5( 1 : 10 ) // 'RI'
-         CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-         IF ( ifield <= 0 ) THEN
-            status = 3
-            IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-            RETURN
-         END IF
-         instr4 = INLIST( ifield )
+        field = FIELD5( 1 : 10 ) // 'RI'
+        CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+        IF ( ifield <= 0 ) THEN
+          status = 3
+          IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+          RETURN
+        END IF
+        instr4 = INLIST( ifield )
       END IF
 
 !  if a definition is to be made from a previously defined index,
 !  ensure that the index exists
 
       IF ( field1 == 'AI' ) THEN
-         field = FIELD3( 1 : 10 ) // 'II'
-         CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-         IF ( ifield <= 0 ) THEN
-            status = 3
-            IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-            RETURN
-         END IF
-         instr3 = INLIST( ifield )
+        field = FIELD3( 1 : 10 ) // 'II'
+        CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+        IF ( ifield <= 0 ) THEN
+          status = 3
+          IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+          RETURN
+        END IF
+        instr3 = INLIST( ifield )
       ELSE
-         IF ( field1 /= 'AF' .AND. field1 /= 'A(' .AND.                        &
-              field1 /= 'AE' ) THEN
-            field = FIELD3( 1 : 10 ) // 'RI'
-            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-            IF ( ifield <= 0 ) THEN
-               status = 3
-               IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-               RETURN
-            END IF
-            instr3 = INLIST( ifield )
-         ELSE
+        IF ( field1 /= 'AF' .AND. field1 /= 'A(' .AND. field1 /= 'AE' ) THEN
+          field = FIELD3( 1 : 10 ) // 'RI'
+          CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+          IF ( ifield <= 0 ) THEN
+             status = 3
+             IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+             RETURN
+          END IF
+          instr3 = INLIST( ifield )
 
 !  the value is to be obtained using a special function. determine
 !  which one
 
-            IF ( field1 /= 'AE' ) THEN
-               DO i = 1, nfunct
-                 IF ( FIELD3( 1 : 10 ) == FUNCTN( i ) ) GO TO 20
-               END DO
-               status = 39
-               IF ( out > 0 ) WRITE( out, 2390 ) FIELD3( 1 : 10 )
-               RETURN
-   20          CONTINUE
-               instr3 = i
-            END IF
-         END IF
+        ELSE
+          IF ( field1 /= 'AE' ) THEN
+            DO i = 1, nfunct
+              IF ( FIELD3( 1 : 10 ) == FUNCTN( i ) ) GO TO 20
+            END DO
+            status = 39
+            IF ( out > 0 ) WRITE( out, 2390 ) FIELD3( 1 : 10 )
+            RETURN
+   20       CONTINUE
+            instr3 = i
+          END IF
+        END IF
       END IF
 
 !  record the address of the index which is to be set
@@ -5836,19 +6747,19 @@
       field = FIELD2( 1 : 10 ) // 'RI'
       CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
       IF ( ifree <= 0 ) THEN
-         IF ( ifree == 0 ) THEN
-            status = - 1
-            RETURN
-         END IF
-         ifree = - ifree
+        IF ( ifree == 0 ) THEN
+          status = - 1
+          RETURN
+        END IF
+        ifree = - ifree
       ELSE
-         nusere = nusere + 1
-         IF ( nusere > nrlndx ) THEN
-            status = - 22
-            RETURN
-         END IF
-         INLIST( ifree ) = nusere
-         NAMRIN( nusere ) = FIELD( 1 : 10 )
+        nusere = nusere + 1
+        IF ( nusere > nrlndx ) THEN
+          status = - 22
+          RETURN
+        END IF
+        INLIST( ifree ) = nusere
+        NAMRIN( nusere ) = FIELD( 1 : 10 )
       END IF
       instr2 = INLIST( ifree )
       IF ( field1 == 'AE' ) REALVL( instr2 ) = rvalue
@@ -5863,7 +6774,7 @@
       IF ( field1 == 'AI' ) REALVL( instr2 ) =                                 &
                               FLOAT( INDVAL( instr3 ) )
       IF ( field1 == 'AF' ) CALL RINTRN( REALVL( instr2 ),                     &
-                                           rvalue, instr3, status )
+                                         rvalue, instr3, status )
       IF ( field1 == 'A=' ) REALVL( instr2 ) = REALVL( instr3 )
       IF ( field1 == 'A+' ) REALVL( instr2 ) =                                 &
                               REALVL( instr3 ) + REALVL( instr4 )
@@ -5874,19 +6785,19 @@
       IF ( field1 == 'A/' ) REALVL( instr2 ) =                                 &
                               REALVL( instr3 ) / REALVL( instr4 )
       IF ( field1 == 'A(' ) CALL RINTRN( REALVL( instr2 ),                     &
-                              REALVL( instr4 ), instr3, status )
+                                         REALVL( instr4 ), instr3, status )
       RETURN
 
 !  non-executable statements
 
- 2030 FORMAT( ' ** Exit from GPSMPS - index parameter name ', A10,             &
+ 2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
               ' not recognised ' )
- 2390 FORMAT( ' ** Exit from GPSMPS - specified function name ', A10,          &
-              ' not recognised ' )
+ 2390 FORMAT( ' ** Exit from INTERPRET_gpsmps - specified function name ',     &
+              A10, ' not recognised ' )
 
-!  end of subroutine PROCAA
+!  end of subroutine EXECUTE_array_instruction
 
-      END SUBROUTINE PROCAA
+      END SUBROUTINE EXECUTE_array_instruction
 
 !-*-*-*-*-*- S I F D E C O D E   G E T F I E    S U B R O U T I N E -*-*-*-*-*-
 
@@ -5894,7 +6805,7 @@
       INTEGER ::NINDEX, status
       INTEGER ::INDVAL( nindex )
       INTEGER ::IARRAY( 5 )
-      CHARACTER ( len = 10 ) :: array, field
+      CHARACTER ( LEN = 10 ) :: array, field
 
 !  -----------------------------------------------------------
 !  construct an expanded array name from its constituent parts
@@ -5903,33 +6814,33 @@
 !  local variables
 
       INTEGER ::I, indces, ivalue, j, ndigit
-      CHARACTER ( len = 9 ) :: field9
+      CHARACTER ( LEN = 9 ) :: field9
 
       j = IARRAY( 1 )
-      field = ARRAY( 1: j )
+      field = ARRAY( 1 : j )
       j = j + 1
       indces = IARRAY( 2 )
-      DO 10 i = 1, indces
-         ivalue = INDVAL( IARRAY( 2 + i ) )
-         IF ( ivalue == 0 ) THEN
-            ndigit = 1
-         ELSE
-            ndigit = INT( LOG10( ABS( FLOAT( ivalue ) ) ) ) + 1
-            IF ( ivalue < 0 ) ndigit = ndigit + 1
-         END IF
-         IF ( ( i < indces .AND. j + ndigit > 10 ) .OR.                        &
-              ( i == indces .AND. j + ndigit > 11 ) ) THEN
-            status = 35
-            RETURN
-         END IF
-         WRITE( UNIT = field9, FMT = 2000 ) ivalue
-         FIELD( J: j + ndigit - 1 ) = FIELD9( 10 - NDIGIT: 9 )
-         j = j + ndigit
-         IF ( i < indces ) THEN
-            FIELD( J: j ) = ','
-            j = j + 1
-         END IF
-  10  CONTINUE
+      DO i = 1, indces
+        ivalue = INDVAL( IARRAY( 2 + i ) )
+        IF ( ivalue == 0 ) THEN
+          ndigit = 1
+        ELSE
+          ndigit = INT( LOG10( ABS( FLOAT( ivalue ) ) ) ) + 1
+          IF ( ivalue < 0 ) ndigit = ndigit + 1
+        END IF
+        IF ( ( i < indces .AND. j + ndigit > 10 ) .OR.                         &
+             ( i == indces .AND. j + ndigit > 11 ) ) THEN
+          status = 35
+          RETURN
+        END IF
+        WRITE( UNIT = field9, FMT = 2000 ) ivalue
+        FIELD( J: j + ndigit - 1 ) = FIELD9( 10 - NDIGIT: 9 )
+        j = j + ndigit
+        IF ( i < indces ) THEN
+          FIELD( J: j ) = ','
+          j = j + 1
+        END IF
+      END DO
       status = 0
       RETURN
 
@@ -6062,17 +6973,17 @@
       REAL ( KIND = wp ) :: dvalue
 
       dvalue = DBLE( value )
-      GO TO ( 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120,               &
-              130, 140 ), ivalue
+      GO TO ( 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140 ),   &
+        ivalue
    10 CONTINUE
       evalue = ABS( dvalue )
       RETURN
    20 CONTINUE
       IF ( value < 0.0 ) THEN
-         status = 40
-         WRITE( 6, 2400 ) value, 'SQRT  '
+        status = 40
+        WRITE( 6, 2400 ) value, 'SQRT  '
       ELSE
-         evalue = SQRT( dvalue )
+        evalue = SQRT( dvalue )
       END IF
       RETURN
    30 CONTINUE
@@ -6080,18 +6991,18 @@
       RETURN
    40 CONTINUE
       IF ( value <= 0.0 ) THEN
-         status = 40
-         WRITE( 6, 2400 ) value, 'LOG   '
+        status = 40
+        WRITE( 6, 2400 ) value, 'LOG   '
       ELSE
-         evalue = LOG( dvalue )
+        evalue = LOG( dvalue )
       END IF
       RETURN
    50 CONTINUE
       IF ( value <= 0.0 ) THEN
-         status = 40
-         WRITE( 6, 2400 ) value, 'LOG10 '
+        status = 40
+        WRITE( 6, 2400 ) value, 'LOG10 '
       ELSE
-         evalue = LOG10( dvalue )
+        evalue = LOG10( dvalue )
       END IF
       RETURN
    60 CONTINUE
@@ -6105,16 +7016,16 @@
       RETURN
    90 CONTINUE
       IF ( ABS( value ) > 1.0 ) THEN
-         status = 40
-         WRITE( 6, 2400 ) value, 'ASIN  '
+        status = 40
+        WRITE( 6, 2400 ) value, 'ASIN  '
       ELSE
-         evalue = ASIN( dvalue )
+        evalue = ASIN( dvalue )
       END IF
       RETURN
   100 CONTINUE
       IF ( ABS( value ) > 1.0 ) THEN
-         status = 40
-         WRITE( 6, 2400 ) value, 'ACOS  '
+        status = 40
+        WRITE( 6, 2400 ) value, 'ACOS  '
       ELSE
          evalue = ACOS( dvalue )
       END IF
@@ -6131,7 +7042,7 @@
   140 CONTINUE
       evalue = TANH( dvalue )
       RETURN
- 2400 FORMAT( ' ** Exit from GPSMPS - argument value ', 1P, D9.1,              &
+ 2400 FORMAT( ' ** Exit from INTERPRET_gpsmps - argument value ', 1P, D9.1,    &
               ' is illegal for function ', A6 )
 
 !  end of subroutine RINTRN
@@ -6142,7 +7053,7 @@
 
       SUBROUTINE GETINT( field, ivalue )
       INTEGER :: ivalue
-      CHARACTER ( len = 12 ) :: field
+      CHARACTER ( LEN = 12 ) :: field
 
 !  ------------------------------------------------------------
 !  read the integer number ivalue stored in the character field
@@ -6151,23 +7062,19 @@
 !  local variables
 
       INTEGER :: i, j
-      CHARACTER ( len = 12 ) :: field2
+      CHARACTER ( LEN = 12 ) :: field2
 
 !  right-shift the field, eliminating blanks
 
       field2 = '            '
-            j = 12
-      DO 10 i = 12, 1, - 1
-         IF ( FIELD( i : i ) == ' ' ) GO TO 10
-         FIELD2( j : j ) = FIELD( i : i )
-         j = j - 1
-   10 CONTINUE
-      READ( UNIT = field2, FMT = 2000 ) ivalue
+      j = 12
+      DO i = 12, 1, - 1
+        IF ( FIELD( i : i ) == ' ' ) CYCLE
+        FIELD2( j : j ) = FIELD( i : i )
+        j = j - 1
+      END DO
+      READ( UNIT = field2, FMT = "( I12 )" ) ivalue
       RETURN
-
-!  non-executable statements
-
- 2000 FORMAT( I12 )
 
 !  end of subroutine GETINT
 
@@ -6183,14 +7090,14 @@
       INTEGER :: nindex, nrlndx, kindar, novals, out, status
       INTEGER :: length
       REAL ( KIND = wp ) :: value4, value6
-      CHARACTER ( len =  2 ) :: field1, farray
-      CHARACTER ( len = 10 ) :: field2, field3, field5
+      CHARACTER ( LEN =  2 ) :: field1, farray
+      CHARACTER ( LEN = 10 ) :: field2, field3, field5
       INTEGER :: INDVAL( nindex ), IARRAY( 5, 3 )
       INTEGER :: INLIST ( length ), ITABLE ( length )
       REAL ( KIND = wp ) :: VARRAY( 2 ), REALVL( nrlndx )
-      CHARACTER ( len =  7 ) :: NAMIIN( nindex )
-      CHARACTER ( len = 10 ) :: ARRAY( 3 ), CARRAY( 2 )
-      CHARACTER ( len = 12 ) :: KEY   ( length )
+      CHARACTER ( LEN =  7 ) :: NAMIIN( nindex )
+      CHARACTER ( LEN = 10 ) :: ARRAY( 3 ), CARRAY( 2 )
+      CHARACTER ( LEN = 12 ) :: KEY   ( length )
 
 !  -----------------------------------------------------------------
 !  translate the contents of an array card to its scalar values
@@ -6222,7 +7129,7 @@
 !  local variables
 
       INTEGER :: i, ifield
-      CHARACTER ( len = 12 ) :: field
+      CHARACTER ( LEN = 12 ) :: field
 
       field1 = farray
       novals = 0
@@ -6232,18 +7139,17 @@
 
       IF ( ( kindar >= 100 .AND. kindar <= 109 ) .OR.                          &
            ( kindar >= 113 .AND. kindar <= 115 ) ) THEN
-         CALL GETFIE( nindex, INDVAL, IARRAY( 1, 1 ),                          &
-                      ARRAY( 1 ), field2, status )
-         IF ( status /= 0 ) THEN
-            IF ( out > 0 ) WRITE( out, 2350 )                                  &
-               ARRAY( 1 )( 1: IARRAY( 1, 1 ) ),                                &
-               ( NAMIIN( IARRAY( 2 + i, 1 ) ),                                 &
-                 INDVAL( IARRAY( 2 + i, 1 ) ), i = 1, IARRAY( 2, 1 ) )
-            status = 35
-            RETURN
-         END IF
+        CALL GETFIE( nindex, INDVAL, IARRAY( 1, 1 ),                           &
+                     ARRAY( 1 ), field2, status )
+        IF ( status /= 0 ) THEN
+          IF ( out > 0 ) WRITE( out, 2350 )                                    &
+            ARRAY( 1 )( 1 : IARRAY( 1, 1 ) ), ( NAMIIN( IARRAY( 2 + i, 1 ) ),  &
+              INDVAL( IARRAY( 2 + i, 1 ) ), i = 1, IARRAY( 2, 1 ) )
+          status = 35
+          RETURN
+        END IF
       ELSE
-         field2 = '          '
+        field2 = '          '
       END IF
 
 !  an array name occurs in field 3. interpret the contents of this
@@ -6252,18 +7158,17 @@
       IF ( ( kindar >= 101 .AND. kindar <= 104 ) .OR.                          &
            ( kindar >= 110 .AND. kindar <= 112 ) .OR.                          &
              kindar == 113 .OR.  kindar == 116 ) THEN
-         CALL GETFIE( nindex, INDVAL, IARRAY( 1, 2 ),                          &
-                      ARRAY( 2 ), field3, status )
-         IF ( status /= 0 ) THEN
-            IF ( out > 0 ) WRITE( out, 2350 )                                  &
-               ARRAY( 2 )( 1: IARRAY( 1, 2 ) ),                                &
-               ( NAMIIN( IARRAY( 2 + i, 2 ) ),                                 &
-                 INDVAL( IARRAY( 2 + i, 2 ) ), i = 1, IARRAY( 2, 2 ) )
-            status = 35
-            RETURN
-         END IF
+        CALL GETFIE( nindex, INDVAL, IARRAY( 1, 2 ),                           &
+                     ARRAY( 2 ), field3, status )
+        IF ( status /= 0 ) THEN
+          IF ( out > 0 ) WRITE( out, 2350 )                                    &
+            ARRAY( 2 )( 1 : IARRAY( 1, 2 ) ), ( NAMIIN( IARRAY( 2 + i, 2 ) ),  &
+              INDVAL( IARRAY( 2 + i, 2 ) ), i = 1, IARRAY( 2, 2 ) )
+          status = 35
+          RETURN
+        END IF
       ELSE
-         field3 = '          '
+        field3 = '          '
       END IF
       IF ( kindar == 103 ) novals = 1
 
@@ -6273,89 +7178,79 @@
       IF ( kindar == 102 .OR.  kindar == 104 .OR.                              &
            kindar == 105 .OR.  kindar == 112 .OR.                              &
          ( kindar >= 113 .AND. kindar <= 116 ) ) THEN
-         CALL GETFIE( nindex, INDVAL, IARRAY( 1, 3 ),                          &
-                      ARRAY( 3 ), field5, status )
-         IF ( status /= 0 ) THEN
-            IF ( out > 0 ) WRITE( out, 2350 )                                  &
-               ARRAY( 3 )( 1: IARRAY( 1, 3 ) ),                                &
-               ( NAMIIN( IARRAY( 2 + i, 3 ) ),                                 &
-                 INDVAL( IARRAY( 2 + i, 3 ) ), i = 1, IARRAY( 2, 3 ) )
-            status = 35
-            RETURN
-         END IF
+        CALL GETFIE( nindex, INDVAL, IARRAY( 1, 3 ),                           &
+                     ARRAY( 3 ), field5, status )
+        IF ( status /= 0 ) THEN
+          IF ( out > 0 ) WRITE( out, 2350 )                                    &
+            ARRAY( 3 )( 1 : IARRAY( 1, 3 ) ), ( NAMIIN( IARRAY( 2 + i, 3 ) ),  &
+              INDVAL( IARRAY( 2 + i, 3 ) ), i = 1, IARRAY( 2, 3 ) )
+          status = 35
+          RETURN
+        END IF
       ELSE
-         field5 = '          '
+        field5 = '          '
       END IF
       IF ( kindar == 104 ) novals = 2
 
 !  an name occurs in field 2
 
-      IF ( ( kindar >= 110 .AND. kindar <= 112 ) .OR.                          &
-             kindar == 116 ) THEN
-         field2 = CARRAY( 1 )
-      END IF
+      IF ( ( kindar >= 110 .AND. kindar <= 112 ) .OR. kindar == 116 )          &
+        field2 = CARRAY( 1 )
 
 !  an name occurs in field 3
 
-      IF ( kindar == 105 .OR. kindar == 106 .OR.                               &
-           kindar == 108 .OR. kindar == 109 .OR.                               &
-           kindar == 115 ) THEN
-         field3 = CARRAY( 1 )
-      END IF
+      IF ( kindar == 105 .OR. kindar == 106 .OR. kindar == 108 .OR.            &
+           kindar == 109 .OR. kindar == 115 ) field3 = CARRAY( 1 )
 
 !  an name occurs in field 5
 
-      IF ( kindar == 109 ) THEN
-         field5 = CARRAY( 2 )
-      END IF
+      IF ( kindar == 109 ) field5 = CARRAY( 2 )
 
 !  a numerical value occurs in field 4
 
-      IF ( kindar == 101 .OR. kindar == 102 .OR.                               &
-           kindar == 107 .OR. kindar == 108 .OR.                               &
-           kindar == 109 .OR. kindar == 111 .OR.                               &
+      IF ( kindar == 101 .OR. kindar == 102 .OR. kindar == 107 .OR.            &
+           kindar == 108 .OR. kindar == 109 .OR. kindar == 111 .OR.            &
            kindar == 112 ) THEN
-         value4 = VARRAY( 1 )
-         novals = 1
-      ELSE
+        value4 = VARRAY( 1 )
+        novals = 1
 
 !  a real index value is to be places in field 4
 
-         IF ( kindar == 113 .OR. kindar == 114 .OR.                            &
-              kindar == 115 .OR. kindar == 116 ) THEN
-            field = FIELD5( 1 : 10 ) // 'RI'
-            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-            IF ( ifield <= 0 ) THEN
-               status = 3
-               IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
-               RETURN
-            END IF
-            value4 = REALVL( INLIST( ifield ) )
-            novals = 1
-         ELSE
-            value4 = 0.0D+0
-         END IF
+      ELSE
+        IF ( kindar == 113 .OR. kindar == 114 .OR.                             &
+             kindar == 115 .OR. kindar == 116 ) THEN
+          field = FIELD5( 1 : 10 ) // 'RI'
+          CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+          IF ( ifield <= 0 ) THEN
+            status = 3
+            IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+            RETURN
+          END IF
+          value4 = REALVL( INLIST( ifield ) )
+          novals = 1
+        ELSE
+          value4 = 0.0D+0
+        END IF
       END IF
 
 !  a numerical value occurs in field 6
 
-      IF ( kindar == 102 .OR. kindar == 109 .OR.                               &
-           kindar == 112 ) THEN
-         value6 = VARRAY( 2 )
-         novals = 2
+      IF ( kindar == 102 .OR. kindar == 109 .OR. kindar == 112 ) THEN
+        value6 = VARRAY( 2 )
+        novals = 2
       ELSE
-         value6 = 0.0D+0
+        value6 = 0.0D+0
       END IF
       status = 0
       RETURN
 
 !  non-executable statements
 
- 2030 FORMAT( ' ** Exit from GPSMPS - index parameter name ', A10,             &
+ 2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
               ' not recognised ' )
- 2350 FORMAT( ' ** Exit from GPSMPS - expanded array name > 10 chars.',        &
-              ' Array name = ', A9, /, ( '    Index ', A10,                    &
-              ' has the value ', i6, : ) )
+ 2350 FORMAT( ' ** Exit from INTERPRET_gpsmps - expanded array name > ',       &
+              '10 chars. Array name = ', A9, /, ( '    Index ', A10,           &
+              ' has the value ', I0, : ) )
 
 !  end of subroutine GETLIN
 
@@ -6365,7 +7260,7 @@
 
       SUBROUTINE GETVAL( field, value )
       REAL ( KIND = wp ) :: value
-      CHARACTER ( len = 12 ) :: field
+      CHARACTER ( LEN = 12 ) :: field
 
 !  --------------------------------------------------------
 !  read the real number value stored in the character field
@@ -6383,8 +7278,8 @@
       SUBROUTINE INTFIE( length, nchar, KEY, ITABLE, INLIST,                   &
                          fielda, array, IARRAY, out, status )
       INTEGER :: length, nchar, out, status
-      CHARACTER ( len = 10 ) :: fielda, array
-      CHARACTER ( len = 12 ) :: KEY   ( length )
+      CHARACTER ( LEN = 10 ) :: fielda, array
+      CHARACTER ( LEN = 12 ) :: KEY   ( length )
       INTEGER :: IARRAY( 5 )
       INTEGER :: INLIST ( length )
       INTEGER :: ITABLE ( length )
@@ -6396,15 +7291,13 @@
 !  local variables
 
       INTEGER :: i, ifield, indces, j
-      CHARACTER ( len = 12 ) :: field
+      CHARACTER ( LEN = 12 ) :: field
 
 !  first find the array name by searching the field for the string '('
 
-      DO 10 i = 1, 10
-         IF ( FIELDA( I: i ) == '(' ) GO TO 20
-   10 CONTINUE
-!     if ( iout > 0 ) write( iout, 2370 ) fielda
-!     inform = 37
+      DO i = 1, 10
+        IF ( FIELDA( i : i ) == '(' ) GO TO 20
+      END DO
       IARRAY( 1 ) = 10
       IARRAY( 2 ) = 0
       array = fielda
@@ -6416,17 +7309,16 @@
    20 CONTINUE
       j = i - 1
       IARRAY( 1 ) = j
-      array = FIELDA( 1: j )
+      array = FIELDA( 1 : j )
       indces = 0
 
 !  now find the array indices. search for one of the strings ')' or ','
 
    30 CONTINUE
          j = i + 1
-         DO 40 i = j, 10
-            IF ( FIELDA( I: i ) == ',' .OR.                                    &
-                 FIELDA( I: i ) == ')' ) GO TO 50
-   40    CONTINUE
+         DO i = j, 10
+           IF ( FIELDA( i : i ) == ',' .OR. FIELDA( i : i ) == ')' ) GO TO 50
+         END DO
          IF ( out > 0 ) WRITE( out, 2370 ) fielda
          status = 37
          RETURN
@@ -6435,26 +7327,26 @@
 
    50    CONTINUE
          IF ( i /= j ) THEN
-            indces = indces + 1
-            IF ( indces > 3 ) THEN
-               IF ( out > 0 ) WRITE( out, 2360 )
-               status = 36
-               RETURN
-            END IF
-            FIELD( 1: 12 ) = '          II'
-            FIELD( 1: i - j ) = FIELDA( J: i - 1 )
+           indces = indces + 1
+           IF ( indces > 3 ) THEN
+             IF ( out > 0 ) WRITE( out, 2360 )
+             status = 36
+             RETURN
+           END IF
+           FIELD( 1 : 12 ) = '          II'
+           FIELD( 1 : i - j ) = FIELDA( J: i - 1 )
 
 !  check that the array index exists and determine its address
 
-            CALL HASH_search( length, nchar, field, KEY, ITABLE, ifield )
-            IF ( ifield <= 0 ) THEN
-               status = 3
-               IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1: 10 )
-               RETURN
-            END IF
-            IARRAY( 2 + indces ) = INLIST( ifield )
+           CALL HASH_search( length, nchar, field, KEY, ITABLE, ifield )
+           IF ( ifield <= 0 ) THEN
+              status = 3
+              IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
+              RETURN
+           END IF
+           IARRAY( 2 + indces ) = INLIST( ifield )
          END IF
-         IF ( FIELDA( I: i ) == ',' ) GO TO 30
+         IF ( FIELDA( i : i ) == ',' ) GO TO 30
 
 !  the array definition is complete
 
@@ -6464,11 +7356,11 @@
 
 !  non-executable statements
 
- 2030 FORMAT( ' ** Exit from GPSMPS - index parameter name ', A10,             &
+ 2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
               ' not recognised ' )
- 2370 FORMAT( ' ** Exit from GPSMPS - incorrect array name', A10,              &
+ 2370 FORMAT( ' ** Exit from INTERPRET_gpsmps - incorrect array name', A10,    &
               ' in do-loop ')
- 2360 FORMAT( ' ** Exit from GPSMPS - > 3 array name indices ' )
+ 2360 FORMAT( ' ** Exit from INTERPRET_gpsmps - > 3 array name indices ' )
 
 !  end of subroutine INTFIE
 
@@ -6492,131 +7384,145 @@
 
       END FUNCTION ONLY1
 
-!-*-*-*-*-*- S I F D E C O D E   I N L A N C    S U B R O U T I N E -*-*-*-*-*-
+!-*-*- S I F D E C O D E   M A K E _ o u t s d i f    S U B R O U T I N E -*-*-
 
-      SUBROUTINE INLANC( n, nlvars, ng, nelnum, nobj, length,                  &
-                         lstadg, lelvar, lstaev, lntvar, licna, lstada,        &
-                         la, lb, lbnds, lintre, liwk, lwk, nmax,               &
-                         ngmax, nbmax, nsmax, nlmax, nelmax, negmax,           &
-                         nobmax, ngrmax, ngpvmx, nepvmx, nomax, nlisgp,        &
+      SUBROUTINE MAKE_outsdif( n, nlvars, ng, nelnum, neling, nobj, length,    &
+                         nelvar, licna, la, nmax,                          &
+                         nbmax,                               &
+                         nobmax, nlisgp, nlisep,                      &
                          nbnd, nnza, nconst, nstart, nrange, nobjgr, nobbnd,   &
-                         neltyp, ngrtyp, pname, nameob, namerh, namera,        &
-                         namebn, namest, nameof, ISTADG, IELVAR, ISTAEV,       &
-                         INTVAR, ICNA, ISTADA, ICOORD, INLIST, ITABLE,         &
-                         ISTATE, IDROWS, IELV, IINV, IGPA, IELING,             &
-                         ISTEP, ISTGP, ITYPEE, ITYPEG, ITYPEV, IWK,            &
-                         A, BND, VSTART, CSTART, RSCALE, CSCALE,               &
-                         RDROWS, DFAULT, WEIGHT, BNDFLT, WK,                   &
-                         GPVALU, EPVALU, FBOUND, ABYROW, B, BL, BU, X,         &
-                         CLMULT, ESCALE, GSCALE, VSCALE, INTREP, GXEQX,        &
+                         neltype, ngtype, pname, nameob, namerh, namera,       &
+                         namebn, namest, nameof, ELING_ptr, ELVAR, EV_ptr,     &
+                         ICNA, A_ptr, ICOORD, INLIST, ITABLE,          &
+                         GSTATE, IDROWS, ELV, INV, GTYPESP_ptr, ELING_el,    &
+                         EP_ptr, GP_ptr, TYPEE, GTYPE, ITYPEV, IWK,            &
+                         A, BND, len1_vstart, VSTART, len1_cstart, CSTART,     &
+                         RSCALE, CSCALE,  &
+                         RDROWS, DFAULT, WEIGHT, BNDFLT,                   &
+                         GP_val, EP_val, FBOUND, ABYROW, B, BL, BU, X,         &
+                         ESCALE, GSCALE, VSCALE,                       &
                          KEY, GNAMES, VNAMES, BNAMES, SNAMES, ONAMES,          &
                          ETYPES, GTYPES, OBNAME, ialgor, iauto,                &
                          out, outda, single, status, debug  )
 
-      INTEGER :: n, ng, length, lstadg, lelvar, lstaev, lntvar
-      INTEGER :: lstada, la, lb, lbnds, lintre, liwk, lwk
-      INTEGER :: nmax, ngmax, nbmax, nsmax, nlmax, nlvars
-      INTEGER :: negmax, ngrmax, ngpvmx, nepvmx, nlisgp, nomax
+      INTEGER :: n, ng, length, nelvar, neling, la
+      INTEGER :: nmax, nbmax, nlvars
+      INTEGER :: nlisgp, nlisep
       INTEGER :: nbnd, nnza, nconst, nstart, nrange, nobjgr
-      INTEGER :: nelmax, ialgor, out, outda, status, nobbnd
-      INTEGER :: neltyp, ngrtyp, licna, nobmax, nobj, nelnum
+      INTEGER :: ialgor, out, outda, status, nobbnd
+      INTEGER :: neltype, ngtype, licna, nobmax, nobj, nelnum
+      INTEGER :: len1_vstart, len1_cstart
       INTEGER :: iauto
       LOGICAL :: single, debug
-      CHARACTER ( len = 8 ) :: pname
-      CHARACTER ( len = 10 ) :: nameob, namerh, namera, namebn, namest,NAMEOF
-      INTEGER :: ISTADG( lstadg ), IELVAR( lelvar ), ICNA( licna )
-      INTEGER :: ISTAEV( lstaev ), INTVAR( lntvar )
-      INTEGER :: ISTADA( lstada ), ITABLE( length )
+      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: nameob, namerh, namera, namebn, namest, nameof
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: A_ptr
+      INTEGER :: ELING_ptr( ng + 1 ), ELVAR( nelvar ), ICNA( licna )
+      INTEGER :: EV_ptr( nelnum + 1 )
+      INTEGER :: ITABLE( length )
       INTEGER :: ICOORD( la, 2  ), INLIST( length )
-      INTEGER :: ISTATE( ngmax  ), IDROWS( 2, ngmax )
-      INTEGER :: IELV  ( nlmax  ), IINV  ( nlmax  )
-      INTEGER :: ISTEP ( nelmax ), ISTGP ( ngmax  )
-      INTEGER :: IELING( negmax ), IGPA  ( ngrmax ) 
-      INTEGER :: ITYPEE( nelmax ), ITYPEG( ngmax ), IWK( liwk )
+      INTEGER :: GSTATE( ng  ), IDROWS( 2, ng )
+      INTEGER :: ELV( neltype + 1 ), INV( neltype + 1 )
+      INTEGER :: EP_ptr ( nelnum + 1 ), GP_ptr( ng + 1 )
+      INTEGER :: ELING_el( neling ), GTYPESP_ptr( ngtype + 1 ) 
+      INTEGER :: TYPEE( nelnum ), GTYPE( ng ), IWK( ng )
       INTEGER :: ITYPEV( nmax )
-      REAL ( KIND = wp ) :: A( la ),  RDROWS( 2, ngmax ), WEIGHT( negmax )
-      REAL ( KIND = wp ) :: BND( 2, nmax, nbmax ), VSTART( nmax, nsmax )
-      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax ), CSTART( ngmax, nsmax )
-      REAL ( KIND = wp ) :: RSCALE( ngmax ), CSCALE( nmax )
-      REAL ( KIND = wp ) :: GPVALU( ngpvmx ), EPVALU( nepvmx )
-      REAL ( KIND = wp ) :: DFAULT( nmax ), FBOUND( 2, nobmax ), WK( lwk )
-      REAL ( KIND = wp ) :: ABYROW( la ), B( lb ), BL( lbnds ), BU( lbnds )
-      REAL ( KIND = wp ) :: X( nmax ), GSCALE( ngmax ), ESCALE( negmax )
-      REAL ( KIND = wp ) :: VSCALE( nmax ), CLMULT( ngmax )
-      LOGICAL :: INTREP( lintre ), GXEQX( ngmax )
-      CHARACTER ( len = 12 ) :: KEY( length  )
-      CHARACTER ( len = 10 ) :: GNAMES( ngmax ), BNAMES( nbmax )
-      CHARACTER ( len = 10 ) :: ONAMES( nomax ), OBNAME( nobmax )
-      CHARACTER ( len = 10 ) :: VNAMES( nmax  ), SNAMES( nsmax )
-      CHARACTER ( len = 10 ) :: ETYPES( nlmax ), GTYPES( ngrmax )
+      REAL ( KIND = wp ) :: A( la ),  RDROWS( 2, ng ), WEIGHT( neling )
+      REAL ( KIND = wp ) :: BND( 2, nmax, nbmax ), VSTART( len1_vstart, nstart )
+      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax ), CSTART( len1_cstart, nstart )
+      REAL ( KIND = wp ) :: RSCALE( ng ), CSCALE( nmax )
+      REAL ( KIND = wp ) :: GP_val( nlisgp ), EP_val( nlisep )
+      REAL ( KIND = wp ) :: DFAULT( nmax ), FBOUND( 2, nobmax )
+      REAL ( KIND = wp ) :: ABYROW( la )
+      REAL ( KIND = wp ) :: X( nmax )
+      REAL ( KIND = wp ) :: VSCALE( nmax )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: ESCALE, GSCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B, BL, BU
+      CHARACTER ( LEN = 12 ) :: KEY( length  )
+      CHARACTER ( LEN = 10 ) :: GNAMES( ng ), BNAMES( nbmax )
+      CHARACTER ( LEN = 10 ) :: ONAMES( nobj ), OBNAME( nobmax )
+      CHARACTER ( LEN = 10 ) :: VNAMES( nmax  ), SNAMES( nstart )
+      CHARACTER ( LEN = 10 ) :: ETYPES( neltype ), GTYPES( ngtype )
 
-!  ---------------------------------------------------------------------------
-!  convert the output from gpsmps into a form suitable for any of the LANCELOT
-!  programs SBMIN ( ialgor = 1 ), AUGLG ( ialgor = 2 ) or BARIA ( ialgor = 3 )
-!  ---------------------------------------------------------------------------
+!  ---------------------------------------------------------------------
+!  convert the output from INTERPRET_gpsmps into a form suitable for any 
+!  of the GALAHAD programs SBMIN (ialgor = 1), AUGLG (ialgor = 2) or 
+!  others (ialgor = 3 )
+
+!  formerly INLANC in SiFDec
+!  ---------------------------------------------------------------------
 
 !  local variables
 
+      INTEGER :: nnz, nslack, jobbnd, jstart, nel1, jcol, jconst, jrange
       INTEGER :: i, ic, ifield, ig, irow, is, itype, j, jbnd, k
-      INTEGER :: k1, k2, nelv, ninv, ng1, nel, ngpv, ngr
-      INTEGER :: jstart, nel1, jcol, jconst, jrange
-      INTEGER :: nnz, nslack, jobbnd
+      INTEGER :: k1, k2, nelv, ninv, ng1, nel, ngpv, ngr, alloc_status
       REAL ( KIND = wp ) :: avalue, rrow
       REAL ( KIND = wp ) :: OBFBND( 2 )
-      CHARACTER ( len = 12 ) :: field
+      CHARACTER ( LEN = 12 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
-      IF ( liwk <  ng .OR. lwk < MAX( n, nlisgp ) ) THEN
-        status = - 1
-        IF ( out  > 0 ) WRITE( out, 2000 )
-        GO TO 800
-      END IF
+!  automatic arrays
+
+      INTEGER, DIMENSION( nelnum ) :: INTVAR
+      REAL ( KIND = wp ), DIMENSION( ng ) :: CLMULT
+      REAL ( KIND = wp ), DIMENSION( ( MAX( n, nlisgp ) ) ) :: WK
+      LOGICAL, DIMENSION( ng ) :: GXEQX
+      LOGICAL, DIMENSION( nelnum ) :: INTREP
 
 !  decide which optimization method to use
 !  ---------------------------------------
 
       IF ( ialgor <= 0 ) THEN
-         ialgor = 1
-         DO 10 ig = 1, ng
-            IF ( ABS( ISTATE( ig ) ) >= 2 ) ialgor = 2
-   10    CONTINUE   
+        ialgor = 1
+        DO ig = 1, ng
+          IF ( ABS( GSTATE( ig ) ) >= 2 ) ialgor = 2
+        END DO
       END IF
-      DO 20 ig = 1, ng
-         ISTATE( ig ) = ABS( ISTATE( ig ) )
-   20 CONTINUE   
+      GSTATE( : ng ) = ABS( GSTATE( : ng ) )
 
 !  select the bounds on the variables
 !  -----------------------------------
 
       IF ( nbnd == 1 ) THEN
-         jbnd = 1
-      ELSE
+        jbnd = 1
 
 !  find the key word in the list of bounds
 
-         DO 110 jbnd = 1, nbnd
-            IF ( namebn == BNAMES( jbnd ) ) GO TO 120
-  110    CONTINUE
-         status = 47
-         IF ( out > 0 ) WRITE( out, 2470 ) namebn
-         GO TO 800
-  120    CONTINUE
+      ELSE
+        DO jbnd = 1, nbnd
+          IF ( namebn == BNAMES( jbnd ) ) GO TO 120
+        END DO
+        status = 47
+        IF ( out > 0 ) WRITE( out, 2470 ) namebn
+        GO TO 800
+  120   CONTINUE
       END IF
+
+      nnz = n + ng
+      CALL ALLOCATE_array( BL, nnz, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'BL' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( BU, nnz, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'BU' ; GO TO 980 ; END IF
 
 !  the required vector of bounds is column jbnd of bnd. copy this
 !  vector into bl( ) and bu( ). record the scale factors
 
-      DO 130 j = 1, nlvars
-         BL( j ) = BND( 1, j, jbnd )
-         BU( j ) = BND( 2, j, jbnd )
-         VSCALE( j ) = CSCALE( j )
-  130 CONTINUE
+      DO j = 1, nlvars
+        BL( j ) = BND( 1, j, jbnd )
+        BU( j ) = BND( 2, j, jbnd )
+        VSCALE( j ) = CSCALE( j )
+      END DO
 
 !  the bounds on the nonlinear variables are set to default values
 
-      DO 140 j = nlvars + 1, n
-         BL( j ) = BNDFLT( 1, jbnd )
-         BU( j ) = BNDFLT( 2, jbnd )
-  140 CONTINUE
+      DO j = nlvars + 1, n
+        BL( j ) = BNDFLT( 1, jbnd )
+        BU( j ) = BNDFLT( 2, jbnd )
+      END DO
 
 !  select the constant/rhs and ranges
 !  -----------------------------------
@@ -6624,65 +7530,77 @@
 !  find the named constant (r.h.s.) vector in the list
 
       IF ( nconst == 1 ) THEN
-         jconst = nlvars + 1
+        jconst = nlvars + 1
       ELSE
-         field = namerh // 'CO'
-         CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-         IF ( ifield > 0 ) THEN
-            jconst = INLIST( ifield )
-         ELSE
-            status = 46
-            IF ( out > 0 ) WRITE( out, 2460 ) namerh
-            GO TO 800
-         END IF
+        field = namerh // 'CO'
+        CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+        IF ( ifield > 0 ) THEN
+           jconst = INLIST( ifield )
+        ELSE
+          status = 46
+          IF ( out > 0 ) WRITE( out, 2460 ) namerh
+          GO TO 800
+        END IF
       END IF
 
 !  find the named range vector in the list
 
       IF ( nrange > 0 ) THEN
-         IF ( nrange == 1 ) THEN
-            jrange = nlvars + nconst + 1
-         ELSE
-            field = namera // 'RA'
-            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-            IF ( ifield > 0 ) THEN
-               jrange = INLIST( ifield )
-            ELSE
-               status = 48
-               IF ( out > 0 ) WRITE( out, 2480 ) namera
-               GO TO 800
-            END IF
-         END IF
+        IF ( nrange == 1 ) THEN
+          jrange = nlvars + nconst + 1
+        ELSE
+          field = namera // 'RA'
+          CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+          IF ( ifield > 0 ) THEN
+            jrange = INLIST( ifield )
+          ELSE
+            status = 48
+            IF ( out > 0 ) WRITE( out, 2480 ) namera
+            GO TO 800
+          END IF
+        END IF
       ELSE
-         jrange = 0
+        jrange = 0
       END IF
+
+      CALL ALLOCATE_array( ESCALE, neling, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ESCALE' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( GSCALE, ng, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GSCALE' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( B, ng, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'B' ; GO TO 980 ; END IF
 
 !  initialize the vector of constants, b, as its default value
 
-      DO 210 i = 1, ng
+      DO i = 1, ng
         IF ( GNAMES ( i ) == cqgrou ) THEN
-         B( i ) = zero
-         BL( n + i ) = zero
-         BU( n + i ) = biginf
-         GSCALE( i ) = one
+          B( i ) = zero
+          BL( n + i ) = zero
+          BU( n + i ) = biginf
+          GSCALE( i ) = one
         ELSE
-         B( i ) = DFAULT( jconst )
+          B( i ) = DFAULT( jconst )
 
 !  initialize lower and upper bounds on slack variables as zero
 !  and the default respectively
 
-         BL( n + i ) = zero
-         IF ( nrange == 0 ) THEN
+          BL( n + i ) = zero
+          IF ( nrange == 0 ) THEN
             BU( n + i ) = biginf
-         ELSE
+          ELSE
             BU( n + i ) = DFAULT( jrange )
-         END IF
+          END IF
 
 !  record the group scale factors
 
-         GSCALE( i ) = one / RSCALE( i )
+          GSCALE( i ) = one / RSCALE( i )
         END IF
-  210 CONTINUE
+      END DO
 
 !  sweep through the entries of a. look for entries in columns
 !  jconst and jrange. subsequently remove all constant/rhs and
@@ -6690,256 +7608,244 @@
 !  elements
 
       nnz = 0
-      DO 220 k = 1, nnza
-         i = ICOORD( k, 1 )
-         j = ICOORD( k, 2 )
-         avalue = A( k )
+      DO k = 1, nnza
+        i = ICOORD( k, 1 )
+        j = ICOORD( k, 2 )
+        avalue = A( k )
 
 !  see if the entry belongs to the selected constant/rhs vector
 
-         IF ( j == jconst ) B( i ) = avalue
+        IF ( j == jconst ) B( i ) = avalue
 
 !  see if the entry belongs to the selected range vector
 
-         IF ( j == jrange ) BU( n + i ) = avalue
+        IF ( j == jrange ) BU( n + i ) = avalue
 
 !  check if the entry belongs to a linear element
 
-         IF ( j <= nlvars ) THEN
-            nnz = nnz + 1
+        IF ( j <= nlvars ) THEN
+          nnz = nnz + 1
 
 !  record the coordinates and value of the entry from the linear
 !  element
 
-            ICOORD( nnz, 1 ) = i
-            ICOORD( nnz, 2 ) = j
-            A( nnz ) = avalue
-         END IF
-  220 CONTINUE
+          ICOORD( nnz, 1 ) = i
+          ICOORD( nnz, 2 ) = j
+          A( nnz ) = avalue
+        END IF
+      END DO
       nnza = nnz
 
 !  the matrix is stored in coordinate form. resort it so that
 !  it is stored by rows
 
-      IF ( nnza > 0 ) CALL REORDA( ng, nnza, ICOORD( 1, 2 ),                   &
-                                      ICOORD( 1, 1 ), A, ISTADA, IWK )
+      ng1 = ng + 1
+      CALL ALLOCATE_array( A_ptr, ng1, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'A_ptr' ; GO TO 980 ; END IF
+
+      IF ( nnza > 0 ) CALL REORDER( ng, nnza, ICOORD( 1, 2 ),                  &
+                                    ICOORD( 1, 1 ), A, A_ptr, IWK )
 
 !  decode the 'd'-groups/rows. set the workspace array wk to zero
 
       nnz = 0
       nslack = 0
-      DO 310 i = 1, n
-         WK( i ) = zero
-  310 CONTINUE
+      WK( : n ) = zero
 
-!  gxeqx is true if the group function is trivial
+!  GXEQX is true if the group function is trivial
 
-      DO 315 ig = 1, ng
-        GXEQX( ig ) = ITYPEG( ig ) == 0
-  315 CONTINUE
+      DO ig = 1, ng
+        GXEQX( ig ) = GTYPE( ig ) == 0
+      END DO
 
 !  set the coefficients of the linear elements
 !  --------------------------------------------
 
 !  consider the groups in order
 
-      DO 390 ig = 1, ng
-         k1 = ISTADA( ig )
-         ISTADA( ig ) = nnz + 1
-         IF ( ISTATE( ig ) <= 4 ) THEN
+      DO ig = 1, ng
+         k1 = A_ptr( ig )
+         A_ptr( ig ) = nnz + 1
+         IF ( GSTATE( ig ) <= 4 ) THEN
 
 !  first pass: determine the nonzeros in the row
 
-            DO 320 k = k1, ISTADA( ig + 1 ) - 1
-               j = ICOORD( k, 2 )
-               IF ( WK( j ) /= zero ) THEN
-                  WK( j ) = WK( j ) + A( k )
-               ELSE
-                  WK( j ) = A( k )
-               END IF
-  320       CONTINUE
+           DO k = k1, A_ptr( ig + 1 ) - 1
+             j = ICOORD( k, 2 )
+             IF ( WK( j ) /= zero ) THEN
+               WK( j ) = WK( j ) + A( k )
+             ELSE
+               WK( j ) = A( k )
+             END IF
+           END DO
 
 !  second pass: only record nonzeros
 
-            DO 325 k = k1, ISTADA( ig + 1 ) - 1
-               j = ICOORD( k, 2 )
-               IF ( WK( j ) /= zero ) THEN
-                  nnz = nnz + 1
-                  ICNA( nnz ) = j
-                  ABYROW( nnz ) = WK( j )
-                  WK( j ) = zero
-!               else
-!                 write(6,*) ' duplicate or zero removed ', j, a( k )
-               END IF
-  325       CONTINUE
+           DO k = k1, A_ptr( ig + 1 ) - 1
+             j = ICOORD( k, 2 )
+             IF ( WK( j ) /= zero ) THEN
+               nnz = nnz + 1
+               ICNA( nnz ) = j
+               ABYROW( nnz ) = WK( j )
+               WK( j ) = zero
+             END IF
+           END DO
          ELSE
 
 !  the ig-th group is a 'd'-group. construct the new group from its
 !  two donors. consider each donor row in turn. form the new row in wk
 
-            DO 340 i = 1, 2
-               irow = IDROWS( i, ig )
-               rrow = RDROWS( i, ig )
-               DO 330 k = ISTADA( irow ), ISTADA( irow + 1 ) - 1
-                  ic = ICNA( k )
-                  IF ( ic <= nlvars ) WK( ic ) = WK( ic ) +                    &
-                                   ABYROW( k ) * rrow
-  330          CONTINUE
-  340       CONTINUE
+           DO i = 1, 2
+             irow = IDROWS( i, ig )
+             rrow = RDROWS( i, ig )
+             DO k = A_ptr( irow ), A_ptr( irow + 1 ) - 1
+               ic = ICNA( k )
+               IF ( ic <= nlvars ) WK( ic ) = WK( ic ) + ABYROW( k ) * rrow
+             END DO
+           END DO
 
 !  move the new row into abyrow, resetting wk to zero as we proceed
 
-            DO 360 i = 1, 2
-               irow = IDROWS( i, ig )
-               DO 350 k = ISTADA( irow ), ISTADA( irow + 1 ) - 1
-                  ic = ICNA( k )
-                  IF ( ic <= nlvars ) THEN
-                     IF ( WK( ic ) /= zero ) THEN
-                        nnz = nnz + 1
-                        ICNA( nnz ) = ic
-                        ABYROW( nnz ) = WK( ic )
-                        WK( ic ) = zero
-                     END IF
-                  END IF
-  350          CONTINUE
-  360       CONTINUE
+           DO i = 1, 2
+             irow = IDROWS( i, ig )
+             DO k = A_ptr( irow ), A_ptr( irow + 1 ) - 1
+               ic = ICNA( k )
+               IF ( ic <= nlvars ) THEN
+                 IF ( WK( ic ) /= zero ) THEN
+                   nnz = nnz + 1
+                   ICNA( nnz ) = ic
+                   ABYROW( nnz ) = WK( ic )
+                   WK( ic ) = zero
+                 END IF
+               END IF
+             END DO
+           END DO
          END IF
 
 !  if the group is of type 'l' or 'g', insert a slack variable in
 !  the linear element
 
-         is = ISTATE( ig )
+         is = GSTATE( ig )
          IF ( is > 4 ) is = is - 4
          IF ( ialgor <= 2 ) THEN
-            IF ( is /= 1 .AND. is /= 2 ) THEN
-               IF ( .NOT. GXEQX( ig ) ) THEN
-                 WRITE( out, 1990 )
-                 status = 51
-                 GO TO 800
-               END IF
-               nnz = nnz + 1
-               nslack = nslack  + 1
-               jcol = n + nslack
-               ICNA( nnz ) = jcol
-               IF ( is == 3 ) THEN
-                  ABYROW( nnz ) =   one
-               ELSE
-                  ABYROW( nnz ) = - one
-               END IF
+           IF ( is /= 1 .AND. is /= 2 ) THEN
+             IF ( .NOT. GXEQX( ig ) ) THEN
+               WRITE( out, 1990 )
+               status = 51
+               GO TO 800
+             END IF
+             nnz = nnz + 1
+             nslack = nslack  + 1
+             jcol = n + nslack
+             ICNA( nnz ) = jcol
+             IF ( is == 3 ) THEN
+                ABYROW( nnz ) =   one
+             ELSE
+                ABYROW( nnz ) = - one
+             END IF
 
 !  give the slack variable the same name as its corresponding group
 
-               VNAMES( jcol ) = GNAMES( ig )
+             VNAMES( jcol ) = GNAMES( ig )
 
 !  assign the correct bounds for the slack variable
 
-               BL( jcol ) = BL( n + ig )
-               BU( jcol ) = BU( n + ig )
-            END IF
+             BL( jcol ) = BL( n + ig )
+             BU( jcol ) = BU( n + ig )
+           END IF
          ELSE
-            IF ( is == 3 ) BL( n + ig ) = - BU( n + ig )
-            IF ( is == 1 .OR. is == 2 .OR. is == 3 )                           &
-                             BU( n + ig ) = zero
+           IF ( is == 3 ) BL( n + ig ) = - BU( n + ig )
+           IF ( is == 1 .OR. is == 2 .OR. is == 3 ) BU( n + ig ) = zero
          END IF
-         ISTATE( ig ) = is
-  390 CONTINUE
+         GSTATE( ig ) = is
+      END DO
 
 !  reset the number of variables to include the slacks
 
       n = n + nslack
       nnza = nnz + 1
       ng1 = ng + 1
-      ISTADA( ng1 ) = nnza
-      IF ( debug .AND. out > 0 ) WRITE( out, 3020 )                          &
-          ( ( i, ICNA( k ), ABYROW( k ), k = ISTADA( i ),                      &
-              ISTADA( i + 1 ) - 1 ), i = 1, ng )
+      A_ptr( ng1 ) = nnza
+      IF ( debug .AND. out > 0 ) WRITE( out, 3020 ) ( ( i, ICNA( k ),          &
+         ABYROW( k ), k = A_ptr( i ), A_ptr( i + 1 ) - 1 ), i = 1, ng )
 
 !  select the starting point for the minimization
 !  ----------------------------------------------
 
       IF ( nstart == 1 ) THEN
-         jstart = 1
+        jstart = 1
       ELSE
 
 !  find the key word in the list of starting points
 
-         DO 410 jstart = 1, nstart
-            IF ( namest == SNAMES( jstart ) ) GO TO 420
-  410    CONTINUE
-         status = 49
-         IF ( out > 0 ) WRITE( out, 2490 ) namest
-         GO TO 800
-  420    CONTINUE
+        DO jstart = 1, nstart
+          IF ( namest == SNAMES( jstart ) ) GO TO 420
+        END DO
+        status = 49
+        IF ( out > 0 ) WRITE( out, 2490 ) namest
+        GO TO 800
+  420   CONTINUE
       END IF
 
 !  record the starting point
 
-      DO 430 j = 1, nlvars
-         X( j ) = VSTART( j, jstart )
-  430 CONTINUE
+      X( : nlvars ) = VSTART( : nlvars, jstart )
 
 !  initialize all slack and nonlinear variables as zero, with weight 1
 
-      DO 440 j = nlvars + 1, n
-         X( j ) = zero
-         VSCALE( j ) = one
-  440 CONTINUE
+      X( nlvars + 1 : n ) = zero
+      VSCALE( nlvars + 1 : n ) = one
 
 !  record the lagrange multipliers, if any
 
-      IF ( ialgor >= 2 ) THEN
-         DO 450 ig = 1, ng
-            CLMULT( ig ) = CSTART( ig, jstart )
-  450    CONTINUE
-      END IF
+      IF ( ialgor >= 2 ) CLMULT( : ng ) = CSTART( : ng, jstart )
 
 !  nonlinear element information
 !  ------------------------------
 
-!  the parameter values for the nonlinear elements may be unordered
-!  order the parameters so that those for group i precede those
-!  from group i+1. place the reordered set in wk
+!  the parameter values for the nonlinear elements may be unordered. Order
+!  the parameters so that those for group i precede those from group i+1.
+!  Place the reordered set in wk
 
       j = 1
-      DO 520 ig = 1, ng
-         k = ITYPEG( ig )
-         ISTGP( ig ) = j
-         IF ( k > 0 ) THEN
-            k1 = IGPA( k + 1 ) - IGPA( k )
-            k2 = ISTGP( ig ) - 1
-            DO 510 i = 1, k1
-               WK( j ) = GPVALU( k2 + i )
-               j = j + 1
-  510       CONTINUE
-         END IF
-  520 CONTINUE
-      ISTGP( ng1 ) = j
+      DO ig = 1, ng
+        k = GTYPE( ig )
+        GP_ptr( ig ) = j
+        IF ( k > 0 ) THEN
+          k1 = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
+          k2 = GP_ptr( ig ) - 1
+          DO i = 1, k1
+            WK( j ) = GP_val( k2 + i )
+            j = j + 1
+          END DO
+        END IF
+      END DO
+      GP_ptr( ng1 ) = j
 
-!  overwrite gpvalu with wk
+!  overwrite GP_val with wk
 
-      DO 530 i = 1, j - 1
-         GPVALU( i ) = WK( i )
-  530 CONTINUE
+      GP_val( : j - 1 ) = WK( : j - 1 )
 
 !  record the scale factors for the nonlinear elements
 
-      DO 540 i = 1, ISTADG( ng1 ) - 1
-         ESCALE( i ) = WEIGHT( i )
-  540 CONTINUE
-      DO 550 i = 1, nelnum
+      DO i = 1, ELING_ptr( ng1 ) - 1
+        ESCALE( i ) = WEIGHT( i )
+      END DO
 
 !  determine whether the nonlinear elements have internal
 !  representations
 
-         itype = ITYPEE( i )
-         nelv = IELV( itype + 1 ) - IELV( itype )
-         ninv = IINV( itype + 1 ) - IINV( itype )
-         INTREP( i ) = ninv < nelv
+      DO i = 1, nelnum
+        itype = TYPEE( i )
+        nelv = ELV( itype + 1 ) - ELV( itype )
+        ninv = INV( itype + 1 ) - INV( itype )
+        INTREP( i ) = ninv < nelv
 
 !  store the number of internal variables for each element
 
-         INTVAR( i ) = ninv
-  550 CONTINUE
+        INTVAR( i ) = ninv
+      END DO
       IF ( ialgor >= 2 ) THEN
 
 !  select the objective function group
@@ -6948,114 +7854,111 @@
 !  find the named objective function group in the list
 !  mark the remaining objective function groups for removal
 
-         IF ( oneobj ) THEN
-            nobjgr = 0
-            DO 610 i = 1, nobj
-               field = ONAMES( i ) // 'GR'
-               CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
-               k = INLIST( ifield )
-               IF ( nameof == ONAMES( i ) ) THEN
-                  nobjgr = k
-                  IF ( out > 0 .AND. debug )                                   &
-                       WRITE( out, 3010 ) ONAMES( i ), k
-               ELSE
-                  ISTADG( k ) = - ISTADG( k )
-                  IF ( out > 0 .AND. debug )                                   &
-                       WRITE( out, 3000 ) ONAMES( i )
-               END IF
-  610       CONTINUE
+        IF ( oneobj ) THEN
+          nobjgr = 0
+          DO i = 1, nobj
+            field = ONAMES( i ) // 'GR'
+            CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
+            k = INLIST( ifield )
+            IF ( nameof == ONAMES( i ) ) THEN
+              nobjgr = k
+              IF ( out > 0 .AND. debug ) WRITE( out, 3010 ) ONAMES( i ), k
+            ELSE
+              ELING_ptr( k ) = - ELING_ptr( k )
+              IF ( out > 0 .AND. debug ) WRITE( out, 3000 ) ONAMES( i )
+            END IF
+          END DO
 
 !  remove redundant group information
 
-             IF ( nobj > 1 .OR.                                                &
-                ( nobj == 1 .AND. nobjgr == 0 ) ) THEN
-               nnz = 1
-               nel = 1
-               ngpv = 1
-               ngr = 0
-               DO 650 i = 1, ng
-                  IF ( ISTADG( i ) > 0 ) THEN
-                     ngr = ngr + 1
-                     IF ( i == nobjgr ) nobjgr = ngr
+          IF ( nobj > 1 .OR. ( nobj == 1 .AND. nobjgr == 0 ) ) THEN
+            nnz = 1
+            nel = 1
+            ngpv = 1
+            ngr = 0
+            DO i = 1, ng
+              IF ( ELING_ptr( i ) > 0 ) THEN
+                ngr = ngr + 1
+                IF ( i == nobjgr ) nobjgr = ngr
 
 !  shift the group status, name, type, constant,
 !  triviality indicator, lagrange multiplier and weight
 
-                     IF ( ialgor >= 2 ) ISTATE( ngr ) = ISTATE( i )
-                     GNAMES( ngr ) = GNAMES( i )
-                     ITYPEG( ngr ) = ITYPEG( i )
-                     B( ngr ) = B( i )
-                     GXEQX( ngr ) = GXEQX( i )
-                     IF ( ialgor >= 2 ) CLMULT( ngr ) = CLMULT( i )
-                     GSCALE( ngr ) = GSCALE( i )
+                IF ( ialgor >= 2 ) GSTATE( ngr ) = GSTATE( i )
+                GNAMES( ngr ) = GNAMES( i )
+                GTYPE( ngr ) = GTYPE( i )
+                B( ngr ) = B( i )
+                GXEQX( ngr ) = GXEQX( i )
+                IF ( ialgor >= 2 ) CLMULT( ngr ) = CLMULT( i )
+                GSCALE( ngr ) = GSCALE( i )
 
 !  shift the list of elements and weights in the i-th group
 
-                     k1 = ISTADG( i )
-                     ISTADG( ngr ) = nel
-                     DO 620 k = k1, ABS( ISTADG( i + 1 ) ) - 1
-                        IELING( nel ) = IELING( k )
-                        ESCALE( nel ) = ESCALE( k )
-                        nel = nel + 1
-  620                CONTINUE
+                k1 = ELING_ptr( i )
+                ELING_ptr( ngr ) = nel
+                DO k = k1, ABS( ELING_ptr( i + 1 ) ) - 1
+                  ELING_el( nel ) = ELING_el( k )
+                  ESCALE( nel ) = ESCALE( k )
+                  nel = nel + 1
+                END DO
 
 !  shift the list of parameters in the i-th group
 
-                     k1 = ISTGP( i )
-                     ISTGP( ngr ) = ngpv
-                     DO 630 k = k1, ISTGP( i + 1 ) - 1
-                        GPVALU( ngpv ) = GPVALU( k )
-                        ngpv = ngpv + 1
-  630             CONTINUE
+                k1 = GP_ptr( i )
+                GP_ptr( ngr ) = ngpv
+                DO k = k1, GP_ptr( i + 1 ) - 1
+                  GP_val( ngpv ) = GP_val( k )
+                  ngpv = ngpv + 1
+                END DO
 
 !  shift the list of coefficients and positions of the nonzeros
 !  for the linear element in the i-th group
 
-                     k1 = ISTADA( i )
-                     ISTADA( ngr ) = nnz
-                     DO 640 k = k1, ISTADA( i + 1 ) - 1
-                        A( nnz ) = A( k )
-                        ICNA( nnz ) = ICNA( k )
-                        nnz = nnz + 1
-  640                CONTINUE
-                  END IF
-  650          CONTINUE
-               ng = ngr
-               ISTADG( ng + 1 ) = nel
-               ISTGP ( ng + 1 ) = ngpv
-               ISTADA( ng + 1 ) = nnz
-            END IF
-         END IF
+                k1 = A_ptr( i )
+                A_ptr( ngr ) = nnz
+                DO k = k1, A_ptr( i + 1 ) - 1
+                   A( nnz ) = A( k )
+                   ICNA( nnz ) = ICNA( k )
+                   nnz = nnz + 1
+                END DO
+              END IF
+            END DO
+            ng = ngr
+            ELING_ptr( ng + 1 ) = nel
+            GP_ptr ( ng + 1 ) = ngpv
+            A_ptr( ng + 1 ) = nnz
+          END IF
+        END IF
       END IF
 
 !  set the required lower and upper bounds on the objective function
 
       IF ( nobbnd == 0 ) THEN
-         OBFBND( 1 ) = - biginf
-         OBFBND( 2 ) =   biginf
-      ELSE
+        OBFBND( 1 ) = - biginf
+        OBFBND( 2 ) =   biginf
 
 !  find the key word in the list of starting points
 
-         DO 660 jobbnd = 1, nobbnd
-            IF ( nameob == OBNAME( jobbnd ) ) GO TO 670
-  660    CONTINUE
-         status = 50
-         IF ( out > 0 ) WRITE( out, 2500 ) nameob
-         GO TO 800
-  670    CONTINUE
-         OBFBND( 1 ) = FBOUND( 1, jobbnd )
-         OBFBND( 2 ) = FBOUND( 2, jobbnd )
+      ELSE
+        DO jobbnd = 1, nobbnd
+          IF ( nameob == OBNAME( jobbnd ) ) GO TO 670
+        END DO
+        status = 50
+        IF ( out > 0 ) WRITE( out, 2500 ) nameob
+        GO TO 800
+  670   CONTINUE
+        OBFBND( 1 ) = FBOUND( 1, jobbnd )
+        OBFBND( 2 ) = FBOUND( 2, jobbnd )
       END IF
 
 !  if no output is required, exit
 
       IF ( outda <= 0 ) GO TO 900
       nel1 = nelnum + 1
-      WRITE( outda, 3180 ) n,  ng, nelnum,     ISTADG( ng1  ) - 1,             &
-                            ISTAEV( nel1 ) - 1, ISTADA( ng1  ) - 1,            &
-                            ISTGP ( ng1  ) - 1, ISTEP ( nel1 ) - 1,            &
-                            neltyp, ngrtyp 
+      WRITE( outda, 3180 ) n, ng, nelnum, ELING_ptr( ng1  ) - 1,               &
+                           EV_ptr( nel1 ) - 1, A_ptr( ng1  ) - 1,             &
+                           GP_ptr( ng1  ) - 1, EP_ptr( nel1 ) - 1,            &
+                           neltype, ngtype 
 
 !  print out problem data. output the number of variables, groups and
 !  elements and, perhaps, the identity of the objective function group
@@ -7067,24 +7970,24 @@
 !  of the parameters used for each group and
 !  of the nonzeros of the linear element in each group
 
-      WRITE( outda, 3110 ) ( ISTADG( i ), i = 1, ng1 )
-      WRITE( outda, 3110 ) ( ISTGP ( i ), i = 1, ng1 )
-      WRITE( outda, 3110 ) ( ISTADA( i ), i = 1, ng1 )
+      WRITE( outda, 3110 ) ( ELING_ptr( i ), i = 1, ng1 )
+      WRITE( outda, 3110 ) ( GP_ptr ( i ), i = 1, ng1 )
+      WRITE( outda, 3110 ) ( A_ptr( i ), i = 1, ng1 )
 
 !  output the starting addresses of the variables and parameters
 !  in each element
 
-      WRITE( outda, 3110 ) ( ISTAEV( i ), i = 1, nel1 )
-      WRITE( outda, 3110 ) ( ISTEP( i ), i = 1, nel1 )
+      WRITE( outda, 3110 ) ( EV_ptr( i ), i = 1, nel1 )
+      WRITE( outda, 3110 ) ( EP_ptr( i ), i = 1, nel1 )
 
 !  output the group type of each group and its status
 
-      WRITE( outda, 3110 ) ( ITYPEG( i ), i = 1, ng )
-      IF ( ialgor >= 2 ) WRITE( outda, 3110 )( ISTATE( i ), i = 1,NG)
+      WRITE( outda, 3110 ) ( GTYPE( i ), i = 1, ng )
+      IF ( ialgor >= 2 ) WRITE( outda, 3110 )( GSTATE( i ), i = 1, ng )
 
 !  output the element type of each element
 
-      WRITE( outda, 3110 ) ( ITYPEE( i ), i = 1, nelnum )
+      WRITE( outda, 3110 ) ( TYPEE( i ), i = 1, nelnum )
 
 !  output the element type of each element
 !  and its number of internal variables
@@ -7093,15 +7996,15 @@
 
 !  output the identity of each individual element
 
-      WRITE( outda, 3110 ) ( IELING( i ), i = 1, ISTADG( ng1 ) - 1 )
+      WRITE( outda, 3110 ) ( ELING_el( i ), i = 1, ELING_ptr( ng1 ) - 1 )
 
 !  output the variables in each group's elements
 
-      WRITE( outda, 3110 ) ( IELVAR( i ), i = 1, ISTAEV( nel1 ) - 1 )
+      WRITE( outda, 3110 ) ( ELVAR( i ), i = 1, EV_ptr( nel1 ) - 1 )
 
 !  output the column addresses of the nonzeros in each linear element
 
-      nnza = ISTADA( ng1 ) - 1
+      nnza = A_ptr( ng1 ) - 1
       WRITE( outda, 3110 ) ( ICNA( i ), i = 1, nnza )
 
 !  write single precision format
@@ -7112,33 +8015,33 @@
 !  constant term in each group, the lower and upper bounds on
 !  the variables and the starting point for the minimization
 
-         WRITE( outda, 3121 ) ( ABYROW( i ), i = 1, nnza )
-         WRITE( outda, 3121 ) ( B( i ), i = 1, ng )
-         IF ( ialgor <= 2 ) THEN
-            WRITE( outda, 3121 ) ( BL( i ), i = 1, n )
-            WRITE( outda, 3121 ) ( BU( i ), i = 1, n )
-         ELSE
-            WRITE( outda, 3121 ) ( BL( i ), i = 1, n + ng )
-            WRITE( outda, 3121 ) ( BU( i ), i = 1, n + ng )
-         END IF
-         WRITE( outda, 3121 ) ( X( i ), i = 1, n )
-         IF ( ialgor >= 2 ) WRITE( outda, 3121 )( CLMULT( i ), i = 1, ng )
+        WRITE( outda, 3121 ) ( ABYROW( i ), i = 1, nnza )
+        WRITE( outda, 3121 ) ( B( i ), i = 1, ng )
+        IF ( ialgor <= 2 ) THEN
+           WRITE( outda, 3121 ) ( BL( i ), i = 1, n )
+           WRITE( outda, 3121 ) ( BU( i ), i = 1, n )
+        ELSE
+           WRITE( outda, 3121 ) ( BL( i ), i = 1, n + ng )
+           WRITE( outda, 3121 ) ( BU( i ), i = 1, n + ng )
+        END IF
+        WRITE( outda, 3121 ) ( X( i ), i = 1, n )
+        IF ( ialgor >= 2 ) WRITE( outda, 3121 )( CLMULT( i ), i = 1, ng )
 
 !  output the parameters in each group
 
-         WRITE( outda, 3121 ) ( GPVALU( i ), i = 1, ISTGP( ng1 ) - 1 )
+        WRITE( outda, 3121 ) ( GP_val( i ), i = 1, GP_ptr( ng1 ) - 1 )
 
 !  output the parameters in each individual element
 
-         WRITE( outda, 3121 ) ( EPVALU( i ), i = 1, ISTEP( nel1 ) - 1 )
+        WRITE( outda, 3121 ) ( EP_val( i ), i = 1, EP_ptr( nel1 ) - 1 )
 
 !  output the scale factors for the nonlinear elements
 
-         WRITE( outda, 3121 ) ( ESCALE( i ), i = 1, ISTADG( ng1 ) - 1 )
+        WRITE( outda, 3121 ) ( ESCALE( i ), i = 1, ELING_ptr( ng1 ) - 1 )
 
 !  output the scale factors for the groups
 
-         WRITE( outda, 3121 ) ( GSCALE( i ), i = 1, ng )
+        WRITE( outda, 3121 ) ( GSCALE( i ), i = 1, ng )
 
 !  output the scale factors for the variables
 
@@ -7146,7 +8049,7 @@
 
 !  output the lower and upper bounds on the objective function
 
-         WRITE( outda, 3161 ) OBFBND( 1 ), OBFBND( 2 )
+        WRITE( outda, 3161 ) OBFBND( 1 ), OBFBND( 2 )
 
 !  write REAL ( KIND = wp ) :: format
 
@@ -7156,41 +8059,41 @@
 !  constant term in each group, the lower and upper bounds on
 !  the variables and the starting point for the minimization
 
-         WRITE( outda, 3120 ) ( ABYROW( i ), i = 1, nnza )
-         WRITE( outda, 3120 ) ( B( i ), i = 1, ng )
-         IF ( ialgor <= 2 ) THEN
-            WRITE( outda, 3120 ) ( BL( i ), i = 1, n )
-            WRITE( outda, 3120 ) ( BU( i ), i = 1, n )
-         ELSE
-            WRITE( outda, 3120 ) ( BL( i ), i = 1, n + ng )
-            WRITE( outda, 3120 ) ( BU( i ), i = 1, n + ng )
-         END IF
-         WRITE( outda, 3120 ) ( X( i ), i = 1, n )
-         IF ( ialgor >= 2 ) WRITE( outda, 3120 )( CLMULT( i ), i = 1, ng )
+        WRITE( outda, 3120 ) ( ABYROW( i ), i = 1, nnza )
+        WRITE( outda, 3120 ) ( B( i ), i = 1, ng )
+        IF ( ialgor <= 2 ) THEN
+           WRITE( outda, 3120 ) ( BL( i ), i = 1, n )
+           WRITE( outda, 3120 ) ( BU( i ), i = 1, n )
+        ELSE
+           WRITE( outda, 3120 ) ( BL( i ), i = 1, n + ng )
+           WRITE( outda, 3120 ) ( BU( i ), i = 1, n + ng )
+        END IF
+        WRITE( outda, 3120 ) ( X( i ), i = 1, n )
+        IF ( ialgor >= 2 ) WRITE( outda, 3120 )( CLMULT( i ), i = 1, ng )
 
 !  output the parameters in each group
 
-         WRITE( outda, 3120 ) ( GPVALU( i ), i = 1, ISTGP( ng1 ) - 1 )
+        WRITE( outda, 3120 ) ( GP_val( i ), i = 1, GP_ptr( ng1 ) - 1 )
 
 !  output the parameters in each individual element
 
-         WRITE( outda, 3120 ) ( EPVALU( i ), i = 1, ISTEP( nel1 ) - 1 )
+        WRITE( outda, 3120 ) ( EP_val( i ), i = 1, EP_ptr( nel1 ) - 1 )
 
 !  output the scale factors for the nonlinear elements
 
-         WRITE( outda, 3120 ) ( ESCALE( i ), i = 1, ISTADG( ng1 ) - 1 )
+        WRITE( outda, 3120 ) ( ESCALE( i ), i = 1, ELING_ptr( ng1 ) - 1 )
 
 !  output the scale factors for the groups
 
-         WRITE( outda, 3120 ) ( GSCALE( i ), i = 1, ng )
+        WRITE( outda, 3120 ) ( GSCALE( i ), i = 1, ng )
 
 !  output the scale factors for the variables
 
-         WRITE( outda, 3120 ) ( VSCALE( i ), i = 1, n )
+        WRITE( outda, 3120 ) ( VSCALE( i ), i = 1, n )
 
 !  output the lower and upper bounds on the objective function
 
-         WRITE( outda, 3160 ) OBFBND( 1 ), OBFBND( 2 )
+        WRITE( outda, 3160 ) OBFBND( 1 ), OBFBND( 2 )
       END IF
 
 !  output a logical array which says whether an element has internal
@@ -7209,8 +8112,8 @@
 
 !  output the names given to the element and group types
 
-      WRITE( outda, 3140 ) ( ETYPES( i ), i = 1, neltyp )
-      WRITE( outda, 3140 ) ( GTYPES( i ), i = 1, ngrtyp )
+      WRITE( outda, 3140 ) ( ETYPES( i ), i = 1, neltype )
+      WRITE( outda, 3140 ) ( GTYPES( i ), i = 1, ngtype )
 
 !  output the type of each variable
 
@@ -7228,23 +8131,29 @@
       status = 0
       RETURN
 
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_outsdif-',                    &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
 !  non-executable statements
 
- 1990 FORMAT( ' ** Exit from INLANC - ', /,                                    &
+ 1990 FORMAT( ' ** Exit from MAKE_outsdif - ', /,                              &
               ' Although the manual may suggest otherwise,',                   &
               ' non-trivial',/,                                                &
               ' groups are not allowed for inequality constraints',/)
- 2000 FORMAT( ' ** Exit from INLANC - increase one or more of ngpvmx, ',       &
-              ' nelmax and ngmax ' )
- 2460 FORMAT( ' ** Exit from INLANC - constant name ', A8,                     &
+ 2460 FORMAT( ' ** Exit from MAKE_outsdif - constant name ', A8,               &
               ' not recognised ' )
- 2470 FORMAT( ' ** Exit from INLANC - bound name ', A8,                        &
+ 2470 FORMAT( ' ** Exit from MAKE_outsdif - bound name ', A8,                  &
               ' not recognised ' )
- 2480 FORMAT( ' ** Exit from INLANC - range name ', A8,                        &
+ 2480 FORMAT( ' ** Exit from MAKE_outsdif - range name ', A8,                  &
               ' not recognised ' )
- 2490 FORMAT( ' ** Exit from INLANC - start point name ', A8,                  &
+ 2490 FORMAT( ' ** Exit from MAKE_outsdif - start point name ', A8,            &
               ' not recognised ' )
- 2500 FORMAT( ' ** Exit from INLANC - obj. bound name ', A8,                   &
+ 2500 FORMAT( ' ** Exit from MAKE_outsdif - obj. bound name ', A8,             &
               ' not recognised ' )
  3000 FORMAT( ' Group ', A10, ' removed as a redundant objective ' )
  3010 FORMAT( /, ' Objective function ', A10, ' is group number ', I8 )
@@ -7262,53 +8171,50 @@
  3170 FORMAT( 2I8 )
  3180 FORMAT( 10I8 )
 
-!  end of subroutine INLANC
+!  end of subroutine MAKE_outsdif
 
-      END SUBROUTINE INLANC
+      END SUBROUTINE MAKE_outsdif
 
 !-*-*-*-*-*- S I F D E C O D E   P R I N T P    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE PRINTP( nmax, ngmax, nlmax,                                   &
-                         nelmax, netmax,                                       &
-                         nevmax, nepmax, ngrmax, negmax, nepvmx,               &
-                         ngpvmx, ngpmax, lstada, licna, liwk,                  &
-                         n, ng, nlvars, nelnum,                                &
-                         ISTATE, ISTADG, IELVAR, ITYPEG, ITYPEE,               &
-                         IELV, IINV, IEPA, IGPA,                               &
-                         ISTADA, ICNA, ISTGP, ISTEP, ISTEV,                    &
-                         IELING, ITYPEV, IWK,                                  &
-                         ABYROW, B, BL, BU, X, EPVALU, GPVALU,                 &
-                         GSCALE, ESCALE, VSCALE,                               &
-                         pname, VNAMES, GNAMES,                                &
-                         lnames, ETYPES, ENAMES,                               &
-                         ANAMES, EPNAME, GPNAME, GTYPES,                       &
-                         out, print_level )
-      INTEGER :: out, print_level
-      INTEGER :: nmax, ngmax, nlmax, nelmax, netmax
-      INTEGER :: nepmax, nevmax, ngrmax, liwk
-      INTEGER :: n, ng
-      INTEGER :: nlvars, nelnum, licna, lstada
-      INTEGER :: negmax, nepvmx, ngpvmx, ngpmax
-      REAL ( KIND = wp ) :: EPVALU( nepvmx ), GPVALU( ngpvmx )
-      INTEGER :: IELING( negmax )
-      INTEGER :: ISTATE( ngmax ), ISTADA( lstada ), ICNA( licna )
-      INTEGER :: IELV  ( nlmax ), IINV  ( nlmax )
-      INTEGER :: IELVAR( nevmax ), ITYPEV( nmax )
-      INTEGER :: ISTADG(  ngmax ), ITYPEG( ngmax ), ITYPEE( nelmax )
-      INTEGER :: IEPA( nlmax ), IGPA( ngrmax ), IWK( liwk )
-      INTEGER :: ISTEP( nelmax ), ISTEV( nelmax ), ISTGP( ngmax )
-      CHARACTER ( len = 8 ) :: pname
-      CHARACTER ( len = 10 ) :: GNAMES( ngmax ), VNAMES( nmax )
-      CHARACTER ( len = 10 ) :: ETYPES( nlmax ), LNAMES( nelmax )
-      CHARACTER ( len = 10 ) :: ENAMES( netmax )
-      CHARACTER ( len = 10 ) :: ANAMES( ngrmax ), GTYPES( ngrmax )
-      CHARACTER ( len = 10 ) :: EPNAME( nepmax ), GPNAME( ngpmax )
-      REAL ( KIND = wp ) :: B( ngmax ), BL( nmax ), BU( nmax ), X( nmax )
-      REAL ( KIND = wp ) :: GSCALE( ngmax ), ESCALE( negmax ), VSCALE( nmax )
+      SUBROUTINE PRINT_details( nmax, nelvar, &
+                                neltype, nevnames, nepnames, ngtype, &
+                                ngpmax, licna, &
+                                n, ng, nlvars, nelnum, neling, nlisgp, nlisep, &
+                                GSTATE, ELING_ptr, ELVAR, GTYPE, TYPEE,       &
+                                ELV, INV, ELP, GTYPESP_ptr, A_ptr, ICNA,    &
+                                GP_ptr, EP_ptr, EV_ptr, ELING_el, ITYPEV, IWK, &
+                                ABYROW, B, BL, BU, X, EP_val, GP_val,          &
+                                GSCALE, ESCALE, VSCALE, pname, VNAMES, GNAMES, &
+                                LNAMES, ETYPES, EVNAMES, GANAMES, EPNAMES,     &
+                                GPNAME, GTYPES, out, print_level )
+      INTEGER :: out, print_level, nlisgp, nlisep
+      INTEGER :: nmax
+      INTEGER :: nelvar, neltype, ngtype, nevnames, nepnames
+      INTEGER :: n, ng, nlvars, nelnum, neling, licna
+      INTEGER :: ngpmax
+      REAL ( KIND = wp ) :: EP_val( nlisep ), GP_val( nlisgp )
+      INTEGER :: ELING_el( neling )
+      INTEGER :: GSTATE( ng ), A_ptr( ng + 1 ), ICNA( licna )
+      INTEGER :: ELV( neltype + 1 ), INV( neltype + 1 )
+      INTEGER :: ELVAR( nelvar ), ITYPEV( nmax )
+      INTEGER :: ELING_ptr( ng + 1 ), GTYPE( ng ), TYPEE( nelnum )
+      INTEGER :: ELP( neltype ), GTYPESP_ptr( ngtype + 1 ), IWK( nelnum )
+      INTEGER :: EP_ptr( nelnum + 1 ), EV_ptr( nelnum + 1 ), GP_ptr( ng + 1 )
+      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: GNAMES( ng ), VNAMES( nmax )
+      CHARACTER ( LEN = 10 ) :: ETYPES( neltype ), LNAMES( neling )
+      CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames )
+      CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), GPNAME( ngpmax )
+      CHARACTER ( LEN = 10 ) :: GANAMES( ngtype ), GTYPES( ngtype )
+      REAL ( KIND = wp ) :: B( ng ), BL( n + ng ), BU( n + ng ), X( nmax )
+      REAL ( KIND = wp ) :: GSCALE( ng ), ESCALE( neling ), VSCALE( nmax )
       REAL ( KIND = wp ) :: ABYROW( licna )
 
 !  --------------------------------------------------------------------
 !  print details of the problem previously specified in an SIF file
+
+!  formerly PRINTP in SiFDec
 
 ! the level of printing performed is determined by the value of iprint
 !  possible values are:
@@ -7342,9 +8248,9 @@
 
 !  pararmeter definitions
 
-      CHARACTER ( len = 3 ), DIMENSION( 3 ), PARAMETER :: VARTYP               &
+      CHARACTER ( LEN = 3 ), DIMENSION( 3 ), PARAMETER :: VARTYP               &
         = (/ '   ', '0-1', 'int' /)
-      CHARACTER ( len = 12 ), DIMENSION( 4 ), PARAMETER :: CONSTRAINT_status   &
+      CHARACTER ( LEN = 12 ), DIMENSION( 4 ), PARAMETER :: CONSTRAINT_status   &
         = (/ 'an objective', 'an equality ', 'a negativity', 'a positivity' /)
 
       IF ( out <= 0 ) RETURN
@@ -7354,174 +8260,161 @@
 
 !  list of variables
 
-         IF ( print_level >= 2 ) THEN
-             WRITE( out, 2010 ) ( VNAMES( j ), j = 1, nlvars )
-             IF ( nlvars < n )                                                 &
-                WRITE( out, 2020 ) ( VNAMES( j ), j = nlvars + 1, n )
+        IF ( print_level >= 2 ) THEN
+          WRITE( out, 2010 ) ( VNAMES( j ), j = 1, nlvars )
+          IF ( nlvars < n ) WRITE( out, 2020 ) ( VNAMES( j ), j = nlvars + 1, n)
 
 !  group details
 
-            IF ( print_level >= 3 ) THEN
-               DO 500 ig = 1, ng
-                  is = ITYPEG( ig )
-                  IF ( is == 0 ) THEN
-                     IF ( ISTATE( ig ) == 1 ) THEN
-                       WRITE( out, 2030 ) ig, GNAMES( ig ),                    &
-                       CONSTRAINT_status( 1 ), 'TRIVIAL   ', GSCALE( ig )
-                     ELSE
-                       WRITE( out, 2030 ) ig, GNAMES( ig ),                    &
-                       CONSTRAINT_status( ISTATE( ig ) ),                      &
-                       'TRIVIAL   ', GSCALE( ig )
-                     END IF
-                  ELSE
-                     IF ( ABS( ISTATE( ig ) ) == 1 ) THEN
-                       WRITE( out, 2030 ) ig, GNAMES( ig ),                    &
-                       CONSTRAINT_status( 1 ), GTYPES( is ), GSCALE( ig )
-                     ELSE
-                       WRITE( out, 2030 ) ig, GNAMES( ig ),                    &
-                       CONSTRAINT_status( ISTATE( ig ) ),                      &
-                       GTYPES( is ), GSCALE( ig )
-                     END IF
-                  END IF
-                  k1 = ISTADG( ig )
-                  k2 = ISTADG( ig + 1 ) - 1
-                  l = k2 - k1 + 1
-                  IF ( k1 <= k2 ) THEN
-                     IF ( k1 == k2 ) THEN
-                        WRITE( out, 2060 ) LNAMES( IELING( k1 ) )
-                     ELSE
-                        WRITE( out, 2070 ) l,                                 &
-                             ( LNAMES( IELING( k ) ), k = k1, k2 )
-                     END IF
-                  ELSE
-                    WRITE( out, 2080 )
-                  END IF
+          IF ( print_level >= 3 ) THEN
+            DO ig = 1, ng
+              is = GTYPE( ig )
+              IF ( is == 0 ) THEN
+                   IF ( GSTATE( ig ) == 1 ) THEN
+                     WRITE( out, 2030 ) ig, GNAMES( ig ),                      &
+                     CONSTRAINT_status( 1 ), 'TRIVIAL   ', GSCALE( ig )
+                   ELSE
+                     WRITE( out, 2030 ) ig, GNAMES( ig ),                      &
+                     CONSTRAINT_status( GSTATE( ig ) ),                        &
+                     'TRIVIAL   ', GSCALE( ig )
+                   END IF
+              ELSE
+                   IF ( ABS( GSTATE( ig ) ) == 1 ) THEN
+                     WRITE( out, 2030 ) ig, GNAMES( ig ),                      &
+                     CONSTRAINT_status( 1 ), GTYPES( is ), GSCALE( ig )
+                   ELSE
+                     WRITE( out, 2030 ) ig, GNAMES( ig ),                      &
+                     CONSTRAINT_status( GSTATE( ig ) ),                        &
+                     GTYPES( is ), GSCALE( ig )
+                   END IF
+              END IF
+              k1 = ELING_ptr( ig )
+              k2 = ELING_ptr( ig + 1 ) - 1
+              l = k2 - k1 + 1
+              IF ( k1 <= k2 ) THEN
+                IF ( k1 == k2 ) THEN
+                  WRITE( out, 2060 ) LNAMES( ELING_el( k1 ) )
+                ELSE
+                  WRITE( out, 2070 ) l, ( LNAMES( ELING_el( k ) ), k = k1, k2 )
+                END IF
+              ELSE
+                WRITE( out, 2080 )
+              END IF
 
 !  further group details
 
-                  IF ( print_level == 4 .OR. print_level >= 7 ) THEN
-                     IF ( is > 0 ) THEN
-                        k3 = IGPA( is ) - 1
-                        k4 = ISTGP( ig ) - 1
-                        l = ISTGP( ig + 1 ) - k4 - 1
-                        IF ( is > 0 ) THEN
-                           IF ( l == 1 ) THEN
-                              WRITE( out, 2090 )                               &
-                                ANAMES( is ), 'is ', l, '. '
-                           ELSE
-                              WRITE( out, 2090 )                               &
-                                ANAMES( is ), 'are', l, 's.'
-                           END IF
-                        END IF
-                        IF ( l > 0 )                                           &
-                           WRITE( out, 2100 ) ( GPNAME( k3 + i ),              &
-                                  GPVALU( k4 + i ), i = 1, l )
-                     END IF
+              IF ( print_level == 4 .OR. print_level >= 7 ) THEN
+                IF ( is > 0 ) THEN
+                  k3 = GTYPESP_ptr( is ) - 1
+                  k4 = GP_ptr( ig ) - 1
+                  l = GP_ptr( ig + 1 ) - k4 - 1
+                  IF ( is > 0 ) THEN
+                    IF ( l == 1 ) THEN
+                      WRITE( out, 2090 ) GANAMES( is ), 'is ', l, '. '
+                    ELSE
+                      WRITE( out, 2090 ) GANAMES( is ), 'are', l, 's.'
+                    END IF
                   END IF
+                  IF ( l > 0 ) WRITE( out, 2100 ) ( GPNAME( k3 + i ),          &
+                                                    GP_val( k4 + i ), i = 1, l )
+                END IF
+              END IF
 
 !  element details
 
-                  IF ( print_level >= 5 ) THEN
-                     DO 400 k = k1, k2
-                        iel = IELING( k )
-                        ieltyp = ITYPEE( iel )
-                        IF ( IWK( iel ) == 0 ) THEN
-                           WRITE( out, 2110 ) LNAMES( iel ),                   &
-                                  iel, ETYPES( ieltyp ),                       &
-                                  IELV( ieltyp + 1 ) - IELV( ieltyp ),         &
-                                  IINV( ieltyp + 1 ) - IINV( ieltyp ),         &
-                                  IEPA( ieltyp + 1 ) - IEPA( ieltyp ),         &
-                                  ESCALE( k )
-                           IF ( print_level < 6 ) IWK( iel ) = 1
-                        ELSE
-                           WRITE( out, 2120 ) LNAMES( iel ), iel,              &
-                                  ESCALE( k )
-                        END IF
+              IF ( print_level >= 5 ) THEN
+                DO 400 k = k1, k2
+                  iel = ELING_el( k )
+                  ieltyp = TYPEE( iel )
+                  IF ( IWK( iel ) == 0 ) THEN
+                    WRITE( out, 2110 ) LNAMES( iel ), iel, ETYPES( ieltyp ),   &
+                            ELV( ieltyp + 1 ) - ELV( ieltyp ),               &
+                            INV( ieltyp + 1 ) - INV( ieltyp ),               &
+                            ELP( ieltyp + 1 ) - ELP( ieltyp ), ESCALE( k )
+                     IF ( print_level < 6 ) IWK( iel ) = 1
+                  ELSE
+                    WRITE( out, 2120 ) LNAMES( iel ), iel, ESCALE( k )
+                  END IF
 
 !  further element details
 
-                        IF ( print_level >= 6 ) THEN
-                           IF ( IWK( iel ) == 0 ) THEN
-                              IWK( iel ) = 1
-                              k3 = IELV ( ieltyp ) - 1
-                              k4 = ISTEV( iel ) - 1
-                              l = ISTEV( iel + 1 ) - k4 - 1
-                              WRITE( out, 2130 ) ( ENAMES( k3 + i ),           &
-                                     VNAMES( IELVAR( k4 + i ) ),               &
-                                                          i = 1, l )
-                              k3 = IEPA( ieltyp )  - 1
-                              k4 = ISTEP( iel ) - 1
-                              l = ISTEP( iel + 1 ) - k4 - 1
-                              IF ( l > 0 )                                     &
-                                WRITE( out, 2150 ) ( EPNAME( k3 + i ),         &
-                                       EPVALU( k4 + i ), i = 1, l )
-                           END IF
-                        END IF
-  400                CONTINUE
+                  IF ( print_level >= 6 ) THEN
+                    IF ( IWK( iel ) == 0 ) THEN
+                      IWK( iel ) = 1
+                      k3 = ELV ( ieltyp ) - 1
+                      k4 = EV_ptr( iel ) - 1
+                      l = EV_ptr( iel + 1 ) - k4 - 1
+                      WRITE( out, 2130 )                                       &
+                       ( EVNAMES( k3 + i ), VNAMES( ELVAR( k4 + i ) ), i = 1, l )
+                      k3 = ELP( ieltyp )  - 1
+                      k4 = EP_ptr( iel ) - 1
+                      l = EP_ptr( iel + 1 ) - k4 - 1
+                      IF ( l > 0 ) WRITE( out, 2150 )                          &
+                              ( EPNAMES( k3 + i ), EP_val( k4 + i ), i = 1, l )
+                    END IF
                   END IF
+  400           CONTINUE
+              END IF
 
 !  linear element details
 
-                  k5 = ISTADA( ig )
-                  k6 = ISTADA( ig + 1 ) - 1
-                  IF ( print_level == 6 ) THEN
-                     IF ( k5 <= k6 ) THEN
-                        IF ( k5 == k6 ) THEN
-                           WRITE( out, 2040 ) k6 - k5 + 1, '. '
-                           IF ( print_level >= 6 ) WRITE( out, 2140 ) ' ',     &
-                             ( VNAMES( ICNA( k ) ), k = k5, k6 )
-                        ELSE
-                           WRITE( out, 2040 ) k6 - k5 + 1, 's.'
-                           IF ( print_level >= 6 ) WRITE( out, 2140 ) 's',     &
-                             ( VNAMES( ICNA( k ) ), k = k5, k6 )
-                        END IF
-                     ELSE
-                        IF ( ABS( B( ig ) ) < 1.0D-12 ) THEN
-                           WRITE( out, 2050 )
-                        ELSE
-                           WRITE( out, 2160 )
-                        END IF
-                     END IF
+              k5 = A_ptr( ig )
+              k6 = A_ptr( ig + 1 ) - 1
+              IF ( print_level == 6 ) THEN
+                IF ( k5 <= k6 ) THEN
+                  IF ( k5 == k6 ) THEN
+                    WRITE( out, 2040 ) k6 - k5 + 1, '. '
+                    IF ( print_level >= 6 ) WRITE( out, 2140 ) ' ',            &
+                      ( VNAMES( ICNA( k ) ), k = k5, k6 )
                   ELSE
+                    WRITE( out, 2040 ) k6 - k5 + 1, 's.'
+                    IF ( print_level >= 6 ) WRITE( out, 2140 ) 's',            &
+                      ( VNAMES( ICNA( k ) ), k = k5, k6 )
+                  END IF
+                ELSE
+                  IF ( ABS( B( ig ) ) < 1.0D-12 ) THEN
+                    WRITE( out, 2050 )
+                  ELSE
+                    WRITE( out, 2160 )
+                  END IF
+                END IF
+              ELSE
 
 !  further linear element details
 
-                     IF ( k5 <= k6 ) THEN
-                        IF ( k5 == k6 ) THEN
-                           WRITE( out, 2040 ) k6 - k5 + 1, '. '
-                           IF ( print_level >= 6 ) WRITE( out, 2200 ) ' ',     &
-                             ') ', ( VNAMES( ICNA( k ) ),                      &
-                               ABYROW( k ), k = k5, k6 )
-                        ELSE
-                           WRITE( out, 2040 ) k6 - k5 + 1, 's.'
-                           IF ( print_level >= 6 ) WRITE( out, 2200 ) 's',     &
-                             's)', ( VNAMES( ICNA( k ) ),                      &
-                               ABYROW( k ), k = k5, k6 )
-                        END IF
-                        IF ( ABS( B( ig ) ) < 1.0D-12 ) THEN
-                           WRITE( out, 2230 )
-                        ELSE
-                           WRITE( out, 2220 ) B( ig )
-                        END IF
-                     ELSE
-                        IF ( ABS( B( ig ) ) < 1.0D-12 ) THEN
-                           WRITE( out, 2050 )
-                        ELSE
-                           WRITE( out, 2210 ) B( ig )
-                        END IF
-                     END IF
+                IF ( k5 <= k6 ) THEN
+                  IF ( k5 == k6 ) THEN
+                    WRITE( out, 2040 ) k6 - k5 + 1, '. '
+                    IF ( print_level >= 6 ) WRITE( out, 2200 ) ' ', ') ',      &
+                          ( VNAMES( ICNA( k ) ), ABYROW( k ), k = k5, k6 )
+                  ELSE
+                    WRITE( out, 2040 ) k6 - k5 + 1, 's.'
+                    IF ( print_level >= 6 ) WRITE( out, 2200 ) 's', 's)',      &
+                          ( VNAMES( ICNA( k ) ), ABYROW( k ), k = k5, k6 )
                   END IF
-  500          CONTINUE
-            END IF
-         END IF
+                  IF ( ABS( B( ig ) ) < 1.0D-12 ) THEN
+                    WRITE( out, 2230 )
+                  ELSE
+                    WRITE( out, 2220 ) B( ig )
+                  END IF
+                ELSE
+                  IF ( ABS( B( ig ) ) < 1.0D-12 ) THEN
+                    WRITE( out, 2050 )
+                  ELSE
+                    WRITE( out, 2210 ) B( ig )
+                  END IF
+                END IF
+              END IF
+            END DO
+          END IF
+        END IF
       END IF
       IF ( print_level >= 8 ) THEN
-         WRITE( out, 2170 )
-         DO 510 i = 1, n
-            WRITE( out, 2180 ) i, VNAMES( i ), BL( i ), X( i ),                &
-                                BU( i ), VSCALE( i ),                          &
-                                VARTYP( ITYPEV( i ) + 1 )
-  510    CONTINUE
+        WRITE( out, 2170 )
+        DO i = 1, n
+          WRITE( out, 2180 ) i, VNAMES( i ), BL( i ), X( i ), BU( i ),         &
+                               VSCALE( i ), VARTYP( ITYPEV( i ) + 1 )
+        END DO
       END IF
       RETURN
 
@@ -7585,36 +8478,40 @@
               ' coefficient ', 1P, D10.2 )
  2230 FORMAT( '    * There is no constant term for the LINEAR ELEMENT' )
 
-!  end of subroutine PRINTP
+!  end of subroutine PRINT_details
 
-      END SUBROUTINE PRINTP
+      END SUBROUTINE PRINT_details
 
 !-*-*-  S I F D E C O D E   M A K E _ e l f u n    S U B R O U T I N E  -*-*-
 
-      SUBROUTINE MAKE_elfun( input, out, outfn, outra, status, nlmax,          &
-                             nimax, netmax, ninmax, numax, neltyp,             &
-                             pname, ENAMES, INAMES, RENAME, INNAME, LONAME,    &
-                             MINAME, EXNAME, ETYPES, LDEFND, length, ITABLE,   &
-                             KEY, IELV, IINV, INLIST, EPNAME, IEPA, nepmax,    &
-                             debug, ijump, U, SETVEC, nsetvc, single, nuline,  &
+      SUBROUTINE MAKE_elfun( input, out, outfn, outra, status,                &
+                             nevnames, nivnames, nepnames, neltype,    &
+                             pname, EVNAMES, IVNAMES, &
+                             len_renames, RENAMES, len_innames, INNAMES,       &
+                             len_lonames, LONAMES, len_minames, MINAMES,       &
+                             len_exnames, EXNAMES,       &
+                             DEFINED, length, ITABLE,  &
+                             KEY, ETYPES, ELV, INV, INLIST, EPNAMES, ELP,   &
+                             debug, single, nuline,                &
                              gotlin, print_level )
       INTEGER :: input, out, outfn, outra, print_level, length, status
-      INTEGER :: nlmax, nimax, netmax, neltyp, ninmax, nsetvc, numax, nepmax
+      INTEGER :: neltype
+      INTEGER :: nevnames, nivnames, nepnames
+      INTEGER :: len_renames, len_innames, len_lonames, len_minames, len_exnames
       LOGICAL :: debug, single, gotlin
-      INTEGER :: ITABLE( length ), ijump ( nlmax  )
-      INTEGER :: IELV  ( nlmax  ), IINV  ( nlmax  )
+      INTEGER :: ITABLE( length )
       INTEGER :: INLIST( length )
-      INTEGER :: IEPA  ( nlmax  )
-      LOGICAL :: LDEFND( nlmax  ), SETVEC( nsetvc )
-      REAL ( KIND = wp ) ::   U     ( numax  )
-      CHARACTER ( len = 12 ) :: KEY   ( length )
-      CHARACTER ( len = 8 ) :: pname
-      CHARACTER ( len = 10 ) :: EPNAME( nepmax ), EXNAME( ninmax )
-      CHARACTER ( len = 10 ) :: INAMES( nimax  ), RENAME( ninmax )
-      CHARACTER ( len = 10 ) :: LONAME( ninmax ), INNAME( ninmax )
-      CHARACTER ( len = 10 ) :: MINAME( ninmax ), ENAMES( netmax )
-      CHARACTER ( len = 10 ) :: ETYPES( nlmax  )
-      CHARACTER ( len = max_record_length ) :: nuline
+      INTEGER, DIMENSION( neltype + 1 ) :: ELV, INV, ELP
+      LOGICAL, DIMENSION( neltype ) :: DEFINED
+      CHARACTER ( LEN = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames ), IVNAMES( nivnames )
+      CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), ETYPES( neltype )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LONAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: MINAMES, EXNAMES
+
+      CHARACTER ( LEN = max_record_length ) :: nuline
 
 !  ----------------------------------------------------------------
 !  make a function evaluation subroutine and a range transformation
@@ -7646,14 +8543,12 @@
 !  see also http://www.cuter.rl.ac.uk/sifdec/Doc/sif.pdf
 !  and      http://www.numerical.rl.ac.uk/lancelot/sif/sifhtml.html
 
-!  returns with negative values of inform indicate that insufficient
+!  returns with negative values of status indicate that insufficient
 !  array space has been allowed, as follows:
 
-!    inform = - 1  when length not large enough
-!    inform = - 2  when max( ninnam, nrenam, nlonam, nenam, nminam )
-!                  > ninmax
-!    inform = - 11 when numax not large enough
-!    inform = - 12 when nsetvc not large enough
+!    status = - 1  when length not large enough
+!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be 
+!                  extended further
 !  ----------------------------------------------------------------
 
 !  parameter definitions
@@ -7665,10 +8560,10 @@
       INTEGER, PARAMETER :: maxnul = 20
       INTEGER, DIMENSION( mendat ), PARAMETER :: LENIND                        &
         = (/ 0, 12, 11, 8, 11, 7, 11, 6 /)
-      CHARACTER ( len = 12 ), DIMENSION( mendat ), PARAMETER :: INDIC8         &
+      CHARACTER ( LEN = 12 ), DIMENSION( mendat ), PARAMETER :: INDIC8         &
         = (/ '            ', 'FIXED FORMAT', 'FREE FORMAT ', 'ELEMENTS    ',   &
              'TEMPORARIES ', 'GLOBALS     ', 'INDIVIDUALS ', 'ENDATA      '  /)
-      CHARACTER ( len = 8 ), DIMENSION( iires ), PARAMETER :: FIELDI           &
+      CHARACTER ( LEN = 8 ), DIMENSION( iires ), PARAMETER :: FIELDI           &
         = (/ 'ELFUN   ', 'LFUVAL  ', 'FUVALS  ', 'XVALUE  ', 'NCALCF  ',       &
              'ITYPEE  ', 'ISTAEV  ', 'IELVAR  ', 'INTVAR  ', 'ISTADH  ',       &
              'ICALCF  ', 'IFFLAG  ', 'IELEMN  ', 'IELTYP  ', 'IHSTRT  ',       &
@@ -7676,36 +8571,40 @@
              'JCALCF  ', 'LTYPEE  ', 'LSTAEV  ', 'LELVAR  ', 'LNTVAR  ',       &
              'LSTADH  ', 'LSTEPA  ', 'LCALCF  ', 'LFVALU  ', 'LXVALU  ',       &
              'LEPVLU  ', 'IFSTAT  ' /)
-      CHARACTER ( len = 6 ), DIMENSION( nincrs ), PARAMETER :: INCRSE          &
+      CHARACTER ( LEN = 6 ), DIMENSION( nincrs ), PARAMETER :: INCRSE          &
         = (/ 'LENGTH', 'NINMAX', '      ', '      ', '      ', '      ',       &
-             '      ', '      ', '      ', '      ', 'NUMAX ', 'NSETVC'  /)
+             '      ', '      ', '      ', '      ', '      ', '      '  /)
 
 !  local variables
 
-      INTEGER :: ifield, ifree, ihvar, ivar, intype, nminam
-      INTEGER :: jvar, k, k1, k2, nh, nhess, nvars, isetty
-      INTEGER :: i, niname, ninnam, ninvar, nloop, nrenam, nexnam
+      INTEGER :: ifield, ifree, ihvar, ivar, intype, nminames, nlines, nlonames
+      INTEGER :: jvar, k, k1, k2, nh, nhess, nvars, isetty, lineno, ilines
+      INTEGER :: i, niname, ninnames, ninvar, nloop, nrenames, nexnames, npname
       INTEGER :: itype, j, is, js, novals, nelv, ninv, nn, nename
-      INTEGER :: npname, lineno, ilines, nlines, nlonam
+      INTEGER :: used_length, new_length, min_length, alloc_status
       LOGICAL :: nointe, defnam, endpar, endgen, firstl, setran
       LOGICAL :: startf, startg, starth, startp, qprod
       LOGICAL :: endoff, endofg, endofh, fixed, nomorg
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 8 ) :: field3
-      CHARACTER ( len = 10 ) :: field2
-      CHARACTER ( len = 12 ) :: field, header
-      CHARACTER ( len = 41 ) :: field7
-      CHARACTER ( len = max_record_length ) :: blnkln
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 8 ) :: field3
+      CHARACTER ( LEN = 10 ) :: field2
+      CHARACTER ( LEN = 12 ) :: field, header
+      CHARACTER ( LEN = 24 ) :: bad_alloc
+      CHARACTER ( LEN = 41 ) :: field7
+      CHARACTER ( LEN = max_record_length ) :: blnkln
       REAL ( KIND = wp ), DIMENSION( 2 ) :: VALUES
-      CHARACTER ( len = 8 ), DIMENSION( 2 ) :: FIELDS
-      CHARACTER ( len = 65 ), DIMENSION( maxnul ) :: NULINA
+      CHARACTER ( LEN = 8 ), DIMENSION( 2 ) :: FIELDS
+      INTEGER :: IJUMP( neltype  )
+      CHARACTER ( LEN = 65 ), DIMENSION( maxnul ) :: NULINA
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: U
+      LOGICAL, ALLOCATABLE, DIMENSION( : ) :: SETVEC
 
       IF ( out > 0 ) WRITE( out, 2900 )
 
 !  set initial values for integer variables
 
-      ninnam = 0 ; nrenam = 0 ; nlonam = 0 ; nminam = 0 ; nexnam = 0
-      lineno = 0 ; nloop = neltyp + 1 ; intype = 1 ; ilines = 0 ; nlines = 0
+      ninnames = 0 ; nrenames = 0 ; nlonames = 0 ; nminames = 0 ; nexnames = 0
+      lineno = 0 ; nloop = neltype + 1 ; intype = 1 ; ilines = 0 ; nlines = 0
 
 !  set initial values for logical variables
 
@@ -7713,11 +8612,28 @@
       endgen = .FALSE. ; firstl = .TRUE. ; nointe = .FALSE. ; fixed = .TRUE.
       gotlin = .FALSE.
 
+!  allocate space to hold the largest range transformation matrix possible
+
+      nn = 0 ; nhess = 0
+      DO itype = 1, neltype
+        nelv = ELV( itype + 1 ) - ELV( itype )
+        ninv = INV( itype + 1 ) - INV( itype )
+        nn = MAX( nn, ninv * nelv )
+        nhess = MAX( nhess, ninv * ( ninv + 1 ) / 2 )
+      END DO
+      CALL ALLOCATE_array( U, nn, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'U' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( SETVEC, nhess, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'SETVEC' ; GO TO 980 ; END IF
+
 !  create a dictionary of the internal variable names used
 
-      niname = IINV( neltyp + 1 ) - 1
+      niname = INV( neltype + 1 ) - 1
       DO 20 i = 1, niname
-         field = INAMES( i ) // 'PF'
+         field = IVNAMES( i ) // 'PF'
          CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
          IF ( ifree <= 0 ) THEN
             IF ( ifree == 0 ) THEN
@@ -7725,20 +8641,27 @@
                GO TO 700
             END IF
          ELSE
-            nrenam = nrenam + 1
-            IF ( nrenam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nrenames = nrenames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nrenames - 1 ; min_length = nrenames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( RENAMES, len_renames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              END IF
+              len_renames = new_length
             END IF
-            RENAME( nrenam ) = INAMES( i )
+            RENAMES( nrenames ) = IVNAMES( i )
          END IF
    20 CONTINUE
 
 !  include the names of the elemental variables used in this dictionary
 
-      nename = IELV( neltyp + 1 ) - 1
+      nename = ELV( neltype + 1 ) - 1
       DO 30 i = 1, nename
-         field = ENAMES( i ) // 'PF'
+         field = EVNAMES( i ) // 'PF'
          CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
          IF ( ifree <= 0 ) THEN
             IF ( ifree == 0 ) THEN
@@ -7746,21 +8669,28 @@
                GO TO 700
             END IF
          ELSE
-            nrenam = nrenam + 1
-            IF ( nrenam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nrenames = nrenames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nrenames - 1 ; min_length = nrenames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( RENAMES, len_renames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              END IF
+              len_renames = new_length
             END IF
-            RENAME( nrenam ) = ENAMES( i )
+            RENAMES( nrenames ) = EVNAMES( i )
          END IF
    30 CONTINUE
 
 !  include the names of the elemental parameters used
 !  in this dictionary
 
-      npname = IEPA( neltyp + 1 ) - 1
+      npname = ELP( neltype + 1 ) - 1
       DO 40 i = 1, npname
-         field = EPNAME( i ) // 'PF'
+         field = EPNAMES( i ) // 'PF'
          CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
          IF ( ifree <= 0 ) THEN
             IF ( ifree == 0 ) THEN
@@ -7768,28 +8698,35 @@
                GO TO 700
             END IF
          ELSE
-            nrenam = nrenam + 1
-            IF ( nrenam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nrenames = nrenames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nrenames - 1 ; min_length = nrenames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( RENAMES, len_renames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              END IF
+              len_renames = new_length
             END IF
-            RENAME( nrenam ) = EPNAME( i )
+            RENAMES( nrenames ) = EPNAMES( i )
          END IF
    40 CONTINUE
 
 !  find which element types have an internal representation
 
       isetty = 0
-      DO 50 itype = 1, neltyp
-         LDEFND( itype ) = .FALSE.
-         IF ( IELV( itype + 1 ) - IELV( itype ) ==                             &
-              IINV( itype + 1 ) - IINV( itype ) ) THEN
-            IJUMP( itype ) = 99998
-            nointe = .TRUE.
-         ELSE
-            IJUMP( itype ) = itype
-         END IF
-   50 CONTINUE
+      DO itype = 1, neltype
+        DEFINED( itype ) = .FALSE.
+        IF ( ELV( itype + 1 ) - ELV( itype ) ==                              &
+             INV( itype + 1 ) - INV( itype ) ) THEN
+          IJUMP( itype ) = 99998
+          nointe = .TRUE.
+        ELSE
+          IJUMP( itype ) = itype
+        END IF
+      END DO
 
 !  set a blank line
 
@@ -7850,16 +8787,16 @@
 
 !  consider the header part of the card
 
-      header = NULINE( 1: 12 )
+      header = NULINE( 1 : 12 )
 
 !  ignore blank lines
 
       IF ( header == INDIC8( mblank ) ) GO TO 100
-      IF ( NULINE( 1: 1 ) /= ' ' ) THEN
+      IF ( NULINE( 1 : 1 ) /= ' ' ) THEN
 
 !  ignore comment cards
 
-         IF ( NULINE( 1: 1 ) == '*' ) GO TO 100
+         IF ( NULINE( 1 : 1 ) == '*' ) GO TO 100
 
 !  check if we have entered fixed-format input
 
@@ -7879,7 +8816,7 @@
 
          IF ( .NOT. defnam  ) THEN
             IF ( header /= INDIC8( mname ) ) THEN
-               IF ( neltyp > 0 ) GO TO 930
+               IF ( neltype > 0 ) GO TO 930
                IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010)
                gotlin = .TRUE.
                GO TO 600
@@ -7888,7 +8825,7 @@
 !  indicator card is elements
 !  ---------------------------
 
-               IF ( pname  /= NULINE( 15: 22 ) ) THEN
+               IF ( pname  /= NULINE( 15 : 22 ) ) THEN
                   status = 51
                   IF ( out > 0 ) WRITE( out, 2510 )
                   GO TO 800
@@ -7902,8 +8839,8 @@
                   ELSE
                      WRITE( outra, 4000 ) pname, TRIM( version )
                   END IF
-                  IF ( neltyp > 1 ) THEN
-                     WRITE( outra, 4040 ) ( IJUMP( i ), i = 1, neltyp )
+                  IF ( neltype > 1 ) THEN
+                     WRITE( outra, 4040 ) ( IJUMP( i ), i = 1, neltype )
                      WRITE( outra, 4050 )
                   END IF
                   GO TO 100
@@ -7953,79 +8890,79 @@
 !  -------- set up subroutine call and reserved parameter declarations
 
             IF ( single ) THEN
-               WRITE( outfn, 3001 ) FIELDI( 1 )(1:6),                          &
-         FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),              &
-       ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                    &
-         FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),                 &
-         FIELDI( 12 )(1:6), FIELDI( 32 )(1:6),                                 &
-         FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                                 &
-       ( FIELDI(  i )(1:6), i = 22, 32 ),                                      &
-         FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                                 &
-         FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                                 &
-         FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                 &
-         FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                 &
-         FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                 &
-         FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                 &
-         FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                 &
-         FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                 &
-         FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                 &
-         FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                                 &
-         pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),         &
-         FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                                 &
-         FIELDI( 17 )(1:6), FIELDI( 20 )(1:6), FIELDI( 21 )(1:6)
+               WRITE( outfn, 3001 ) FIELDI( 1 )( 1 : 6 ),                      &
+         FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ),  &
+       ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),            &
+         FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),         &
+         FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ),                         &
+         FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                         &
+       ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                  &
+         FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                         &
+         FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                         &
+         FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                         &
+         FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                         &
+         FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                         &
+         FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                         &
+         FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                         &
+         FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                         &
+         FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                         &
+         FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                         &
+         pname, TRIM( version ), FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ), &
+         FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                         &
+         FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), FIELDI( 21 )( 1 : 6 )
             ELSE   
-               WRITE( outfn, 3000 ) FIELDI( 1 )(1:6),                          &
-         FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),              &
-       ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                    &
-         FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),                 &
-         FIELDI( 12 )(1:6), FIELDI( 32 )(1:6),                                 &
-         FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                                 &
-       ( FIELDI(  i )(1:6), i = 22, 32 ),                                      &
-         FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                                 &
-         FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                                 &
-         FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                 &
-         FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                 &
-         FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                 &
-         FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                 &
-         FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                 &
-         FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                 &
-         FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                 &
-         FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                                 &
-         pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),         &
-         FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                                 &
-         FIELDI( 17 )(1:6), FIELDI( 20 )(1:6), FIELDI( 21 )(1:6)
+               WRITE( outfn, 3000 ) FIELDI( 1 )( 1 : 6 ),                      &
+         FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ),  &
+       ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),            &
+         FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),         &
+         FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ),                         &
+         FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                         &
+       ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                  &
+         FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                         &
+         FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                         &
+         FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                         &
+         FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                         &
+         FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                         &
+         FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                         &
+         FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                         &
+         FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                         &
+         FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                         &
+         FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                         &
+         pname, TRIM( version ), FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ), &
+         FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                         &
+         FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), FIELDI( 21 )( 1 : 6 )
             END IF
 
 ! --------- insert integer declarations
 
-            IF ( ninnam > 0 )                                                  &
-               WRITE( outfn, 3010 ) ( INNAME( i ), i = 1, ninnam )
+            IF ( ninnames > 0 )                                                &
+               WRITE( outfn, 3010 ) ( INNAMES( i ), i = 1, ninnames )
 
 ! --------- insert real declarations
 
-            IF ( nrenam > 0 ) THEN
+            IF ( nrenames > 0 ) THEN
                IF ( single ) THEN
-                  WRITE( outfn, 3019 ) ( RENAME( i ), i = 1, nrenam )
+                  WRITE( outfn, 3019 ) ( RENAMES( i ), i = 1, nrenames )
                ELSE
-                  WRITE( outfn, 3020 ) ( RENAME( i ), i = 1, nrenam )
+                  WRITE( outfn, 3020 ) ( RENAMES( i ), i = 1, nrenames )
                END IF
             END IF
 
 ! --------- insert logical declarations
 
-            IF ( nlonam > 0 )                                                  &
-               WRITE( outfn, 3023 ) ( LONAME( i ), i = 1, nlonam )
+            IF ( nlonames > 0 )                                                &
+               WRITE( outfn, 3023 ) ( LONAMES( i ), i = 1, nlonames )
 
 ! --------- insert intrinsic declarations
 
-            IF ( nminam > 0 )                                                  &
-               WRITE( outfn, 3021 ) ( MINAME( i ), i = 1, nminam )
+            IF ( nminames > 0 )                                                &
+               WRITE( outfn, 3021 ) ( MINAMES( i ), i = 1, nminames )
 
 ! --------- insert external declarations
 
-            IF ( nexnam > 0 )                                                  &
-               WRITE( outfn, 3022 ) ( EXNAME( i ), i = 1, nexnam )
-            WRITE( outfn, 3009 ) FIELDI( 32 )(1:6)
+            IF ( nexnames > 0 )                                                &
+               WRITE( outfn, 3022 ) ( EXNAMES( i ), i = 1, nexnames )
+            WRITE( outfn, 3009 ) FIELDI( 32 )( 1 : 6 )
          END IF
 
 !  the general parameter assignments have been completed
@@ -8037,54 +8974,54 @@
 ! --------- start loop over elements
 
             WRITE( outfn, 3050 ) nloop,                                        &
-                   FIELDI( 21 )(1:6), FIELDI(  5 )(1:6),                       &
-                   FIELDI( 13 )(1:6), FIELDI( 11 )(1:6),                       &
-                   FIELDI( 21 )(1:6),                                          &
-                   FIELDI( 16 )(1:6), FIELDI(  7 )(1:6),                       &
-                   FIELDI( 13 )(1:6), FIELDI( 17 )(1:6),                       &
-                   FIELDI(  9 )(1:6), FIELDI( 13 )(1:6),                       &
-                   FIELDI( 20 )(1:6), FIELDI( 19 )(1:6),                       &
-                   FIELDI( 13 )(1:6),                                          &
-                   FIELDI( 12 )(1:6), FIELDI( 15 )(1:6),                       &
-                   FIELDI( 10 )(1:6), FIELDI( 13 )(1:6)
-            IF ( neltyp > 1 ) THEN
+                   FIELDI( 21 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),               &
+                   FIELDI( 13 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),               &
+                   FIELDI( 21 )( 1 : 6 ),                                      &
+                   FIELDI( 16 )( 1 : 6 ), FIELDI(  7 )( 1 : 6 ),               &
+                   FIELDI( 13 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),               &
+                   FIELDI(  9 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 ),               &
+                   FIELDI( 20 )( 1 : 6 ), FIELDI( 19 )( 1 : 6 ),               &
+                   FIELDI( 13 )( 1 : 6 ),                                      &
+                   FIELDI( 12 )( 1 : 6 ), FIELDI( 15 )( 1 : 6 ),               &
+                   FIELDI( 10 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 )
+            IF ( neltype > 1 ) THEN
                WRITE( outfn, 3051 )                                            &
-                  FIELDI( 14 )(1:6), FIELDI(  6 )(1:6),                        &
-                  FIELDI( 13 )(1:6), ( i, i = 1, neltyp )
-               WRITE( outfn, 3052 ) FIELDI( 14 )(1:6)
+                  FIELDI( 14 )( 1 : 6 ), FIELDI(  6 )( 1 : 6 ),                &
+                  FIELDI( 13 )( 1 : 6 ), ( i, i = 1, neltype )
+               WRITE( outfn, 3052 ) FIELDI( 14 )( 1 : 6 )
             END IF
 
 !  make sure that quadratic Hessian terms are included
 
-            DO 140 itype = 1, MIN( 2, neltyp )
+            DO 140 itype = 1, MIN( 2, neltype )
 
 !  diagonal term
 
                IF ( ETYPES( itype ) == cqsqr ) THEN
                   WRITE( outfn, 3060 ) ETYPES( itype )
-                  IF ( neltyp > 1 ) WRITE( outfn, 3061 ) itype
+                  IF ( neltype > 1 ) WRITE( outfn, 3061 ) itype
                   IF ( single ) THEN
                     WRITE( outfn, 3053 ) 'E', 'E'
                   ELSE
                     WRITE( outfn, 3053 ) 'D', 'D'
                   END IF
-                  LDEFND( itype ) = .TRUE.
+                  DEFINED( itype ) = .TRUE.
                   isetty = isetty + 1
-                  IF ( isetty < neltyp ) WRITE( outfn, 3191 ) nloop
+                  IF ( isetty < neltype ) WRITE( outfn, 3191 ) nloop
 
 !  off-diagonal term
 
                ELSE IF ( ETYPES( itype ) == cqprod ) THEN
                   WRITE( outfn, 3060 ) ETYPES( itype )
-                  IF ( neltyp > 1 ) WRITE( outfn, 3061 ) itype
+                  IF ( neltype > 1 ) WRITE( outfn, 3061 ) itype
                   IF ( single ) THEN
                     WRITE( outfn, 3054 ) 'E', 'E', 'E'
                   ELSE
                     WRITE( outfn, 3054 ) 'D', 'D', 'D'
                   END IF
-                  LDEFND( itype ) = .TRUE.
+                  DEFINED( itype ) = .TRUE.
                   isetty = isetty + 1
-                  IF ( isetty < neltyp ) WRITE( outfn, 3191 ) nloop
+                  IF ( isetty < neltype ) WRITE( outfn, 3191 ) nloop
                END IF
   140       CONTINUE   
          END IF
@@ -8099,7 +9036,7 @@
 !  check that the first non commment card is the elements indicator card
 
          IF ( .NOT. defnam  ) THEN
-            IF ( neltyp > 0 ) GO TO 930
+            IF ( neltype > 0 ) GO TO 930
             IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010 )
             gotlin = .TRUE.
             GO TO 600
@@ -8108,26 +9045,26 @@
 !  a data card has been found
 !  read the character fields 1 and 2 from the card
 
-         field1 = NULINE(  2:  3 )
-         field2 = NULINE(  5: 14 )
+         field1 = NULINE(  2 :  3 )
+         field2 = NULINE(  5 : 14 )
          IF ( intype == mindiv .AND. field1 == 'R ' ) THEN
 
 !  read the character fields 3 and 5 from the card
 
-            FIELDS( 1 ) = NULINE( 15: 22 )
-            FIELDS( 2 ) = NULINE( 40: 47 )
+            FIELDS( 1 ) = NULINE( 15 : 22 )
+            FIELDS( 2 ) = NULINE( 40 : 47 )
 
 !  check to see if there is are any numerical values to be read
 
             novals = 0
             IF ( FIELDS( 1 ) /= '        ' .AND.                               &
-                 NULINE( 15: 15 ) /= '[' ) THEN
+                 NULINE( 15 : 15 ) /= '[' ) THEN
                novals = 1
                CALL GETVAL( NULINE( 25: 36 ), VALUES( 1 ) )
                IF ( FIELDS( 2 ) /= '        ' .AND.                            &
-                 NULINE( 40: 40 ) /= '[' ) THEN
+                 NULINE( 40 : 40 ) /= '[' ) THEN
                   novals = 2
-                  CALL GETVAL( NULINE( 50: 61 ), VALUES( 2 ) )
+                  CALL GETVAL( NULINE( 50 : 61 ), VALUES( 2 ) )
 
 !  remove fields with numerical values of zero
 
@@ -8147,14 +9084,13 @@
 
 !  read the character fields 3 and 7 from the card
 
-            field3 = NULINE( 15: 22 )
-            field7 = NULINE( 25: 65 )
+            field3 = NULINE( 15 : 22 )
+            field7 = NULINE( 25 : 65 )
 
 !  check that field3 is blank on 'a', 'f' and 'g' cards
 
-            IF ( FIELD1( 1: 1 ) == 'A' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'F' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'G' ) THEN
+            IF ( field1( 1 : 1 ) == 'A' .OR. field1( 1 : 1 ) == 'F' .OR.       &
+                 field1( 1 : 1 ) == 'G' ) THEN
                IF ( field3 /= '       ' ) THEN
                   status = 72
                   IF ( out > 0 ) WRITE( out, 2720 )
@@ -8175,9 +9111,8 @@
 
 !  check to see if the parameter is integer, real, logical or a function
 
-      IF ( field1 /= 'I ' .AND. field1 /= 'R ' .AND.                           &
-           field1 /= 'M ' .AND. field1 /= 'F ' .AND.                           &
-           field1 /= 'L ' ) THEN
+      IF ( field1 /= 'I ' .AND. field1 /= 'R ' .AND. field1 /= 'M ' .AND.      &
+           field1 /= 'F ' .AND. field1 /= 'L ' ) THEN
          status = 54
          IF ( out > 0 ) WRITE( out, 2540 )
          GO TO 800
@@ -8195,12 +9130,18 @@
                GO TO 700
             END IF
          ELSE
-            nexnam = nexnam + 1
-            IF ( nexnam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nexnames = nexnames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nexnames - 1 ; min_length = nexnames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EXNAMES, len_exnames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
+              len_exnames = new_length
             END IF
-            EXNAME( nexnam ) = field2
+            EXNAMES( nexnames ) = field2
          END IF
       ELSE
 
@@ -8215,37 +9156,57 @@
             END IF
          ELSE
             IF ( field1 == 'R ' ) THEN
-               nrenam = nrenam + 1
-               IF ( nrenam > ninmax ) THEN
-                  status = - 2
-                  GO TO 700
+               nrenames = nrenames + 1
+               IF ( nrenames > len_renames ) THEN
+                 used_length = nrenames - 1 ; min_length = nrenames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( RENAMES, len_renames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_renames = new_length
                END IF
-               RENAME( nrenam ) = field2
+               RENAMES( nrenames ) = field2
+            ELSE IF ( field1 == 'M ' ) THEN
+               nminames = nminames + 1
+               IF ( nminames > len_minames ) THEN
+                 used_length = nminames - 1 ; min_length = nminames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( MINAMES, len_minames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_minames = new_length
+               END IF
+               MINAMES( nminames ) = field2
+            ELSE IF ( field1 == 'L ' ) THEN
+               nlonames = nlonames + 1
+               IF ( nlonames > len_lonames ) THEN
+                 used_length = nlonames - 1 ; min_length = nlonames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( LONAMES, len_lonames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_lonames = new_length
+               END IF
+               LONAMES( nlonames ) = field2
             ELSE
-               IF ( field1 == 'M ' ) THEN
-                  nminam = nminam + 1
-                  IF ( nminam > ninmax ) THEN
-                     status = - 2
-                     GO TO 700
-                  END IF
-                  MINAME( nminam ) = field2
-               ELSE
-                  IF ( field1 == 'L ' ) THEN
-                     nlonam = nlonam + 1
-                     IF ( nlonam > ninmax ) THEN
-                        status = - 2
-                        GO TO 700
-                     END IF
-                     LONAME( nlonam ) = field2
-                  ELSE
-                     ninnam = ninnam + 1
-                     IF ( ninnam > ninmax ) THEN
-                        status = - 2
-                        GO TO 700
-                     END IF
-                     INNAME( ninnam ) = field2
-                  END IF
+               ninnames = ninnames + 1
+               IF ( ninnames > len_innames ) THEN
+                 used_length = ninnames - 1 ; min_length = ninnames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( INNAMES, len_innames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_innames = new_length
                END IF
+               INNAMES( ninnames ) = field2
             END IF
          END IF
       END IF
@@ -8277,7 +9238,7 @@
 ! --------- make general parameter assignments
 
          IF ( field1 == 'A ' ) THEN
-            WRITE( outfn, 3030 ) FIELD2(1:6), field7
+            WRITE( outfn, 3030 ) FIELD2( 1 : 6 ), field7
 
 ! --------- make conditional parameter assignments
 
@@ -8297,15 +9258,13 @@
                GO TO 800
             END IF
             IF ( field1 == 'I ' ) THEN
-               WRITE( outfn, 3031 ) FIELD2(1:6),                               &
-                                     FIELD3(1:6), field7
+               WRITE( outfn, 3031 ) FIELD2( 1 : 6 ), FIELD3( 1 : 6 ), field7
             ELSE
-               WRITE( outfn, 3032 ) FIELD2(1:6),                               &
-                                     FIELD3(1:6), field7
+               WRITE( outfn, 3032 ) FIELD2( 1 : 6 ), FIELD3( 1 : 6 ), field7
             END IF   
          END IF
       ELSE
-         IF ( FIELD1( 2: 2 ) == '+' .AND. startp ) THEN
+         IF ( field1( 2 : 2 ) == '+' .AND. startp ) THEN
 
 ! --------- continue a parameter assignment
 
@@ -8346,11 +9305,11 @@
 
                      IF ( .NOT. SETVEC( ihvar ) ) THEN
                         IF ( single ) THEN
-                           WRITE( outfn, 3162 ) FIELDI(  3 )(1:6),             &
-                                  FIELDI( 15 )(1:6), ihvar
+                           WRITE( outfn, 3162 ) FIELDI(  3 )( 1 : 6 ),         &
+                                  FIELDI( 15 )( 1 : 6 ), ihvar
                         ELSE
-                           WRITE( outfn, 3161 ) FIELDI(  3 )(1:6),             &
-                                 FIELDI( 15 )(1:6), ihvar
+                           WRITE( outfn, 3161 ) FIELDI(  3 )( 1 : 6 ),         &
+                                 FIELDI( 15 )( 1 : 6 ), ihvar
                         END IF   
                      END IF   
   410             CONTINUE
@@ -8366,19 +9325,17 @@
 !  set the remaining gradient components to zero
 
                IF ( .NOT. endofg ) THEN
-                  DO 415 ivar = 1, ninvar
 
 ! --------- set a component of g
 
+                  DO 415 ivar = 1, ninvar
                      IF ( .NOT. SETVEC( ivar ) ) THEN
                         IF ( single ) THEN
-                           WRITE( outfn, 3132 )                                &
-                              FIELDI(  3 )(1:6),                               &
-                              FIELDI( 17 )(1:6), ivar
+                           WRITE( outfn, 3132 ) FIELDI(  3 )( 1 : 6 ),         &
+                              FIELDI( 17 )( 1 : 6 ), ivar
                         ELSE
-                           WRITE( outfn, 3131 )                                &
-                              FIELDI(  3 )(1:6),                               &
-                              FIELDI( 17 )(1:6), ivar
+                           WRITE( outfn, 3131 ) FIELDI(  3 )( 1 : 6 ),         &
+                              FIELDI( 17 )( 1 : 6 ), ivar
                         END IF   
                      END IF   
   415             CONTINUE
@@ -8395,7 +9352,7 @@
                IF ( out > 0 ) WRITE( out, 2610 )
                GO TO 800
             END IF
-            IF ( isetty < neltyp ) WRITE( outfn, 3191 ) nloop
+            IF ( isetty < neltype ) WRITE( outfn, 3191 ) nloop
          END IF
 
 !  find itype, the element type
@@ -8415,28 +9372,24 @@
 
          itype = INLIST( ifield )
          WRITE( outfn, 3060 ) field2
-         IF ( neltyp > 1 ) WRITE( outfn, 3061 ) itype
-         IF ( LDEFND( itype ) ) THEN
+         IF ( neltype > 1 ) WRITE( outfn, 3061 ) itype
+         IF ( DEFINED( itype ) ) THEN
             status = 67
             IF ( out > 0 ) WRITE( out, 2670 )
             GO TO 800
          ELSE
-            LDEFND( itype ) = .TRUE.
+            DEFINED( itype ) = .TRUE.
             isetty = isetty + 1
          END IF
 
 !  find the row and column dimensions (ninv and nelv, resp.) of the
 !  transformation matrix u. u is stored in vector form by columns
 
-         is = IINV( itype ) - 1
-         js = IELV( itype ) - 1
-         nelv = IELV( itype + 1 ) - IELV( itype )
-         ninv = IINV( itype + 1 ) - IINV( itype )
+         is = INV( itype ) - 1
+         js = ELV( itype ) - 1
+         nelv = ELV( itype + 1 ) - ELV( itype )
+         ninv = INV( itype + 1 ) - INV( itype )
          nn = ninv * nelv
-         IF ( nn > numax ) THEN
-            status = - 11
-            GO TO 700
-         END IF
 
 ! --------- find type of current element
 
@@ -8444,36 +9397,34 @@
 
 !  initialize u as the zero matrix
 
-         DO 420 i = 1, nn
-            U( i ) = zero
-  420    CONTINUE
+         U( : nn ) = zero
          setran = nelv > ninv
 
 ! --------- set elemental variables
 
-         k1 = IELV( itype )
-         k2 = IELV( itype + 1 ) - 1
+         k1 = ELV( itype )
+         k2 = ELV( itype + 1 ) - 1
          DO 430 k = k1, k2
             ivar = k - k1 + 1
-            WRITE( outfn, 3070 ) ENAMES( k ), FIELDI(  4 )(1:6),               &
-                FIELDI(  8 )(1:6), FIELDI( 16 )(1:6), ivar
+            WRITE( outfn, 3070 ) EVNAMES( k ), FIELDI(  4 )( 1 : 6 ),           &
+                FIELDI(  8 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ), ivar
   430    CONTINUE
 
 ! --------- set elemental parameters
 
-         k1 = IEPA( itype )
-         k2 = IEPA( itype + 1 ) - 1
+         k1 = ELP( itype )
+         k2 = ELP( itype + 1 ) - 1
          DO 435 k = k1, k2
             ivar = k - k1 + 1
-            WRITE( outfn, 3071 ) EPNAME( k ), FIELDI( 18 )(1:6),               &
-                FIELDI( 20 )(1:6), ivar
+            WRITE( outfn, 3071 ) EPNAMES( k ), FIELDI( 18 )( 1 : 6 ),           &
+                FIELDI( 20 )( 1 : 6 ), ivar
   435    CONTINUE
 
 !  find the number of internal variables and the required size of
 !  the lower triangular portion of the Hessian matrix
 
-         k1 = IINV( itype )
-         k2 = IINV( itype + 1 ) - 1
+         k1 = INV( itype )
+         k2 = INV( itype + 1 ) - 1
          ninvar = k2 - k1 + 1
          nhess = ninvar * ( ninvar + 1 ) / 2
          nvars = 0
@@ -8493,7 +9444,7 @@
 !  determine which internal variable is given in field2
 
             DO 440 i = 1, ninv
-               IF ( field2 == INAMES( is + i ) ) GO TO 450
+               IF ( field2 == IVNAMES( is + i ) ) GO TO 450
   440       CONTINUE
 
 !  the internal variable name is unrecognised
@@ -8511,7 +9462,7 @@
             IF ( novals > 0 ) THEN
                DO 480 k = 1, novals
                   DO 460 j = 1, nelv
-                     IF ( FIELDS( k ) == ENAMES( js + j ) ) GO TO 470
+                     IF ( FIELDS( k ) == EVNAMES( js + j ) ) GO TO 470
   460             CONTINUE
 
 !  the elemental variable name is unrecognised
@@ -8530,8 +9481,8 @@
   480          CONTINUE
             END IF
          ELSE
-            IF ( FIELD1( 1: 1 ) == 'A' .OR. FIELD1( 1: 1 )                     &
-                 == 'I' .OR. FIELD1( 1: 1 ) == 'E' ) THEN
+            IF ( field1( 1 : 1 ) == 'A' .OR. field1( 1 : 1 )                   &
+                 == 'I' .OR. field1( 1 : 1 ) == 'E' ) THEN
                IF ( startf ) THEN
                   IF ( .NOT. endoff ) THEN
                      WRITE( outfn, 3120 )
@@ -8540,21 +9491,21 @@
                END IF
                IF ( startg ) THEN
                   IF ( endofg .AND. .NOT. nomorg ) THEN
-                     WRITE( outfn, 3150 ) FIELDI( 12 )(1:6)
+                     WRITE( outfn, 3150 ) FIELDI( 12 )( 1 : 6 )
                      nomorg = .TRUE.
                   END IF
                END IF
 
 !  start a parameter assignment
 
-               IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+               IF ( field1( 2 : 2 ) == ' ' ) THEN
                   startp = .TRUE.
 
 !  set up the transformations for the element
 
                   IF ( setran ) THEN
-                      CALL OUTRAN( nelv, ninv, U, outfn, outra,                &
-                                   ENAMES( js + 1 ), INAMES( is + 1 ),         &
+                      CALL OUTRANGE( nelv, ninv, U, outfn, outra,              &
+                                     EVNAMES( js + 1 ), IVNAMES( is + 1 ),     &
                                    single )
                       setran = .FALSE.
                   END IF
@@ -8571,11 +9522,11 @@
 
 ! --------- make element-specific parameter assignments
 
-                  IF ( FIELD1( 1: 1 ) == 'A' ) THEN
+                  IF ( field1( 1 : 1 ) == 'A' ) THEN
                      IF ( .NOT. startf ) THEN
-                        WRITE( outfn, 3080 ) FIELD2(1:6), field7
+                        WRITE( outfn, 3080 ) FIELD2( 1 : 6 ), field7
                      ELSE
-                        WRITE( outfn, 3083 ) FIELD2(1:6), field7
+                        WRITE( outfn, 3083 ) FIELD2( 1 : 6 ), field7
                      END IF
 
 ! --------- make conditional parameter assignments
@@ -8595,26 +9546,26 @@
                         IF ( out > 0 ) WRITE( out, 2580 )
                         GO TO 800
                      END IF
-                     IF ( FIELD1( 1: 1 ) == 'I' ) THEN
+                     IF ( field1( 1 : 1 ) == 'I' ) THEN
                         IF ( .NOT. startf ) THEN
-                           WRITE( outfn, 3081 ) FIELD2(1:6),                   &
-                                                 FIELD3(1:6), field7
+                           WRITE( outfn, 3081 ) FIELD2( 1 : 6 ),               &
+                                                FIELD3( 1 : 6 ), field7
                         ELSE
-                           WRITE( outfn, 3084 ) FIELD2(1:6),                   &
-                                                 FIELD3(1:6), field7
+                           WRITE( outfn, 3084 ) FIELD2( 1 : 6 ),               &
+                                                FIELD3( 1 : 6 ), field7
                         END IF
                      ELSE
                      IF ( .NOT. startf ) THEN
-                           WRITE( outfn, 3082 ) FIELD2(1:6),                   &
-                                                 FIELD3(1:6), field7
+                           WRITE( outfn, 3082 ) FIELD2( 1 : 6 ),               &
+                                                FIELD3( 1 : 6 ), field7
                         ELSE
-                           WRITE( outfn, 3085 ) FIELD2(1:6),                   &
-                                                 FIELD3(1:6), field7
+                           WRITE( outfn, 3085 ) FIELD2( 1 : 6 ),               &
+                                                FIELD3( 1 : 6 ), field7
                         END IF
                      END IF   
                   END IF
                ELSE
-                  IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                  IF ( field1( 2 : 2 ) == '+' ) THEN
                      IF ( startp ) THEN
 
 ! --------- continuation of a parameter assignment
@@ -8633,29 +9584,29 @@
                END IF
             ELSE
                startp = .FALSE.
-               IF ( FIELD1( 1: 1 ) == 'F' ) THEN
+               IF ( field1( 1 : 1 ) == 'F' ) THEN
 
 !  set the function value
 
-                  IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+                  IF ( field1( 2 : 2 ) == ' ' ) THEN
                      startf = .TRUE.
                      endoff = .FALSE.
 
 !  set up the transformations for the element
 
                      IF ( setran ) THEN
-                         CALL OUTRAN( nelv, ninv, U, outfn, outra,             &
-                                   ENAMES( js + 1 ), INAMES( is + 1 ),         &
-                                   single )
+                         CALL OUTRANGE( nelv, ninv, U, outfn, outra,           &
+                                        EVNAMES( js + 1 ), IVNAMES( is + 1 ),  &
+                                        single )
                          setran = .FALSE.
                      END IF
 
 ! --------- start f
 
-                     WRITE( outfn, 3100 ) FIELDI( 12 )(1:6),                   &
-                     FIELDI( 3 )(1:6), FIELDI( 13 )(1:6), field7
+                     WRITE( outfn, 3100 ) FIELDI( 12 )( 1 : 6 ),               &
+                     FIELDI( 3 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 ), field7
                   ELSE
-                     IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                     IF ( field1( 2 : 2 ) == '+' ) THEN
                         IF ( startf ) THEN
 
 ! --------- continuation of f
@@ -8669,7 +9620,7 @@
                      END IF
                   END IF
                ELSE
-                  IF ( FIELD1( 1: 1 ) == 'G' ) THEN
+                  IF ( field1( 1 : 1 ) == 'G' ) THEN
 
 !  no function value has been specified
 
@@ -8681,20 +9632,14 @@
 
 !  set the gradient values
 
-                     IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+                     IF ( field1( 2 : 2 ) == ' ' ) THEN
                         IF ( .NOT. startg ) THEN
                            startg = .TRUE.
                            endofg = .FALSE.
 
 !  use the logical array setvec to ensure that all gradients are set
 
-                           IF ( ninvar > nsetvc ) THEN
-                              status = - 12
-                              GO TO 700
-                           END IF
-                           DO 510 i = 1, ninvar
-                              SETVEC( i ) = .FALSE.
-  510                      CONTINUE
+                           SETVEC( : ninvar ) = .FALSE.
 
 ! --------- start g
 
@@ -8708,7 +9653,7 @@
 
                         DO 520 k = k1, k2
                            ivar = k - k1 + 1
-                           IF ( field2 == INAMES( k ) ) GO TO 525
+                           IF ( field2 == IVNAMES( k ) ) GO TO 525
   520                   CONTINUE
 
 !  the component name is unrecognised
@@ -8728,10 +9673,10 @@
                         SETVEC( ivar ) = .TRUE.
                         nvars = nvars + 1
                         endofg = nvars == ninvar
-                        WRITE( outfn, 3130 ) FIELDI(  3 )(1:6),                &
-                               FIELDI( 17 )(1:6), ivar, field7
+                        WRITE( outfn, 3130 ) FIELDI(  3 )( 1 : 6 ),            &
+                               FIELDI( 17 )( 1 : 6 ), ivar, field7
                      ELSE
-                        IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                        IF ( field1( 2 : 2 ) == '+' ) THEN
                            IF ( startg .AND. .NOT. nomorg ) THEN
 
 ! --------- continuation of g
@@ -8745,11 +9690,11 @@
                         END IF
                      END IF
                   ELSE
-                     IF ( FIELD1( 1: 1 ) == 'H' ) THEN
+                     IF ( field1( 1 : 1 ) == 'H' ) THEN
 
 !  set the Hessian values
 
-                        IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+                        IF ( field1( 2 : 2 ) == ' ' ) THEN
                            IF ( .NOT. starth ) THEN
 
 !  set the remaining gradient components to zero
@@ -8761,12 +9706,12 @@
 
                                     IF ( single ) THEN
                                        WRITE( outfn, 3132 )                    &
-                                          FIELDI(  3 )(1:6),                   &
-                                          FIELDI( 17 )(1:6), ivar
+                                          FIELDI(  3 )( 1 : 6 ),               &
+                                          FIELDI( 17 )( 1 : 6 ), ivar
                                     ELSE
                                        WRITE( outfn, 3131 )                    &
-                                          FIELDI(  3 )(1:6),                   &
-                                          FIELDI( 17 )(1:6), ivar
+                                          FIELDI(  3 )( 1 : 6 ),               &
+                                          FIELDI( 17 )( 1 : 6 ), ivar
                                     END IF   
   530                            CONTINUE
                                  startg = .TRUE.
@@ -8780,12 +9725,12 @@
                                     IF ( .NOT. SETVEC( ivar ) ) THEN
                                        IF ( single ) THEN
                                           WRITE( outfn, 3132 )                 &
-                                             FIELDI(  3 )(1:6),                &
-                                             FIELDI( 17 )(1:6), ivar
+                                             FIELDI(  3 )( 1 : 6 ),            &
+                                             FIELDI( 17 )( 1 : 6 ), ivar
                                        ELSE
                                           WRITE( outfn, 3131 )                 &
-                                             FIELDI(  3 )(1:6),                &
-                                             FIELDI( 17 )(1:6), ivar
+                                             FIELDI(  3 )( 1 : 6 ),            &
+                                             FIELDI( 17 )( 1 : 6 ), ivar
                                        END IF   
                                     END IF   
   535                            CONTINUE
@@ -8793,7 +9738,7 @@
                               END IF
                               IF ( .NOT. nomorg ) THEN
                                  WRITE( outfn, 3150 )                          &
-                                        FIELDI( 12 )(1:6)
+                                        FIELDI( 12 )( 1 : 6 )
                                  nomorg = .TRUE.
                               END IF
                               starth = .TRUE.
@@ -8801,13 +9746,7 @@
 
 !  use the logical array setvec to ensure that all Hessians are set
 
-                              IF ( nhess > nsetvc ) THEN
-                                 status = - 12
-                                 GO TO 700
-                              END IF
-                              DO 540 i = 1, nhess
-                                 SETVEC( i ) = .FALSE.
-  540                         CONTINUE
+                              SETVEC( : nhess ) = .FALSE.
                            END IF
 
 ! ---------  start h
@@ -8817,7 +9756,7 @@
 
                            DO 550 k = k1, k2
                               ivar = k - k1 + 1
-                              IF ( field2 == INAMES( k ) ) GO TO 560
+                              IF ( field2 == IVNAMES( k ) ) GO TO 560
   550                      CONTINUE
 
 !  the component name field2 is unrecognised
@@ -8828,7 +9767,7 @@
   560                      CONTINUE
                            DO 570 k = k1, k2
                               jvar = k - k1 + 1
-                              IF ( field3 == INAMES( k ) ) GO TO 580
+                              IF ( field3 == IVNAMES( k ) ) GO TO 580
   570                      CONTINUE
 
 !  the component name field3 is unrecognised
@@ -8861,10 +9800,10 @@
 
 ! --------- set a component of h
 
-                           WRITE( outfn, 3160 ) FIELDI(  3 )(1:6),             &
-                                  FIELDI( 15 )(1:6), ihvar, field7
+                           WRITE( outfn, 3160 ) FIELDI(  3 )( 1 : 6 ),         &
+                                  FIELDI( 15 )( 1 : 6 ), ihvar, field7
                         ELSE
-                           IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                           IF ( field1( 2 : 2 ) == '+' ) THEN
                               IF ( starth ) THEN
 
 ! --------- continuation of h
@@ -8901,7 +9840,7 @@
          RETURN
       END IF
       qprod = .FALSE.
-      DO 591 itype = 1, MIN( 2, neltyp ) 
+      DO 591 itype = 1, MIN( 2, neltype ) 
          IF ( ETYPES( itype ) /= cqsqr .AND.                                   &
               ETYPES( itype ) /= cqprod ) GO TO 930
          IF ( ETYPES( itype ) == cqprod ) qprod = .TRUE.
@@ -8914,148 +9853,150 @@
 
 !  write a dummy elfuns routine
 
-      IF ( neltyp == 0 ) THEN
-         IF ( single ) THEN
-            WRITE( outfn, 3003 ) FIELDI( 1 )(1:6),                             &
-           FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),            &
-         ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                  &
-           FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),               &
-           FIELDI( 12 )(1:6), FIELDI( 32 )(1:6),                               &
-           FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                               &
-         ( FIELDI(  i )(1:6), i = 22, 32 ),                                    &
-           FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                               &
-           FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                               &
-           FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                               &
-           FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                               &
-           FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                               &
-           FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                               &
-           FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                               &
-           FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                               &
-           FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                               &
-           FIELDI( 18 )(1:6), FIELDI( 31 )(1:6), pname, TRIM( version )
-         ELSE   
-            WRITE( outfn, 3002 ) FIELDI( 1 )(1:6),                             &
-           FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),            &
-         ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                  &
-           FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),               &
-           FIELDI( 12 )(1:6), FIELDI( 32 )(1:6),                               &
-           FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                               &
-         ( FIELDI(  i )(1:6), i = 22, 32 ),                                    &
-           FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                               &
-           FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                               &
-           FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                               &
-           FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                               &
-           FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                               &
-           FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                               &
-           FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                               &
-           FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                               &
-           FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                               &
-           FIELDI( 18 )(1:6), FIELDI( 31 )(1:6), pname, TRIM( version )
+      IF ( neltype == 0 ) THEN
+        IF ( single ) THEN
+          WRITE( outfn, 3003 ) FIELDI( 1 )( 1 : 6 ),                           &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
+         ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),          &
+           FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),       &
+           FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ),                       &
+           FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                       &
+         ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                &
+           FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                       &
+           FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                       &
+           FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                       &
+           FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                       &
+           FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                       &
+           FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                       &
+           FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                       &
+           FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                       &
+           FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                       &
+           FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ), pname, TRIM( version )
+        ELSE   
+          WRITE( outfn, 3002 ) FIELDI( 1 )( 1 : 6 ),                           &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
+         ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),          &
+           FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),       &
+           FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ),                       &
+           FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                       &
+         ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                &
+           FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                       &
+           FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                       &
+           FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                       &
+           FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                       &
+           FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                       &
+           FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                       &
+           FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                       &
+           FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                       &
+           FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                       &
+           FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ), pname, TRIM( version )
          END IF
-         WRITE( outfn, 3009 ) FIELDI( 32 )(1:6)
+         WRITE( outfn, 3009 ) FIELDI( 32 )( 1 : 6 )
          WRITE( outfn, 3201 )
       ELSE
-         IF ( single ) THEN
-            WRITE( outfn, 3001 ) FIELDI( 1 )(1:6),                             &
-           FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),            &
-         ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                  &
-           FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),               &
-           FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), FIELDI(  5 )(1:6),            &
-           FIELDI( 12 )(1:6), ( FIELDI(  i )(1:6), i = 22, 32 ),               &
-           FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                               &
-           FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                               &
-           FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                               &
-           FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                               &
-           FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                               &
-           FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                               &
-           FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                               &
-           FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                               &
-           FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                               &
-           FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                               &
-           pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),       &
-           FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                               &
-           FIELDI( 17 )(1:6), FIELDI( 20 )(1:6), FIELDI( 21 )(1:6)
+        IF ( single ) THEN
+          WRITE( outfn, 3001 ) FIELDI( 1 )( 1 : 6 ),                           &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
+         ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),          &
+           FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),       &
+           FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),&
+           FIELDI( 12 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),       &
+           FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                       &
+           FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                       &
+           FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                       &
+           FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                       &
+           FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                       &
+           FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                       &
+           FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                       &
+           FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                       &
+           FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                       &
+           FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                       &
+           pname, TRIM( version ),                                             &
+           FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),                       &
+           FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                       &
+           FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), FIELDI( 21 )( 1 : 6 )
             IF ( qprod ) THEN
                WRITE( outfn, 3019 ) 'X     ', 'Y     '
             ELSE
                WRITE( outfn, 3019 ) 'X     '
             END IF
-         ELSE   
-            WRITE( outfn, 3000 ) FIELDI( 1 )(1:6),                             &
-           FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),            &
-         ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                  &
-           FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),               &
-           FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), FIELDI(  5 )(1:6),            &
-           FIELDI( 12 )(1:6), ( FIELDI(  i )(1:6), i = 22, 32 ),               &
-           FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                               &
-           FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                               &
-           FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                               &
-           FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                               &
-           FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                               &
-           FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                               &
-           FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                               &
-           FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                               &
-           FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                               &
-           FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                               &
-           pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),       &
-           FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                               &
-           FIELDI( 17 )(1:6), FIELDI( 20 )(1:6), FIELDI( 21 )(1:6)
+        ELSE   
+          WRITE( outfn, 3000 ) FIELDI( 1 )( 1 : 6 ),                           &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
+         ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),          &
+           FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),       &
+           FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),&
+           FIELDI( 12 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),       &
+           FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                       &
+           FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                       &
+           FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                       &
+           FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                       &
+           FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                       &
+           FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                       &
+           FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                       &
+           FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                       &
+           FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                       &
+           FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                       &
+           pname, TRIM( version ),                                             &
+           FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),                       &
+           FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                       &
+           FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), FIELDI( 21 )( 1 : 6 )
             IF ( qprod ) THEN
                WRITE( outfn, 3020 ) 'X     ', 'Y     '
             ELSE
                WRITE( outfn, 3020 ) 'X     '
             END IF
-         END IF
-         WRITE( outfn, 3009 ) FIELDI( 32 )(1:6)
-         WRITE( outfn, 3050 ) nloop,                                           &
-                FIELDI( 21 )(1:6), FIELDI(  5 )(1:6),                          &
-                FIELDI( 13 )(1:6), FIELDI( 11 )(1:6),                          &
-                FIELDI( 21 )(1:6),                                             &
-                FIELDI( 16 )(1:6), FIELDI(  7 )(1:6),                          &
-                FIELDI( 13 )(1:6), FIELDI( 17 )(1:6),                          &
-                FIELDI(  9 )(1:6), FIELDI( 13 )(1:6),                          &
-                FIELDI( 20 )(1:6), FIELDI( 19 )(1:6),                          &
-                FIELDI( 13 )(1:6),                                             &
-                FIELDI( 12 )(1:6), FIELDI( 15 )(1:6),                          &
-                FIELDI( 10 )(1:6), FIELDI( 13 )(1:6)
-         IF ( neltyp > 1 ) THEN
-            WRITE( outfn, 3051 )                                               &
-               FIELDI( 14 )(1:6), FIELDI(  6 )(1:6),                           &
-               FIELDI( 13 )(1:6), ( i, i = 1, neltyp )
-            WRITE( outfn, 3052 ) FIELDI( 14 )(1:6)
-         END IF
+        END IF
+        WRITE( outfn, 3009 ) FIELDI( 32 )( 1 : 6 )
+        WRITE( outfn, 3050 ) nloop,                                            &
+                FIELDI( 21 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),                  &
+                FIELDI( 13 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),                  &
+                FIELDI( 21 )( 1 : 6 ),                                         &
+                FIELDI( 16 )( 1 : 6 ), FIELDI(  7 )( 1 : 6 ),                  &
+                FIELDI( 13 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),                  &
+                FIELDI(  9 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 ),                  &
+                FIELDI( 20 )( 1 : 6 ), FIELDI( 19 )( 1 : 6 ),                  &
+                FIELDI( 13 )( 1 : 6 ),                                         &
+                FIELDI( 12 )( 1 : 6 ), FIELDI( 15 )( 1 : 6 ),                  &
+                FIELDI( 10 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 )
+        IF ( neltype > 1 ) THEN
+          WRITE( outfn, 3051 )                                                 &
+             FIELDI( 14 )( 1 : 6 ), FIELDI(  6 )( 1 : 6 ),                     &
+             FIELDI( 13 )( 1 : 6 ), ( i, i = 1, neltype )
+          WRITE( outfn, 3052 ) FIELDI( 14 )( 1 : 6 )
+        END IF
 
 !  make sure that quadratic Hessian terms are included
 
-         DO 640 itype = 1, MIN( 2, neltyp )
+        DO 640 itype = 1, MIN( 2, neltype )
 
 !  diagonal term
 
             IF ( ETYPES( itype ) == cqsqr ) THEN
                WRITE( outfn, 3060 ) ETYPES( itype )
-               IF ( neltyp > 1 ) WRITE( outfn, 3061 ) itype
+               IF ( neltype > 1 ) WRITE( outfn, 3061 ) itype
                IF ( single ) THEN
                  WRITE( outfn, 3053 ) 'E', 'E'
                ELSE
                  WRITE( outfn, 3053 ) 'D', 'D'
                END IF
-               LDEFND( itype ) = .TRUE.
+               DEFINED( itype ) = .TRUE.
                isetty = isetty + 1
-               IF ( isetty < neltyp ) WRITE( outfn, 3191 ) nloop
+               IF ( isetty < neltype ) WRITE( outfn, 3191 ) nloop
 
 !  off-diagonal term
 
             ELSE IF ( ETYPES( itype ) == cqprod ) THEN
                WRITE( outfn, 3060 ) ETYPES( itype )
-               IF ( neltyp > 1 ) WRITE( outfn, 3061 ) itype
+               IF ( neltype > 1 ) WRITE( outfn, 3061 ) itype
                IF ( single ) THEN
                  WRITE( outfn, 3054 ) 'E', 'E', 'E'
                ELSE
                  WRITE( outfn, 3054 ) 'D', 'D', 'D'
                END IF
-               LDEFND( itype ) = .TRUE.
+               DEFINED( itype ) = .TRUE.
                isetty = isetty + 1
-               IF ( isetty < neltyp ) WRITE( outfn, 3191 ) nloop
+               IF ( isetty < neltype ) WRITE( outfn, 3191 ) nloop
             END IF
   640    CONTINUE   
          WRITE( outfn, 3200 ) nloop
@@ -9100,11 +10041,11 @@
 
                   IF ( .NOT. SETVEC( ihvar ) ) THEN
                      IF ( single ) THEN
-                        WRITE( outfn, 3162 ) FIELDI(  3 )(1:6),                &
-                               FIELDI( 15 )(1:6), ihvar
+                        WRITE( outfn, 3162 ) FIELDI(  3 )( 1 : 6 ),            &
+                               FIELDI( 15 )( 1 : 6 ), ihvar
                      ELSE
-                        WRITE( outfn, 3161 ) FIELDI(  3 )(1:6),                &
-                               FIELDI( 15 )(1:6), ihvar
+                        WRITE( outfn, 3161 ) FIELDI(  3 )( 1 : 6 ),            &
+                               FIELDI( 15 )( 1 : 6 ), ihvar
                      END IF   
                   END IF   
   910          CONTINUE
@@ -9127,12 +10068,12 @@
                   IF ( .NOT. SETVEC( ivar ) ) THEN
                      IF ( single ) THEN
                         WRITE( outfn, 3132 )                                   &
-                           FIELDI(  3 )(1:6),                                  &
-                           FIELDI( 17 )(1:6), ivar
+                           FIELDI(  3 )( 1 : 6 ),                              &
+                           FIELDI( 17 )( 1 : 6 ), ivar
                      ELSE
                         WRITE( outfn, 3131 )                                   &
-                           FIELDI(  3 )(1:6),                                  &
-                           FIELDI( 17 )(1:6), ivar
+                           FIELDI(  3 )( 1 : 6 ),                              &
+                           FIELDI( 17 )( 1 : 6 ), ivar
                      END IF   
                   END IF   
   920          CONTINUE
@@ -9149,7 +10090,7 @@
             IF ( out > 0 ) WRITE( out, 2610 )
             GO TO 800
          END IF
-         IF ( isetty < neltyp ) WRITE( outfn, 3191 ) nloop
+         IF ( isetty < neltype ) WRITE( outfn, 3191 ) nloop
       END IF
 
 ! ---------- successful run. wind up output
@@ -9157,18 +10098,26 @@
       status = 0
       WRITE( outfn, 3200 ) nloop
       IF ( nointe ) WRITE( outra, 4070 )
-      IF ( neltyp == 0 ) WRITE( outra, 4080 )
+      IF ( neltype == 0 ) WRITE( outra, 4080 )
       WRITE( outra, 4090 )
 
 !   check that all element types have been defined
 
   930 CONTINUE
-      DO 940 itype = 1, neltyp
-         IF ( .NOT. LDEFND( itype ) ) THEN
+      DO 940 itype = 1, neltype
+         IF ( .NOT. DEFINED( itype ) ) THEN
             status = 68
             IF ( out > 0 ) WRITE( out, 2680 ) ETYPES( itype )
          END IF
   940 CONTINUE
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from MAKE_elfun-',                           &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
@@ -9370,9 +10319,9 @@
  3201 FORMAT( '      RETURN', /,                                               &
               '      END' )
  4000 FORMAT( '      SUBROUTINE RANGE( IELEMN, TRANSP, W1,',                   &
-              ' W2, NELVAR, ninvar,', /,                                       &
+              ' W2, nelvar, ninvar,', /,                                       &
               '     *                  itype, LW1, LW2 )', /,                  &
-              '      INTEGER IELEMN, NELVAR, ninvar, itype,',                  &
+              '      INTEGER IELEMN, nelvar, ninvar, itype,',                  &
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      DOUBLE PRECISION W1( LW1 ), W2( LW2 )', /,                &
@@ -9383,9 +10332,9 @@
               'C', /,                                                          &
               '      INTEGER I' )
  4001 FORMAT( '      SUBROUTINE RANGE( IELEMN, TRANSP, W1,',                   &
-              ' W2, NELVAR, ninvar,', /,                                       &
+              ' W2, nelvar, ninvar,', /,                                       &
               '     *                  itype, LW1, LW2 )', /,                  &
-              '      INTEGER IELEMN, NELVAR, ninvar, itype,',                  &
+              '      INTEGER IELEMN, nelvar, ninvar, itype,',                  &
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      REAL             W1( LW1 ), W2( LW2 )', /,                &
@@ -9396,9 +10345,9 @@
               'C', /,                                                          &
               '      INTEGER I' )
  4002 FORMAT( '      SUBROUTINE RANGE( IELEMN, TRANSP, W1,',                   &
-              ' W2, NELVAR, ninvar,', /,                                       &
+              ' W2, nelvar, ninvar,', /,                                       &
               '     *                  itype, LW1, LW2 )', /,                  &
-              '      INTEGER IELEMN, NELVAR, ninvar, itype,',                  &
+              '      INTEGER IELEMN, nelvar, ninvar, itype,',                  &
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      DOUBLE PRECISION W1( LW1 ), W2( LW2 )', /,                &
@@ -9408,9 +10357,9 @@
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
               'C' )
  4003 FORMAT( '      SUBROUTINE RANGE( IELEMN, TRANSP, W1,',                   &
-              ' W2, NELVAR, ninvar,', /,                                       &
+              ' W2, nelvar, ninvar,', /,                                       &
               '     *                  itype, LW1, LW2 )', /,                  &
-              '      INTEGER IELEMN, NELVAR, ninvar, itype,',                  &
+              '      INTEGER IELEMN, nelvar, ninvar, itype,',                  &
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      REAL             W1( LW1 ), W2( LW2 )', /,                &
@@ -9429,7 +10378,7 @@
               'C  Elements without internal variables.', /,                    &
               'C', /,                                                          &
               '99998 CONTINUE', /,                                             &
-              '      DO 99999 i = 1, NELVAR', /,                               &
+              '      DO 99999 i = 1, nelvar', /,                               &
               '         W2( i ) = W1( i )', /,                                 &
               '99999 CONTINUE', /,                                             &
               '      RETURN' )
@@ -9443,30 +10392,32 @@
 !-*-  S I F D E C O D E   M A K E _ e l f u n _ a d    S U B R O U T I N E  -*-
 
       SUBROUTINE MAKE_elfun_ad( input, out, outff, outfd, outra, outem,        &
-                                status, nlmax, nimax, netmax, ninmax, numax,   &
-                                neltyp, pname, ENAMES, INAMES, RENAME, INNAME, &
-                                LONAME, MINAME, EXNAME, ETYPES, LDEFND,        &
-                                length, ITABLE, KEY, IELV, IINV, INLIST,       &
-                                EPNAME, IEPA, nepmax, debug, ijump, U, single, &
+                                status, nevnames, nivnames, nepnames,          &
+                                neltype, pname, EVNAMES, IVNAMES,              &
+                                len_renames, RENAMES, len_innames, INNAMES,    &
+                                len_lonames, LONAMES, len_minames, MINAMES,    &
+                                len_exnames, EXNAMES,       &
+                                DEFINED,        &
+                                length, ITABLE, KEY, ETYPES, ELV, INV, INLIST, &
+                                EPNAMES, ELP, debug, single,    &
                                 nuline, gotlin, iauto, iad0, print_level )
       INTEGER :: input, out, outff, outra, outfd, outem, status
-      INTEGER :: nlmax, nimax, netmax, neltyp, ninmax
-      INTEGER :: nepmax, length, numax, print_level, iauto, iad0
+      INTEGER :: nevnames, nivnames, nepnames, neltype
+      INTEGER :: length, print_level, iauto, iad0
+      INTEGER :: len_renames, len_innames, len_lonames, len_minames, len_exnames
       LOGICAL :: debug, single, gotlin 
-      INTEGER :: ITABLE( length ), ijump ( nlmax  )
-      INTEGER :: IELV( nlmax  ), IINV( nlmax  )
+      CHARACTER ( LEN = max_record_length ) :: nuline
+      INTEGER :: ITABLE( length )
       INTEGER :: INLIST( length )
-      INTEGER :: IEPA( nlmax  )
-      LOGICAL :: LDEFND( nlmax  )
-      REAL ( KIND = wp ) ::   U( numax )
-      CHARACTER ( len = 12 ) :: KEY( length )
-      CHARACTER ( len = 8  ) :: pname
-      CHARACTER ( len = 10 ) :: EPNAME( nepmax ), EXNAME( ninmax )
-      CHARACTER ( len = 10 ) :: INAMES( nimax  ), RENAME( ninmax )
-      CHARACTER ( len = 10 ) :: LONAME( ninmax ), INNAME( ninmax )
-      CHARACTER ( len = 10 ) :: MINAME( ninmax ), ENAMES( netmax )
-      CHARACTER ( len = 10 ) :: ETYPES( nlmax  )
-      CHARACTER ( len = max_record_length ) :: nuline
+      INTEGER, DIMENSION( neltype + 1 ) :: ELV, INV, ELP
+      LOGICAL, DIMENSION( neltype ) :: DEFINED
+      CHARACTER ( LEN = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 8  ) :: pname
+      CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames ), IVNAMES( nivnames )
+      CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), ETYPES( neltype  )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LONAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: MINAMES, EXNAMES
 
 !  --------------------------------------------------------------------
 !  make a function evaluation subroutine, suitable for automatic
@@ -9499,13 +10450,12 @@
 !  see also http://www.cuter.rl.ac.uk/sifdec/Doc/sif.pdf
 !  and      http://www.numerical.rl.ac.uk/lancelot/sif/sifhtml.html
 
-!  returns with negative values of inform indicate that insufficient
+!  returns with negative values of status indicate that insufficient
 !  array space has been allowed, as follows:
 
-!    inform = - 1  when length not large enough
-!    inform = - 2  when max( ninnam, nrenam, nlonam, nenam, nminam )
-!                  > ninmax
-!    inform = - 11 when numax not large enough
+!    status = - 1  when length not large enough
+!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be 
+!                  extended further
 !  -------------------------------------------------------------------
 
 !  parameter definitions
@@ -9517,10 +10467,10 @@
       INTEGER, PARAMETER :: maxnul = 20
       INTEGER, DIMENSION( mendat ), PARAMETER :: LENIND                        &
         = (/ 0, 12, 11, 8, 11, 7, 11, 6 /)
-      CHARACTER ( len = 12 ), DIMENSION( mendat ), PARAMETER :: INDIC8         &
+      CHARACTER ( LEN = 12 ), DIMENSION( mendat ), PARAMETER :: INDIC8         &
         = (/ '            ', 'FIXED FORMAT', 'FREE FORMAT ', 'ELEMENTS    ',   &
              'TEMPORARIES ', 'GLOBALS     ', 'INDIVIDUALS ', 'ENDATA      '  /)
-      CHARACTER ( len = 8 ), DIMENSION( iires ), PARAMETER :: FIELDI           &
+      CHARACTER ( LEN = 8 ), DIMENSION( iires ), PARAMETER :: FIELDI           &
         = (/ 'ELFUNF  ', 'LFUVAL  ', 'FUVALS  ', 'XVALUE  ', 'NCALCF  ',       &
              'ITYPEE  ', 'ISTAEV  ', 'IELVAR  ', 'INTVAR  ', 'ISTADH  ',       &
              'ICALCF  ', 'IFFLAG  ', 'IELEMN  ', 'IELTYP  ', 'IHSTRT  ',       &
@@ -9528,40 +10478,45 @@
              'JCALCF  ', 'LTYPEE  ', 'LSTAEV  ', 'LELVAR  ', 'LNTVAR  ',       &
              'LSTADH  ', 'LSTEPA  ', 'LCALCF  ', 'LFVALU  ', 'LXVALU  ',       &
              'LEPVLU  ', 'IFSTAT  ', 'ELFUN   ' /)
-      CHARACTER ( len = 6 ), DIMENSION( nincrs ), PARAMETER :: INCRSE          &
+      CHARACTER ( LEN = 6 ), DIMENSION( nincrs ), PARAMETER :: INCRSE          &
         = (/ 'LENGTH', 'NINMAX', '      ', '      ', '      ', '      ',       &
-             '      ', '      ', '      ', '      ', 'NUMAX ', 'NSETVC'  /)
+             '      ', '      ', '      ', '      ', '      ', '      '  /)
 
 !  local variables
 
-      INTEGER :: i, niname, ninnam, ninvar, nloop, nrenam, nexnam, nlonam
-      INTEGER :: i1, i2, i3, i4, i5, i6
-      INTEGER :: ifield, ifree, ihvar, ivar, intype, nminam, k, k1, k2, isetty
+      INTEGER :: niname, ninnames, ninvar, nloop, nrenames, nexnames, nlonames
+      INTEGER :: i, i1, i2, i3, i4, i5, i6
+      INTEGER :: ifield, ifree, ihvar, ivar, intype, nminames, k, k1, k2, isetty
       INTEGER :: itype, j, is, js, novals, nelv, ninv, nn, nename, nlines
       INTEGER :: npname, lineno, ilines, maxnel, maxnin, ntem, nrenm1, nrenm2
+      INTEGER :: used_length, new_length, min_length, alloc_status
       LOGICAL :: nointe, defnam, endpar, endgen, firstl, setran
       LOGICAL :: startf, startp, startv, qprod
       LOGICAL :: endoff, fixed, cqsqrt, cqprdt, loutff
-      CHARACTER ( len = 4 ) :: ad0
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 6 ) :: xvar, yvar
-      CHARACTER ( len = 8 ) :: field3
-      CHARACTER ( len = 10 ) :: field2, ctemp
-      CHARACTER ( len = 12 ) :: field, header
-      CHARACTER ( len = 15 ) :: aorb
-      CHARACTER ( len = 41 ) :: field7
-      CHARACTER ( len = 72 ) :: ctem
-      CHARACTER ( len = max_record_length ) :: blnkln
+      CHARACTER ( LEN = 4 ) :: ad0
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 6 ) :: xvar, yvar
+      CHARACTER ( LEN = 8 ) :: field3
+      CHARACTER ( LEN = 10 ) :: field2, ctemp
+      CHARACTER ( LEN = 12 ) :: field, header
+      CHARACTER ( LEN = 15 ) :: aorb
+      CHARACTER ( LEN = 24 ) :: bad_alloc
+      CHARACTER ( LEN = 41 ) :: field7
+      CHARACTER ( LEN = 72 ) :: ctem
+      CHARACTER ( LEN = max_record_length ) :: blnkln
       REAL ( KIND = wp ), DIMENSION( 2 ) :: VALUES
-      CHARACTER ( len = 8 ), DIMENSION( 2 ) :: FIELDS
-      CHARACTER ( len = 65 ), DIMENSION( maxnul ) :: NULINA
+      CHARACTER ( LEN = 8 ), DIMENSION( 2 ) :: FIELDS
+      INTEGER :: IJUMP( neltype  )
+      CHARACTER ( LEN = 65 ), DIMENSION( maxnul ) :: NULINA
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: U
 
       IF ( out > 0 ) WRITE( out, 2900 )
 
 !  set initial values for integer variables
 
-      ninnam = 0 ; nrenam = 0 ; nlonam = 0 ; nminam = 0 ; nexnam = 0 ; ntem = 0
-      lineno = 0 ; nloop = neltyp + 1 ; intype = 1 ; ilines = 0 ; nlines = 0
+      ninnames = 0 ; nrenames = 0 ; nlonames = 0 ; nminames = 0 ; nexnames = 0
+      ntem = 0
+      lineno = 0 ; nloop = neltype + 1 ; intype = 1 ; ilines = 0 ; nlines = 0
 
 !  set initial values for logical variables
 
@@ -9574,34 +10529,46 @@
 
       i1 = 0 ; i2 = 1 ; i3 = 1 ; i4 = 1 ; i5 = 1 ; i6 = 1
       cqsqrt = .FALSE. ; cqprdt = .FALSE.
-      DO itype = 1, MIN( 2, neltyp )
+      DO itype = 1, MIN( 2, neltype )
         IF ( ETYPES( itype ) == cqsqr ) cqsqrt = .TRUE.
         IF ( ETYPES( itype ) == cqprod ) cqprdt = .TRUE.
       END DO
       IF ( cqprdt ) THEN
          yvar = NUNAME( i1, i2, i3, i4, i5, i6, iires,                         &
-                        ninmax, nrenam, ninnam, nlonam,                        &
-                        nminam, nexnam, nlmax, neltyp, '      ',               &
-                        FIELDI, RENAME, INNAME, LONAME,                        &
-                        MINAME, EXNAME, ETYPES )
+                        nrenames, ninnames, nlonames,                          &
+                        nminames, nexnames, neltype, '      ',                 &
+                        FIELDI, RENAMES, INNAMES, LONAMES,                     &
+                        MINAMES, EXNAMES, ETYPES )
       ELSE
          yvar = '      '
       END IF
       IF ( cqsqrt .OR.  cqprdt ) THEN
          xvar = NUNAME( i1, i2, i3, i4, i5, i6, iires,                         &
-                        ninmax, nrenam, ninnam, nlonam,                        &
-                        nminam, nexnam, nlmax, neltyp, yvar,                   &
-                        FIELDI, RENAME, INNAME, LONAME,                        &
-                        MINAME, EXNAME, ETYPES )
+                        nrenames, ninnames, nlonames,                          &
+                        nminames, nexnames, neltype, yvar,                     &
+                        FIELDI, RENAMES, INNAMES, LONAMES,                     &
+                        MINAMES, EXNAMES, ETYPES )
       ELSE
          xvar = '      '
       END IF
 
+!  allocate space to hold the largest range transformation matrix possible
+
+      nn = 0
+      DO itype = 1, neltype
+        nelv = ELV( itype + 1 ) - ELV( itype )
+        ninv = INV( itype + 1 ) - INV( itype )
+        nn = MAX( nn, ninv * nelv )
+      END DO
+      CALL ALLOCATE_array( U, nn, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'U' ; GO TO 980 ; END IF
+
 !  create a dictionary of the internal variable names used
 
-      niname = IINV( neltyp + 1 ) - 1
+      niname = INV( neltype + 1 ) - 1
       DO 20 i = 1, niname
-         field = INAMES( i ) // 'PF'
+         field = IVNAMES( i ) // 'PF'
          CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
          IF ( ifree <= 0 ) THEN
             IF ( ifree == 0 ) THEN
@@ -9609,20 +10576,27 @@
                GO TO 700
             END IF
          ELSE
-            nrenam = nrenam + 1
-            IF ( nrenam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nrenames = nrenames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nrenames - 1 ; min_length = nrenames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( RENAMES, len_renames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              END IF
+              len_renames = new_length
             END IF
-            RENAME( nrenam ) = INAMES( i )
+            RENAMES( nrenames ) = IVNAMES( i )
          END IF
    20 CONTINUE
 
 !  include the names of the elemental variables used in this dictionary
 
-      nename = IELV( neltyp + 1 ) - 1
+      nename = ELV( neltype + 1 ) - 1
       DO 30 i = 1, nename
-         field = ENAMES( i ) // 'PF'
+         field = EVNAMES( i ) // 'PF'
          CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
          IF ( ifree <= 0 ) THEN
             IF ( ifree == 0 ) THEN
@@ -9630,22 +10604,29 @@
                GO TO 700
             END IF
          ELSE
-            nrenam = nrenam + 1
-            IF ( nrenam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nrenames = nrenames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nrenames - 1 ; min_length = nrenames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( RENAMES, len_renames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              END IF
+              len_renames = new_length
             END IF
-            RENAME( nrenam ) = ENAMES( i )
+            RENAMES( nrenames ) = EVNAMES( i )
          END IF
    30 CONTINUE
-!     netnam = nrenam
+!     netnam = nrenames
 
 !  include the names of the elemental parameters used
 !  in this dictionary
 
-      npname = IEPA( neltyp + 1 ) - 1
+      npname = ELP( neltype + 1 ) - 1
       DO 40 i = 1, npname
-         field = EPNAME( i ) // 'PF'
+         field = EPNAMES( i ) // 'PF'
          CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
          IF ( ifree <= 0 ) THEN
             IF ( ifree == 0 ) THEN
@@ -9653,12 +10634,19 @@
                GO TO 700
             END IF
          ELSE
-            nrenam = nrenam + 1
-            IF ( nrenam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nrenames = nrenames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nrenames - 1 ; min_length = nrenames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( RENAMES, len_renames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              END IF
+              len_renames = new_length
             END IF
-            RENAME( nrenam ) = EPNAME( i )
+            RENAMES( nrenames ) = EPNAMES( i )
          END IF
    40 CONTINUE
 
@@ -9667,23 +10655,23 @@
       maxnin = 1
       maxnel = 1
       isetty = 0
-      DO 50 itype = 1, neltyp
-         LDEFND( itype ) = .FALSE.
-         IF ( IELV( itype + 1 ) - IELV( itype ) ==                             &
-              IINV( itype + 1 ) - IINV( itype ) ) THEN
-            IJUMP( itype ) = 99998
-            nointe = .TRUE.
-         ELSE
-            IJUMP( itype ) = itype
-         END IF
-         maxnin = MAX( maxnin, IINV( itype + 1 ) - IINV( itype ) )
-         maxnel = MAX( maxnel, IELV( itype + 1 ) - IELV( itype ) )
-   50 CONTINUE
+      DO itype = 1, neltype
+        DEFINED( itype ) = .FALSE.
+        IF ( ELV( itype + 1 ) - ELV( itype ) ==                                &
+             INV( itype + 1 ) - INV( itype ) ) THEN
+          IJUMP( itype ) = 99998
+          nointe = .TRUE.
+        ELSE
+          IJUMP( itype ) = itype
+        END IF
+        maxnin = MAX( maxnin, INV( itype + 1 ) - INV( itype ) )
+        maxnel = MAX( maxnel, ELV( itype + 1 ) - ELV( itype ) )
+      END DO
 
 !  set a blank line
 
       DO i = 1, max_record_length
-        BLNKLN( I: i ) = ' '
+        BLNKLN( i : i ) = ' '
       END DO
 
 !  read next line
@@ -9736,206 +10724,210 @@
 
 !  consider the header part of the card
 
-      header = NULINE( 1: 12 )
+      header = NULINE( 1 : 12 )
 
 !  ignore blank lines
 
       IF ( header == INDIC8( mblank ) ) GO TO 100
-      IF ( NULINE( 1: 1 ) /= ' ' ) THEN
+      IF ( NULINE( 1 : 1 ) /= ' ' ) THEN
 
 !  ignore comment cards
 
-         IF ( NULINE( 1: 1 ) == '*' ) GO TO 100
+        IF ( NULINE( 1 : 1 ) == '*' ) GO TO 100
 
 !  check if we have entered fixed-format input
 
-         IF ( header == INDIC8( mfixed ) ) THEN
-            fixed = .TRUE.
-            GO TO 100
-         END IF
+        IF ( header == INDIC8( mfixed ) ) THEN
+          fixed = .TRUE.
+          GO TO 100
+        END IF
 
 !  check if we have entered free-format input
 
-         IF ( header == INDIC8( mfree ) ) THEN
-            fixed = .FALSE.
-            GO TO 100
-         END IF
+        IF ( header == INDIC8( mfree ) ) THEN
+          fixed = .FALSE.
+          GO TO 100
+        END IF
 
 !  check that the first encountered indicator card is the elements card
 
-         IF ( .NOT. defnam  ) THEN
-            IF ( header /= INDIC8( mname ) ) THEN
-               IF ( neltyp > 0 ) GO TO 930
-               IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010)
-               gotlin = .TRUE.
-               GO TO 600
-            ELSE
+        IF ( .NOT. defnam  ) THEN
+          IF ( header /= INDIC8( mname ) ) THEN
+            IF ( neltype > 0 ) GO TO 930
+            IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010)
+            gotlin = .TRUE.
+            GO TO 600
+          ELSE
 
 !  indicator card is elements
 !  ---------------------------
 
-               IF ( pname  /= NULINE( 15: 22 ) ) THEN
-                  status = 51
-                  IF ( out > 0 ) WRITE( out, 2510 )
-                  GO TO 800
-               ELSE
-                  defnam = .TRUE.
+            IF ( pname  /= NULINE( 15 : 22 ) ) THEN
+              status = 51
+              IF ( out > 0 ) WRITE( out, 2510 )
+              GO TO 800
+            ELSE
+              defnam = .TRUE.
 
 !  -------- set up subroutine call for range routine
 
-                  IF ( single ) THEN
-                     WRITE( outra, 4001 ) pname, TRIM( version )
-                  ELSE
-                     WRITE( outra, 4000 ) pname, TRIM( version )
-                  END IF
-                  IF ( neltyp > 1 ) THEN
-                     WRITE( outra, 4040 ) ( IJUMP( i ), i = 1, neltyp )
-                     WRITE( outra, 4050 )
-                  END IF
-                  GO TO 100
-               END IF
+              IF ( single ) THEN
+                 WRITE( outra, 4001 ) pname, TRIM( version )
+              ELSE
+                 WRITE( outra, 4000 ) pname, TRIM( version )
+              END IF
+              IF ( neltype > 1 ) THEN
+                 WRITE( outra, 4040 ) ( IJUMP( i ), i = 1, neltype )
+                 WRITE( outra, 4050 )
+              END IF
+              GO TO 100
             END IF
-         END IF
+          END IF
+        END IF
 
 !  an indicator card has been found
 
-         DO 110 i = intype, mendat
-            IF ( header == INDIC8( i ) ) THEN
-               intype = i
-               GO TO 120
-            END IF
-  110    CONTINUE
+        DO 110 i = intype, mendat
+          IF ( header == INDIC8( i ) ) THEN
+            intype = i
+            GO TO 120
+          END IF
+  110   CONTINUE
 
 !  the indicator card is not recognised
 
-         status = 2
-         IF ( out > 0 ) WRITE( out, 2020 )
-         GO TO 800
-  120    CONTINUE
+        status = 2
+        IF ( out > 0 ) WRITE( out, 2020 )
+        GO TO 800
+  120   CONTINUE
 
 !  the parameter values have been completed. write out the
 !  first part of the generated subroutine
 
-         IF ( intype >= mglob .AND. .NOT. endpar ) THEN
-            endpar = .TRUE.
+        IF ( intype >= mglob .AND. .NOT. endpar ) THEN
+          endpar = .TRUE.
 
 !  insert the list of reserved integer/real/logical variables into
 !  the dictionary
 
-            DO 130 i = 1, iires
-               field = FIELDI( i ) // '  PF'
-               CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
-               IF ( ifree <= 0 ) THEN
-                  IF ( ifree == 0 ) THEN
-                     status = - 1
-                     GO TO 700
-                  END IF
-                  status = 59
-                  IF ( out > 0 ) WRITE( out, 2590 ) FIELDI( i )
-                  GO TO 800
-               END IF
-  130       CONTINUE
+          DO 130 i = 1, iires
+            field = FIELDI( i ) // '  PF'
+            CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
+            IF ( ifree <= 0 ) THEN
+              IF ( ifree == 0 ) THEN
+                status = - 1
+                GO TO 700
+              END IF
+              status = 59
+              IF ( out > 0 ) WRITE( out, 2590 ) FIELDI( i )
+              GO TO 800
+            END IF
+  130     CONTINUE
 
 !  -------- set up subroutine call and reserved parameter declarations
 
-            IF ( iauto == 1 ) THEN
-               IF ( single ) THEN
-                  aorb = 'FORWARD_SINGLE '
-               ELSE
-                  aorb = 'FORWARD_DOUBLE '
-               END IF
-            ELSE
-               IF ( single ) THEN
-                  aorb = 'BACKWARD_SINGLE'
-               ELSE
-                  aorb = 'BACKWARD_DOUBLE'
-               END IF
-            END IF
-            IF ( iad0 == 1 ) THEN
-               ad0 = 'AD01'
-            ELSE
-               ad0 = 'AD02'
-            END IF
+          IF ( iauto == 1 ) THEN
             IF ( single ) THEN
-               IF ( loutff ) WRITE( outff, 3001 ) FIELDI( 1 )(1:6),            &
-           FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),            &
-         ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                  &
-           FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),               &
-           FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), FIELDI(  5 )(1:6),            &
-           FIELDI( 12 )(1:6), ( FIELDI(  i )(1:6), i = 22, 32 ),               &
-           FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                               &
-           FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                               &
-           FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                               &
-           FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                               &
-           FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                               &
-           FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                               &
-           FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                               &
-           FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                               &
-           FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                               &
-           FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                               &
-           pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),       &
-           FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                               &
-           FIELDI( 17 )(1:6), FIELDI( 20 )(1:6), FIELDI( 21 )(1:6)
-               WRITE( outfd, 3005 ) FIELDI( 33 )(1:6),                         &
-          FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),             &
-        ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                   &
-          FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),                &
-          FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), ad0, aorb,                     &
-          FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                                &
-        ( FIELDI(  i )(1:6), i = 22, 32 ), FIELDI(  6 )(1:6),                  &
-          FIELDI( 22 )(1:6), FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),             &
-          FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                &
-          FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                &
-          FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                &
-          FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                &
-          FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                &
-          FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                &
-          FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                &
-          FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                                &
-          pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),        &
-          FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                                &
-          FIELDI( 17 )(1:6), FIELDI( 20 )(1:6),                                &
-          FIELDI( 21 )(1:6), maxnin
-            ELSE   
-               IF ( loutff ) WRITE( outff, 3000 ) FIELDI( 1 )(1:6),            &
-          FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),             &
-        ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                   &
-          FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),                &
-          FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), FIELDI(  5 )(1:6),             &
-          FIELDI( 12 )(1:6), ( FIELDI(  i )(1:6), i = 22, 32 ),                &
-          FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                                &
-          FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                                &
-          FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                &
-          FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                &
-          FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                &
-          FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                &
-          FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                &
-          FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                &
-          FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                &
-          FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                                &
-          pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),        &
-          FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                                &
-          FIELDI( 17 )(1:6), FIELDI( 20 )(1:6), FIELDI( 21 )(1:6)
-               WRITE( outfd, 3004 ) FIELDI( 33 )(1:6),                         &
-          FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),             &
-        ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                   &
-          FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),                &
-          FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), ad0, aorb,                     &
-          FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                                &
-        ( FIELDI(  i )(1:6), i = 22, 32 ),                                     &
-          FIELDI(  6 )(1:6), FIELDI( 22 )(1:6), FIELDI(  7 )(1:6),             &
-          FIELDI( 23 )(1:6), FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),             &
-          FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                &
-          FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                &
-          FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                &
-          FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                &
-          FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                &
-          FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                &
-          FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                                &
-          pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),        &
-          FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                                &
-          FIELDI( 17 )(1:6), FIELDI( 20 )(1:6),                                &
-          FIELDI( 21 )(1:6), maxnin
+              aorb = 'FORWARD_SINGLE '
+            ELSE
+              aorb = 'FORWARD_DOUBLE '
+            END IF
+          ELSE
+            IF ( single ) THEN
+              aorb = 'BACKWARD_SINGLE'
+            ELSE
+              aorb = 'BACKWARD_DOUBLE'
+            END IF
+          END IF
+          IF ( iad0 == 1 ) THEN
+            ad0 = 'AD01'
+          ELSE
+            ad0 = 'AD02'
+          END IF
+          IF ( single ) THEN
+            IF ( loutff ) WRITE( outff, 3001 ) FIELDI( 1 )( 1 : 6 ),           &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
+         ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),          &
+           FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),       &
+           FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),&
+           FIELDI( 12 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),       &
+           FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                       &
+           FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                       &
+           FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                       &
+           FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                       &
+           FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                       &
+           FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                       &
+           FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                       &
+           FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                       &
+           FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                       &
+           FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                       &
+           pname, TRIM( version ),                                             &
+           FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),                       &
+           FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                       &
+           FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), FIELDI( 21 )( 1 : 6 )
+            WRITE( outfd, 3005 ) FIELDI( 33 )( 1 : 6 ),                        &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
+        ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),           &
+          FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),        &
+          FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), ad0, aorb,             &
+          FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                        &
+        ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ), FIELDI(  6 )( 1 : 6 ),          &
+          FIELDI( 22 )( 1 : 6 ), FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ), &
+          FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                        &
+          FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                        &
+          FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                        &
+          FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                        &
+          FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                        &
+          FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                        &
+          FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                        &
+          FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                        &
+          pname, TRIM( version ),                                              &
+          FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),                        &
+          FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                        &
+          FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ),                        &
+          FIELDI( 21 )( 1 : 6 ), maxnin
+          ELSE   
+            IF ( loutff ) WRITE( outff, 3000 ) FIELDI( 1 )( 1 : 6 ),           &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
+        ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),           &
+          FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),        &
+          FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ), &
+          FIELDI( 12 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),        &
+          FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                        &
+          FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                        &
+          FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                        &
+          FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                        &
+          FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                        &
+          FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                        &
+          FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                        &
+          FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                        &
+          FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                        &
+          FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                        &
+          pname, TRIM( version ),                                              &
+          FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),                        &
+          FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                        &
+          FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), FIELDI( 21 )( 1 : 6 )
+            WRITE( outfd, 3004 ) FIELDI( 33 )( 1 : 6 ),                        &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
+        ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),           &
+          FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),        &
+          FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), ad0, aorb,             &
+          FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                        &
+        ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                 &
+          FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ), FIELDI(  7 )( 1 : 6 ), &
+          FIELDI( 23 )( 1 : 6 ), FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ), &
+          FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                        &
+          FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                        &
+          FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                        &
+          FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                        &
+          FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                        &
+          FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                        &
+          FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                        &
+          pname, TRIM( version ),                                              &
+          FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),                        &
+          FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                        &
+          FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ),                        &
+          FIELDI( 21 )( 1 : 6 ), maxnin
             END IF
             IF ( iad0 == 1 ) THEN
                WRITE( outfd, 3024 ) maxnel, maxnin
@@ -9945,32 +10937,32 @@
 
 ! --------- insert integer declarations
 
-            IF ( ninnam > 0 .AND. loutff )                                     &
-               WRITE( outff, 3010 ) ( INNAME( i ), i = 1, ninnam )
-            IF ( ninnam > 0 )                                                  &
-               WRITE( outfd, 3010 ) ( INNAME( i ), i = 1, ninnam )
+            IF ( ninnames > 0 .AND. loutff )                                   &
+               WRITE( outff, 3010 ) ( INNAMES( i ), i = 1, ninnames )
+            IF ( ninnames > 0 )                                                &
+               WRITE( outfd, 3010 ) ( INNAMES( i ), i = 1, ninnames )
 
 !  order the real values so that the list of variables which belong
 !  to intrinsic or external functions follow those which do not
 
-            IF ( nrenam > 0 ) THEN
+            IF ( nrenames > 0 ) THEN
                nrenm1 = 0
-               nrenm2 = nrenam + 1
+               nrenm2 = nrenames + 1
   140          CONTINUE
                IF ( nrenm1 + 1 == nrenm2 ) GO TO 180
-               DO 150 i = 1, nminam
-                  IF ( RENAME( nrenm1 + 1 ) == MINAME( i ) ) GO TO 170
+               DO 150 i = 1, nminames
+                  IF ( RENAMES( nrenm1 + 1 ) == MINAMES( i ) ) GO TO 170
   150          CONTINUE
-               DO 160 i = 1, nexnam
-                  IF ( RENAME( nrenm1 + 1 ) == EXNAME( i ) ) GO TO 170
+               DO 160 i = 1, nexnames
+                  IF ( RENAMES( nrenm1 + 1 ) == EXNAMES( i ) ) GO TO 170
   160          CONTINUE
                nrenm1 = nrenm1 + 1
                GO TO 140
   170          CONTINUE
                nrenm2 = nrenm2 - 1
-               ctemp = RENAME( nrenm2 )
-               RENAME( nrenm2 ) = RENAME( nrenm1 + 1 )
-               RENAME( nrenm1 + 1 ) = ctemp
+               ctemp = RENAMES( nrenm2 )
+               RENAMES( nrenm2 ) = RENAMES( nrenm1 + 1 )
+               RENAMES( nrenm1 + 1 ) = ctemp
                GO TO 140
   180          CONTINUE
 
@@ -9978,40 +10970,40 @@
 
                IF ( loutff ) THEN
                   IF ( single ) THEN
-                    WRITE( outff, 3019 ) ( RENAME( i ), i = 1, nrenam )
+                    WRITE( outff, 3019 ) ( RENAMES( i ), i = 1, nrenames )
                   ELSE
-                    WRITE( outff, 3020 ) ( RENAME( i ), i = 1, nrenam )
+                    WRITE( outff, 3020 ) ( RENAMES( i ), i = 1, nrenames )
                   END IF
                END IF
                IF ( iad0 == 1 ) THEN
                   IF ( nrenm1 > 0 ) WRITE( outfd, 3018 )                       &
-                       ( RENAME( i ), i = 1, nrenm1 )
+                       ( RENAMES( i ), i = 1, nrenm1 )
                ELSE
                   IF ( nrenm1 > 0 ) WRITE( outfd, 3017 )                       &
-                       ( ad0, RENAME( i ), i = 1, nrenm1 )
+                       ( ad0, RENAMES( i ), i = 1, nrenm1 )
                END IF
-               IF ( nrenm2 <= nrenam ) WRITE( outfd, 3017 )                    &
-                    ( ad0, RENAME( i ), i = nrenm2, nrenam )
+               IF ( nrenm2 <= nrenames ) WRITE( outfd, 3017 )                  &
+                    ( ad0, RENAMES( i ), i = nrenm2, nrenames )
             END IF
 
 ! --------- insert logical declarations
 
-            IF ( nlonam > 0 .AND. loutff )                                     &
-               WRITE( outff, 3023 ) ( LONAME( i ), i = 1, nlonam )
-            IF ( nlonam > 0 )                                                  &
-               WRITE( outfd, 3023 ) ( LONAME( i ), i = 1, nlonam )
+            IF ( nlonames > 0 .AND. loutff )                                   &
+               WRITE( outff, 3023 ) ( LONAMES( i ), i = 1, nlonames )
+            IF ( nlonames > 0 )                                                &
+               WRITE( outfd, 3023 ) ( LONAMES( i ), i = 1, nlonames )
 
 ! --------- insert intrinsic declarations
 
-            IF ( nminam > 0 .AND. loutff )                                     &
-               WRITE( outff, 3021 ) ( MINAME( i ), i = 1, nminam )
+            IF ( nminames > 0 .AND. loutff )                                   &
+               WRITE( outff, 3021 ) ( MINAMES( i ), i = 1, nminames )
 
 ! --------- insert external declarations
 
-            IF ( nexnam > 0 .AND. loutff )                                     &
-               WRITE( outff, 3022 ) ( EXNAME( i ), i = 1, nexnam )
-            IF ( nexnam > 0 )                                                  &
-               WRITE( outfd, 3022 ) ( EXNAME( i ), i = 1, nexnam )
+            IF ( nexnames > 0 .AND. loutff )                                   &
+               WRITE( outff, 3022 ) ( EXNAMES( i ), i = 1, nexnames )
+            IF ( nexnames > 0 )                                                &
+               WRITE( outfd, 3022 ) ( EXNAMES( i ), i = 1, nexnames )
 
 ! --------- insert variables for quadratic terms (if any)
 
@@ -10034,8 +11026,8 @@
                   END IF
                END IF
             END IF
-            IF ( loutff ) WRITE( outff, 3009 ) FIELDI( 32 )(1:6)
-            WRITE( outfd, 3009 ) FIELDI( 32 )(1:6)
+            IF ( loutff ) WRITE( outff, 3009 ) FIELDI( 32 )( 1 : 6 )
+            WRITE( outfd, 3009 ) FIELDI( 32 )( 1 : 6 )
          END IF
 
 !  the general parameter assignments have been completed
@@ -10047,57 +11039,57 @@
 ! --------- start loop over elements
 
             IF ( loutff ) WRITE( outff, 3050 ) nloop,                          &
-                   FIELDI( 21 )(1:6), FIELDI(  5 )(1:6),                       &
-                   FIELDI( 13 )(1:6), FIELDI( 11 )(1:6),                       &
-                   FIELDI( 21 )(1:6),                                          &
-                   FIELDI( 16 )(1:6), FIELDI(  7 )(1:6),                       &
-                   FIELDI( 13 )(1:6), FIELDI( 17 )(1:6),                       &
-                   FIELDI(  9 )(1:6), FIELDI( 13 )(1:6),                       &
-                   FIELDI( 20 )(1:6), FIELDI( 19 )(1:6),                       &
-                   FIELDI( 13 )(1:6),                                          &
-                   FIELDI( 12 )(1:6), FIELDI( 15 )(1:6),                       &
-                   FIELDI( 10 )(1:6), FIELDI( 13 )(1:6)
+                   FIELDI( 21 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),               &
+                   FIELDI( 13 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),               &
+                   FIELDI( 21 )( 1 : 6 ),                                      &
+                   FIELDI( 16 )( 1 : 6 ), FIELDI(  7 )( 1 : 6 ),               &
+                   FIELDI( 13 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),               &
+                   FIELDI(  9 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 ),               &
+                   FIELDI( 20 )( 1 : 6 ), FIELDI( 19 )( 1 : 6 ),               &
+                   FIELDI( 13 )( 1 : 6 ),                                      &
+                   FIELDI( 12 )( 1 : 6 ), FIELDI( 15 )( 1 : 6 ),               &
+                   FIELDI( 10 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 )
             IF ( iad0 == 1 ) THEN
               WRITE( outfd, 3008 ) 
             ELSE
               WRITE( outfd, 3011 )
 !             do i = 1, netnam
               DO i = 1, nrenm1
-                 WRITE( outfd, 3016 ) ad0, RENAME( i )
+                 WRITE( outfd, 3016 ) ad0, RENAMES( i )
               END DO
             END IF  
             WRITE( outfd, 3050 ) nloop,                                        &
-                   FIELDI( 21 )(1:6), FIELDI(  5 )(1:6),                       &
-                   FIELDI( 13 )(1:6), FIELDI( 11 )(1:6),                       &
-                   FIELDI( 21 )(1:6),                                          &
-                   FIELDI( 16 )(1:6), FIELDI(  7 )(1:6),                       &
-                   FIELDI( 13 )(1:6), FIELDI( 17 )(1:6),                       &
-                   FIELDI(  9 )(1:6), FIELDI( 13 )(1:6),                       &
-                   FIELDI( 20 )(1:6), FIELDI( 19 )(1:6),                       &
-                   FIELDI( 13 )(1:6),                                          &
-                   FIELDI( 12 )(1:6), FIELDI( 15 )(1:6),                       &
-                   FIELDI( 10 )(1:6), FIELDI( 13 )(1:6)
-            IF ( neltyp > 1 ) THEN
+                   FIELDI( 21 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),               &
+                   FIELDI( 13 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),               &
+                   FIELDI( 21 )( 1 : 6 ),                                      &
+                   FIELDI( 16 )( 1 : 6 ), FIELDI(  7 )( 1 : 6 ),               &
+                   FIELDI( 13 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),               &
+                   FIELDI(  9 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 ),               &
+                   FIELDI( 20 )( 1 : 6 ), FIELDI( 19 )( 1 : 6 ),               &
+                   FIELDI( 13 )( 1 : 6 ),                                      &
+                   FIELDI( 12 )( 1 : 6 ), FIELDI( 15 )( 1 : 6 ),               &
+                   FIELDI( 10 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 )
+            IF ( neltype > 1 ) THEN
                IF ( loutff ) WRITE( outff, 3051 )                              &
-                  FIELDI( 14 )(1:6), FIELDI(  6 )(1:6),                        &
-                  FIELDI( 13 )(1:6), ( i, i = 1, neltyp )
+                  FIELDI( 14 )( 1 : 6 ), FIELDI(  6 )( 1 : 6 ),                &
+                  FIELDI( 13 )( 1 : 6 ), ( i, i = 1, neltype )
                WRITE( outfd, 3051 )                                            &
-                  FIELDI( 14 )(1:6), FIELDI(  6 )(1:6),                        &
-                  FIELDI( 13 )(1:6), ( i, i = 1, neltyp )
-               IF ( loutff ) WRITE( outff, 3052 ) FIELDI( 14 )(1:6)
-               WRITE( outfd, 3052 ) FIELDI( 14 )(1:6)
+                  FIELDI( 14 )( 1 : 6 ), FIELDI(  6 )( 1 : 6 ),                &
+                  FIELDI( 13 )( 1 : 6 ), ( i, i = 1, neltype )
+               IF ( loutff ) WRITE( outff, 3052 ) FIELDI( 14 )( 1 : 6 )
+               WRITE( outfd, 3052 ) FIELDI( 14 )( 1 : 6 )
             END IF
 
 !  make sure that quadratic Hessian terms are included
 
-            DO 190 itype = 1, MIN( 2, neltyp )
+            DO 190 itype = 1, MIN( 2, neltype )
 
 !  diagonal term
 
                IF ( ETYPES( itype ) == cqsqr ) THEN
                   IF ( loutff ) WRITE( outff, 3060 ) ETYPES( itype )
                   WRITE( outfd, 3060 ) ETYPES( itype )
-                  IF ( neltyp > 1 ) THEN
+                  IF ( neltype > 1 ) THEN
                      IF ( loutff ) WRITE( outff, 3061 ) itype
                      WRITE( outfd, 3061 ) itype
                   END IF
@@ -10108,9 +11100,9 @@
                      IF ( loutff ) WRITE( outff, 3055 ) 'D'
                      WRITE( outfd, 3057 ) xvar, 'D', xvar, xvar, xvar, 'D'
                   END IF
-                  LDEFND( itype ) = .TRUE.
+                  DEFINED( itype ) = .TRUE.
                   isetty = isetty + 1
-                  IF ( isetty < neltyp ) THEN
+                  IF ( isetty < neltype ) THEN
                      IF ( loutff ) WRITE( outff, 3191 ) nloop
                      WRITE( outfd, 3191 ) nloop
                   END IF
@@ -10120,7 +11112,7 @@
                ELSE IF ( ETYPES( itype ) == cqprod ) THEN
                   IF ( loutff ) WRITE( outff, 3060 ) ETYPES( itype )
                   WRITE( outfd, 3060 ) ETYPES( itype )
-                  IF ( neltyp > 1 ) THEN
+                  IF ( neltype > 1 ) THEN
                      IF ( loutff ) WRITE( outff, 3061 ) itype
                      WRITE( outfd, 3061 ) itype
                   END IF
@@ -10133,9 +11125,9 @@
                      WRITE( outfd, 3058 )                                      &
                        xvar, yvar, xvar, yvar, yvar, xvar, 'D', 'D', 'D'
                   END IF
-                  LDEFND( itype ) = .TRUE.
+                  DEFINED( itype ) = .TRUE.
                   isetty = isetty + 1
-                  IF ( isetty < neltyp ) THEN
+                  IF ( isetty < neltype ) THEN
                      IF ( loutff ) WRITE( outff, 3191 ) nloop
                      WRITE( outfd, 3191 ) nloop
                   END IF
@@ -10153,7 +11145,7 @@
 !  check that the first non commment card is the elements indicator card
 
          IF ( .NOT. defnam  ) THEN
-            IF ( neltyp > 0 ) GO TO 930
+            IF ( neltype > 0 ) GO TO 930
             IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010 )
             gotlin = .TRUE.
             GO TO 600
@@ -10162,26 +11154,26 @@
 !  a data card has been found
 !  read the character fields 1 and 2 from the card
 
-         field1 = NULINE(  2:  3 )
-         field2 = NULINE(  5: 14 )
+         field1 = NULINE(  2 :  3 )
+         field2 = NULINE(  5 : 14 )
          IF ( intype == mindiv .AND. field1 == 'R ' ) THEN
 
 !  read the character fields 3 and 5 from the card
 
-            FIELDS( 1 ) = NULINE( 15: 22 )
-            FIELDS( 2 ) = NULINE( 40: 47 )
+            FIELDS( 1 ) = NULINE( 15 : 22 )
+            FIELDS( 2 ) = NULINE( 40 : 47 )
 
 !  check to see if there is are any numerical values to be read
 
             novals = 0
             IF ( FIELDS( 1 ) /= '        ' .AND.                               &
-                 NULINE( 15: 15 ) /= '[' ) THEN
+                 NULINE( 15 : 15 ) /= '[' ) THEN
                novals = 1
-               CALL GETVAL( NULINE( 25: 36 ), VALUES( 1 ) )
+               CALL GETVAL( NULINE( 25 : 36 ), VALUES( 1 ) )
                IF ( FIELDS( 2 ) /= '        ' .AND.                            &
-                 NULINE( 40: 40 ) /= '[' ) THEN
+                 NULINE( 40 : 40 ) /= '[' ) THEN
                   novals = 2
-                  CALL GETVAL( NULINE( 50: 61 ), VALUES( 2 ) )
+                  CALL GETVAL( NULINE( 50 : 61 ), VALUES( 2 ) )
 
 !  remove fields with numerical values of zero
 
@@ -10201,14 +11193,13 @@
 
 !  read the character fields 3 and 7 from the card
 
-            field3 = NULINE( 15: 22 )
-            field7 = NULINE( 25: 65 )
+            field3 = NULINE( 15 : 22 )
+            field7 = NULINE( 25 : 65 )
 
 !  check that field3 is blank on 'a', 'f' and 'g' cards
 
-            IF ( FIELD1( 1: 1 ) == 'A' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'F' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'G' ) THEN
+            IF ( field1( 1 : 1 ) == 'A' .OR. field1( 1 : 1 ) == 'F' .OR.       &
+                 field1( 1 : 1 ) == 'G' ) THEN
                IF ( field3 /= '       ' ) THEN
                   status = 72
                   IF ( out > 0 ) WRITE( out, 2720 )
@@ -10249,12 +11240,18 @@
                GO TO 700
             END IF
          ELSE
-            nexnam = nexnam + 1
-            IF ( nexnam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nexnames = nexnames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nexnames - 1 ; min_length = nexnames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EXNAMES, len_exnames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
+              len_exnames = new_length
             END IF
-            EXNAME( nexnam ) = field2
+            EXNAMES( nexnames ) = field2
          END IF
       ELSE
 
@@ -10269,37 +11266,57 @@
             END IF
          ELSE
             IF ( field1 == 'R ' ) THEN
-               nrenam = nrenam + 1
-               IF ( nrenam > ninmax ) THEN
-                  status = - 2
-                  GO TO 700
+               nrenames = nrenames + 1
+               IF ( nrenames > len_renames ) THEN
+                 used_length = nrenames - 1 ; min_length = nrenames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( RENAMES, len_renames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_renames = new_length
                END IF
-               RENAME( nrenam ) = field2
+               RENAMES( nrenames ) = field2
+            ELSE IF ( field1 == 'M ' ) THEN
+               nminames = nminames + 1
+               IF ( nminames > len_minames ) THEN
+                 used_length = nminames - 1 ; min_length = nminames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( MINAMES, len_minames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_minames = new_length
+               END IF
+               MINAMES( nminames ) = field2
+            ELSE IF ( field1 == 'L ' ) THEN
+               nlonames = nlonames + 1
+               IF ( nlonames > len_lonames ) THEN
+                 used_length = nlonames - 1 ; min_length = nlonames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( LONAMES, len_lonames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_lonames = new_length
+               END IF
+               LONAMES( nlonames ) = field2
             ELSE
-               IF ( field1 == 'M ' ) THEN
-                  nminam = nminam + 1
-                  IF ( nminam > ninmax ) THEN
-                     status = - 2
-                     GO TO 700
-                  END IF
-                  MINAME( nminam ) = field2
-               ELSE
-                  IF ( field1 == 'L ' ) THEN
-                     nlonam = nlonam + 1
-                     IF ( nlonam > ninmax ) THEN
-                        status = - 2
-                        GO TO 700
-                     END IF
-                     LONAME( nlonam ) = field2
-                  ELSE
-                     ninnam = ninnam + 1
-                     IF ( ninnam > ninmax ) THEN
-                        status = - 2
-                        GO TO 700
-                     END IF
-                     INNAME( ninnam ) = field2
-                  END IF
+               ninnames = ninnames + 1
+               IF ( ninnames > len_innames ) THEN
+                 used_length = ninnames - 1 ; min_length = ninnames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( INNAMES, len_innames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_innames = new_length
                END IF
+               INNAMES( ninnames ) = field2
             END IF
          END IF
       END IF
@@ -10331,9 +11348,9 @@
 ! --------- make general parameter assignments
 
          IF ( field1 == 'A ' ) THEN
-            IF ( loutff ) WRITE( outff, 3030 ) FIELD2(1:6), field7
+            IF ( loutff ) WRITE( outff, 3030 ) FIELD2( 1 : 6 ), field7
             ntem = ntem + 1
-            WRITE( outem, 3080 ) FIELD2(1:6), field7
+            WRITE( outem, 3080 ) FIELD2( 1 : 6 ), field7
 
 ! --------- make conditional parameter assignments
 
@@ -10353,21 +11370,21 @@
                GO TO 800
             END IF
             IF ( field1 == 'I ' ) THEN
-               IF ( loutff ) WRITE( outff, 3031 ) FIELD2(1:6),                 &
-                                     FIELD3(1:6), field7
+               IF ( loutff ) WRITE( outff, 3031 ) FIELD2( 1 : 6 ),             &
+                                    FIELD3( 1 : 6 ), field7
                ntem = ntem + 1
-               WRITE( outem, 3081 ) FIELD2(1:6),                               &
-                                     FIELD3(1:6), field7
+               WRITE( outem, 3081 ) FIELD2( 1 : 6 ),                           &
+                                    FIELD3( 1 : 6 ), field7
             ELSE
-               IF ( loutff ) WRITE( outff, 3032 ) FIELD2(1:6),                 &
-                                     FIELD3(1:6), field7
+               IF ( loutff ) WRITE( outff, 3032 ) FIELD2( 1 : 6 ),             &
+                                    FIELD3( 1 : 6 ), field7
                ntem = ntem + 1
-               WRITE( outem, 3082 ) FIELD2(1:6),                               &
-                                     FIELD3(1:6), field7
+               WRITE( outem, 3082 ) FIELD2( 1 : 6 ),                           &
+                                    FIELD3( 1 : 6 ), field7
             END IF   
          END IF
       ELSE
-         IF ( FIELD1( 2: 2 ) == '+' .AND. startp ) THEN
+         IF ( field1( 2 : 2 ) == '+' .AND. startp ) THEN
 
 ! --------- continue a parameter assignment
 
@@ -10410,18 +11427,18 @@
                   END IF
                   IF ( iad0 == 1 ) THEN
                      WRITE( outfd, 3122 )                                      &
-                        FIELDI( 12 )(1:6), FIELDI( 3  )(1:6),                  &
-                        FIELDI( 13 )(1:6), FIELDI( 3  )(1:6),                  &
-                        FIELDI( 17 )(1:6), FIELDI( 17 )(1:6),                  &
+                        FIELDI( 12 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),          &
+                        FIELDI( 13 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),          &
+                        FIELDI( 17 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),          &
                         ninvar
                   ELSE
                      WRITE( outfd, 3123 )                                      &
-                        FIELDI( 12 )(1:6), FIELDI( 3  )(1:6),                  &
-                        FIELDI( 13 )(1:6), FIELDI( 3  )(1:6),                  &
-                        FIELDI( 17 )(1:6), FIELDI( 17 )(1:6),                  &
+                        FIELDI( 12 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),          &
+                        FIELDI( 13 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),          &
+                        FIELDI( 17 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),          &
                         ninvar
                   END IF
-                  WRITE( outfd, 3150 ) FIELDI( 12 )(1:6)
+                  WRITE( outfd, 3150 ) FIELDI( 12 )( 1 : 6 )
                   IF ( iad0 == 1 ) THEN
                     WRITE( outfd, 3151 ) 
                   ELSE
@@ -10431,13 +11448,11 @@
                      DO 401 is = 1, js
                         ihvar = ( js * ( js - 1 ) ) / 2 + is
                         IF ( is == js ) THEN
-                           WRITE( outfd, 3163 )                                &
-                              FIELDI(  3 )(1:6),                               &
-                              FIELDI( 15 )(1:6), ihvar, ihvar
+                           WRITE( outfd, 3163 ) FIELDI(  3 )( 1 : 6 ),         &
+                              FIELDI( 15 )( 1 : 6 ), ihvar, ihvar
                         ELSE
-                           WRITE( outfd, 3164 )                                &
-                              FIELDI(  3 )(1:6),                               &
-                              FIELDI( 15 )(1:6), ihvar, ihvar
+                           WRITE( outfd, 3164 ) FIELDI(  3 )( 1 : 6 ),         &
+                              FIELDI( 15 )( 1 : 6 ), ihvar, ihvar
                         END IF
   401                CONTINUE
   402             CONTINUE   
@@ -10451,9 +11466,9 @@
                IF ( out > 0 ) WRITE( out, 2610 )
                GO TO 800
             END IF
-            IF ( isetty < neltyp .AND. loutff )                                &
+            IF ( isetty < neltype .AND. loutff )                               &
                WRITE( outff, 3191 ) nloop
-            IF ( isetty < neltyp ) WRITE( outfd, 3191 ) nloop
+            IF ( isetty < neltype ) WRITE( outfd, 3191 ) nloop
          END IF
 
 !  find itype, the element type
@@ -10474,29 +11489,25 @@
          itype = INLIST( ifield )
          IF ( loutff ) WRITE( outff, 3060 ) field2
          WRITE( outfd, 3060 ) field2
-         IF ( neltyp > 1 .AND. loutff ) WRITE( outff, 3061 ) itype
-         IF ( neltyp > 1 ) WRITE( outfd, 3061 ) itype
-         IF ( LDEFND( itype ) ) THEN
+         IF ( neltype > 1 .AND. loutff ) WRITE( outff, 3061 ) itype
+         IF ( neltype > 1 ) WRITE( outfd, 3061 ) itype
+         IF ( DEFINED( itype ) ) THEN
             status = 67
             IF ( out > 0 ) WRITE( out, 2670 )
             GO TO 800
          ELSE
-            LDEFND( itype ) = .TRUE.
+            DEFINED( itype ) = .TRUE.
             isetty = isetty + 1
          END IF
 
 !  find the row and column dimensions (ninv and nelv, resp.) of the
 !  transformation matrix u. u is stored in vector form by columns
 
-         is = IINV( itype ) - 1
-         js = IELV( itype ) - 1
-         nelv = IELV( itype + 1 ) - IELV( itype )
-         ninv = IINV( itype + 1 ) - IINV( itype )
+         is = INV( itype ) - 1
+         js = ELV( itype ) - 1
+         nelv = ELV( itype + 1 ) - ELV( itype )
+         ninv = INV( itype + 1 ) - INV( itype )
          nn = ninv * nelv
-         IF ( nn > numax ) THEN
-            status = - 11
-            GO TO 700
-         END IF
 
 ! --------- find type of current element
 
@@ -10504,56 +11515,54 @@
 
 !  initialize u as the zero matrix
 
-         DO 420 i = 1, nn
-            U( i ) = zero
-  420    CONTINUE
+         U( : nn ) = zero
          setran = nelv > ninv
 
 ! --------- set elemental variables
 
-         k1 = IELV( itype )
-         k2 = IELV( itype + 1 ) - 1
+         k1 = ELV( itype )
+         k2 = ELV( itype + 1 ) - 1
          IF ( setran ) THEN
             IF ( iad0 == 1 ) THEN
                WRITE( outfd, 3230 ) nelv,                                      &
-                      FIELDI(  4 )(1:6), FIELDI(  8 )(1:6),                    &
-                      FIELDI( 16 )(1:6), FIELDI( 16 )(1:6), nelv
+                      FIELDI(  4 )( 1 : 6 ), FIELDI(  8 )( 1 : 6 ),            &
+                      FIELDI( 16 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ), nelv
             ELSE
                WRITE( outfd, 3231 ) nelv,                                      &
-                      FIELDI(  4 )(1:6), FIELDI(  8 )(1:6),                    &
-                      FIELDI( 16 )(1:6), FIELDI( 16 )(1:6), nelv
+                      FIELDI(  4 )( 1 : 6 ), FIELDI(  8 )( 1 : 6 ),            &
+                      FIELDI( 16 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ), nelv
             END IF
             DO 430 k = k1, k2
                ivar = k - k1 + 1
                IF ( loutff )                                                   &
-               WRITE( outff, 3070 ) ENAMES( k ), FIELDI(  4 )(1:6),            &
-                   FIELDI(  8 )(1:6), FIELDI( 16 )(1:6), ivar
-               WRITE( outfd, 3220 ) ENAMES( k ), ivar
+               WRITE( outff, 3070 ) EVNAMES( k ), FIELDI(  4 )( 1 : 6 ),       &
+                   FIELDI(  8 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ), ivar
+               WRITE( outfd, 3220 ) EVNAMES( k ), ivar
   430       CONTINUE
          ELSE
             IF ( iad0 == 1 ) THEN
-               WRITE( outfd, 3210 ) FIELDI( 12 )(1:6), ninv,                   &
-                      FIELDI(  4 )(1:6), FIELDI(  8 )(1:6),                    &
-                      FIELDI( 16 )(1:6), FIELDI( 16 )(1:6), ninv
+               WRITE( outfd, 3210 ) FIELDI( 12 )( 1 : 6 ), ninv,               &
+                      FIELDI(  4 )( 1 : 6 ), FIELDI(  8 )( 1 : 6 ),            &
+                      FIELDI( 16 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ), ninv
             ELSE
-               WRITE( outfd, 3211 ) FIELDI( 12 )(1:6), ninv,                   &
-                      FIELDI(  4 )(1:6), FIELDI(  8 )(1:6),                    &
-                      FIELDI( 16 )(1:6), FIELDI( 16 )(1:6), ninv
+               WRITE( outfd, 3211 ) FIELDI( 12 )( 1 : 6 ), ninv,               &
+                      FIELDI(  4 )( 1 : 6 ), FIELDI(  8 )( 1 : 6 ),            &
+                      FIELDI( 16 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ), ninv
             END IF
             DO 431 k = k1, k2
                ivar = k - k1 + 1
                IF ( loutff )                                                   &
-               WRITE( outff, 3070 ) ENAMES( k ), FIELDI(  4 )(1:6),            &
-                   FIELDI(  8 )(1:6), FIELDI( 16 )(1:6), ivar
-               WRITE( outfd, 3220 ) ENAMES( k ), ivar
+               WRITE( outff, 3070 ) EVNAMES( k ), FIELDI(  4 )( 1 : 6 ),       &
+                   FIELDI(  8 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ), ivar
+               WRITE( outfd, 3220 ) EVNAMES( k ), ivar
   431       CONTINUE
          END IF
 
 !  find the number of internal variables and the required size of
 !  the lower triangular portion of the Hessian matrix
 
-         k1 = IINV( itype )
-         k2 = IINV( itype + 1 ) - 1
+         k1 = INV( itype )
+         k2 = INV( itype + 1 ) - 1
          ninvar = k2 - k1 + 1
          startp = .FALSE.
          startf = .FALSE.
@@ -10566,7 +11575,7 @@
 !  determine which internal variable is given in field2
 
             DO 440 i = 1, ninv
-               IF ( field2 == INAMES( is + i ) ) GO TO 450
+               IF ( field2 == IVNAMES( is + i ) ) GO TO 450
   440       CONTINUE
 
 !  the internal variable name is unrecognised
@@ -10584,7 +11593,7 @@
             IF ( novals > 0 ) THEN
                DO 480 k = 1, novals
                   DO 460 j = 1, nelv
-                     IF ( FIELDS( k ) == ENAMES( js + j ) ) GO TO 470
+                     IF ( FIELDS( k ) == EVNAMES( js + j ) ) GO TO 470
   460             CONTINUE
 
 !  the elemental variable name is unrecognised
@@ -10603,8 +11612,8 @@
   480          CONTINUE
             END IF
          ELSE
-            IF ( FIELD1( 1: 1 ) == 'A' .OR. FIELD1( 1: 1 )                     &
-                 == 'I' .OR. FIELD1( 1: 1 ) == 'E' ) THEN
+            IF ( field1( 1 : 1 ) == 'A' .OR. field1( 1 : 1 ) == 'I' .OR.       &
+                 field1( 1 : 1 ) == 'E' ) THEN
 
 !  finish the function assignment
 
@@ -10615,18 +11624,18 @@
                   END IF
                   IF ( iad0 == 1 ) THEN
                      WRITE( outfd, 3122 )                                      &
-                        FIELDI( 12 )(1:6), FIELDI( 3  )(1:6),                  &
-                        FIELDI( 13 )(1:6), FIELDI( 3  )(1:6),                  &
-                        FIELDI( 17 )(1:6), FIELDI( 17 )(1:6),                  &
+                        FIELDI( 12 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),          &
+                        FIELDI( 13 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),          &
+                        FIELDI( 17 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),          &
                         ninvar
                   ELSE
                      WRITE( outfd, 3123 )                                      &
-                        FIELDI( 12 )(1:6), FIELDI( 3  )(1:6),                  &
-                        FIELDI( 13 )(1:6), FIELDI( 3  )(1:6),                  &
-                        FIELDI( 17 )(1:6), FIELDI( 17 )(1:6),                  &
+                        FIELDI( 12 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),          &
+                        FIELDI( 13 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),          &
+                        FIELDI( 17 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),          &
                         ninvar
                   END IF
-                  WRITE( outfd, 3150 ) FIELDI( 12 )(1:6)
+                  WRITE( outfd, 3150 ) FIELDI( 12 )( 1 : 6 )
                   IF ( iad0 == 1 ) THEN
                     WRITE( outfd, 3151 ) 
                   ELSE
@@ -10636,13 +11645,11 @@
                      DO 481 is = 1, js
                         ihvar = ( js * ( js - 1 ) ) / 2 + is
                         IF ( is == js ) THEN
-                           WRITE( outfd, 3163 )                                &
-                              FIELDI(  3 )(1:6),                               &
-                              FIELDI( 15 )(1:6), ihvar, ihvar
+                           WRITE( outfd, 3163 ) FIELDI(  3 )( 1 : 6 ),         &
+                              FIELDI( 15 )( 1 : 6 ), ihvar, ihvar
                         ELSE
-                           WRITE( outfd, 3164 )                                &
-                              FIELDI(  3 )(1:6),                               &
-                              FIELDI( 15 )(1:6), ihvar, ihvar
+                           WRITE( outfd, 3164 ) FIELDI(  3 )( 1 : 6 ),         &
+                              FIELDI( 15 )( 1 : 6 ), ihvar, ihvar
                         END IF
   481                CONTINUE
   482             CONTINUE   
@@ -10652,28 +11659,28 @@
 
 !  start a parameter assignment
 
-                  IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+                  IF ( field1( 2 : 2 ) == ' ' ) THEN
                      startp = .TRUE.
 
 !  set up the transformations for the element
 
                      IF ( setran ) THEN
-                         CALL OUTRN2( nelv, ninv, U, outff, outfd,             &
-                                      outra, ENAMES( js + 1 ),                 &
-                                      INAMES( is + 1 ), single, ad0 )
+                         CALL OUTRANGE_ad( nelv, ninv, U, outff, outfd,        &
+                                           outra, EVNAMES( js + 1 ),           &
+                                           IVNAMES( is + 1 ), single, ad0 )
                          setran = .FALSE.
                      END IF
 
 ! --------- set elemental parameters
 
-                     k1 = IEPA( itype )
-                     DO 483 k = k1, IEPA( itype + 1 ) - 1
+                     k1 = ELP( itype )
+                     DO 483 k = k1, ELP( itype + 1 ) - 1
                         ivar = k - k1 + 1
                         IF ( loutff )                                          &
-                        WRITE( outff, 3071 ) EPNAME( k ),                      &
-                        FIELDI( 18 )(1:6), FIELDI( 20 )(1:6), ivar
-                        WRITE( outfd, 3071 ) EPNAME( k ),                      &
-                            FIELDI( 18 )(1:6), FIELDI( 20 )(1:6), ivar
+                        WRITE( outff, 3071 ) EPNAMES( k ),                     &
+                        FIELDI( 18 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), ivar
+                        WRITE( outfd, 3071 ) EPNAMES( k ),                     &
+                            FIELDI( 18 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), ivar
   483                CONTINUE
 
 !  include the global parameters
@@ -10699,15 +11706,15 @@
 
 ! --------- make element-specific parameter assignments
 
-                     IF ( FIELD1( 1: 1 ) == 'A' ) THEN
+                     IF ( field1( 1 : 1 ) == 'A' ) THEN
                         IF ( .NOT. startf ) THEN
                            IF ( loutff )                                       &
-                           WRITE( outff, 3080 ) FIELD2(1:6), field7
-                           WRITE( outfd, 3080 ) FIELD2(1:6), field7
+                           WRITE( outff, 3080 ) FIELD2( 1 : 6 ), field7
+                           WRITE( outfd, 3080 ) FIELD2( 1 : 6 ), field7
                         ELSE
                            IF ( loutff )                                       &
-                           WRITE( outff, 3083 ) FIELD2(1:6), field7
-                           WRITE( outfd, 3083 ) FIELD2(1:6), field7
+                           WRITE( outff, 3083 ) FIELD2( 1 : 6 ), field7
+                           WRITE( outfd, 3083 ) FIELD2( 1 : 6 ), field7
                         END IF
 
 ! --------- make conditional parameter assignments
@@ -10728,38 +11735,38 @@
                            IF ( out > 0 ) WRITE( out, 2580 )
                            GO TO 800
                         END IF
-                        IF ( FIELD1( 1: 1 ) == 'I' ) THEN
+                        IF ( field1( 1 : 1 ) == 'I' ) THEN
                            IF ( .NOT. startf ) THEN
                               IF ( loutff )                                    &
-                              WRITE( outff, 3081 ) FIELD2(1:6),                &
-                                                 FIELD3(1:6), field7
-                              WRITE( outfd, 3081 ) FIELD2(1:6),                &
-                                                 FIELD3(1:6), field7
+                              WRITE( outff, 3081 ) FIELD2( 1 : 6 ),            &
+                                                 FIELD3( 1 : 6 ), field7
+                              WRITE( outfd, 3081 ) FIELD2( 1 : 6 ),            &
+                                                 FIELD3( 1 : 6 ), field7
                            ELSE
                               IF ( loutff )                                    &
-                              WRITE( outff, 3084 ) FIELD2(1:6),                &
-                                                 FIELD3(1:6), field7
-                              WRITE( outfd, 3084 ) FIELD2(1:6),                &
-                                                 FIELD3(1:6), field7
+                              WRITE( outff, 3084 ) FIELD2( 1 : 6 ),            &
+                                                 FIELD3( 1 : 6 ), field7
+                              WRITE( outfd, 3084 ) FIELD2( 1 : 6 ),            &
+                                                 FIELD3( 1 : 6 ), field7
                            END IF
                         ELSE
                         IF ( .NOT. startf ) THEN
                               IF ( loutff )                                    &
-                              WRITE( outff, 3082 ) FIELD2(1:6),                &
-                                                 FIELD3(1:6), field7
-                              WRITE( outfd, 3082 ) FIELD2(1:6),                &
-                                                 FIELD3(1:6), field7
+                              WRITE( outff, 3082 ) FIELD2( 1 : 6 ),            &
+                                                 FIELD3( 1 : 6 ), field7
+                              WRITE( outfd, 3082 ) FIELD2( 1 : 6 ),            &
+                                                 FIELD3( 1 : 6 ), field7
                            ELSE
                               IF ( loutff )                                    &
-                              WRITE( outff, 3085 ) FIELD2(1:6),                &
-                                                 FIELD3(1:6), field7
-                              WRITE( outfd, 3085 ) FIELD2(1:6),                &
-                                                 FIELD3(1:6), field7
+                              WRITE( outff, 3085 ) FIELD2( 1 : 6 ),            &
+                                                 FIELD3( 1 : 6 ), field7
+                              WRITE( outfd, 3085 ) FIELD2( 1 : 6 ),            &
+                                                 FIELD3( 1 : 6 ), field7
                            END IF
                         END IF   
                      END IF
                   ELSE
-                     IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                     IF ( field1( 2 : 2 ) == '+' ) THEN
                         IF ( startp ) THEN
 
 ! --------- continuation of a parameter assignment
@@ -10781,33 +11788,33 @@
                END IF
             ELSE
                startp = .FALSE.
-               IF ( FIELD1( 1: 1 ) == 'F' ) THEN
+               IF ( field1( 1 : 1 ) == 'F' ) THEN
 
 !  set the function value
 
-                  IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+                  IF ( field1( 2 : 2 ) == ' ' ) THEN
                      startf = .TRUE.
                      endoff = .FALSE.
 
 !  set up the transformations for the element
 
                      IF ( setran ) THEN
-                         CALL OUTRN2( nelv, ninv, U, outff, outfd,             &
-                                      outra, ENAMES( js + 1 ),                 &
-                                      INAMES( is + 1 ), single, ad0 )
+                         CALL OUTRANGE_ad( nelv, ninv, U, outff, outfd,        &
+                                           outra, EVNAMES( js + 1 ),           &
+                                           IVNAMES( is + 1 ), single, ad0 )
                          setran = .FALSE.
                      END IF
 
 ! --------- set elemental parameters
 
-                     k1 = IEPA( itype )
-                     DO 485 k = k1, IEPA( itype + 1 ) - 1
+                     k1 = ELP( itype )
+                     DO 485 k = k1, ELP( itype + 1 ) - 1
                         ivar = k - k1 + 1
                         IF ( loutff )                                          &
-                        WRITE( outff, 3071 ) EPNAME( k ),                      &
-                        FIELDI( 18 )(1:6), FIELDI( 20 )(1:6), ivar
-                        WRITE( outfd, 3071 ) EPNAME( k ),                      &
-                            FIELDI( 18 )(1:6), FIELDI( 20 )(1:6), ivar
+                        WRITE( outff, 3071 ) EPNAMES( k ),                     &
+                        FIELDI( 18 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), ivar
+                        WRITE( outfd, 3071 ) EPNAMES( k ),                     &
+                            FIELDI( 18 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), ivar
   485                CONTINUE
 
 !  include the global parameters
@@ -10824,11 +11831,11 @@
 ! --------- start f
 
                      IF ( loutff )                                             &
-                     WRITE( outff, 3100 ) FIELDI( 12 )(1:6),                   &
-                     FIELDI( 3 )(1:6), FIELDI( 13 )(1:6), field7
+                     WRITE( outff, 3100 ) FIELDI( 12 )( 1 : 6 ),               &
+                     FIELDI( 3 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 ), field7
                      WRITE( outfd, 3101 ) field7
                   ELSE
-                     IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                     IF ( field1( 2 : 2 ) == '+' ) THEN
                         IF ( startf ) THEN
 
 ! --------- continuation of f
@@ -10842,8 +11849,7 @@
                         END IF
                      END IF
                   END IF
-               ELSE IF ( FIELD1( 1: 1 ) == 'G' .OR.                            &
-                         FIELD1( 1: 1 ) == 'H' ) THEN
+             ELSE IF ( field1( 1 : 1 ) == 'G' .OR. field1( 1 : 1 ) == 'H' ) THEN
                   IF ( startf .AND. .NOT. endoff ) THEN
                      IF ( loutff ) THEN
                         WRITE( outff, 3120 )
@@ -10851,18 +11857,18 @@
                      END IF
                      IF ( iad0 == 1 ) THEN
                         WRITE( outfd, 3122 )                                   &
-                           FIELDI( 12 )(1:6), FIELDI( 3  )(1:6),               &
-                           FIELDI( 13 )(1:6), FIELDI( 3  )(1:6),               &
-                           FIELDI( 17 )(1:6), FIELDI( 17 )(1:6),               &
+                           FIELDI( 12 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),       &
+                           FIELDI( 13 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),       &
+                           FIELDI( 17 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),       &
                            ninvar
                      ELSE
                         WRITE( outfd, 3123 )                                   &
-                           FIELDI( 12 )(1:6), FIELDI( 3  )(1:6),               &
-                           FIELDI( 13 )(1:6), FIELDI( 3  )(1:6),               &
-                           FIELDI( 17 )(1:6), FIELDI( 17 )(1:6),               &
+                           FIELDI( 12 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),       &
+                           FIELDI( 13 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),       &
+                           FIELDI( 17 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),       &
                            ninvar
                      END IF
-                     WRITE( outfd, 3150 ) FIELDI( 12 )(1:6)
+                     WRITE( outfd, 3150 ) FIELDI( 12 )( 1 : 6 )
                      IF ( iad0 == 1 ) THEN
                        WRITE( outfd, 3151 ) 
                      ELSE
@@ -10872,13 +11878,11 @@
                         DO 511 is = 1, js
                            ihvar = ( js * ( js - 1 ) ) / 2 + is
                            IF ( is == js ) THEN
-                              WRITE( outfd, 3163 )                             &
-                                 FIELDI(  3 )(1:6),                            &
-                                 FIELDI( 15 )(1:6), ihvar, ihvar
+                              WRITE( outfd, 3163 ) FIELDI(  3 )( 1 : 6 ),      &
+                                 FIELDI( 15 )( 1 : 6 ), ihvar, ihvar
                            ELSE
-                              WRITE( outfd, 3164 )                             &
-                                 FIELDI(  3 )(1:6),                            &
-                                 FIELDI( 15 )(1:6), ihvar, ihvar
+                              WRITE( outfd, 3164 ) FIELDI(  3 )( 1 : 6 ),      &
+                                 FIELDI( 15 )( 1 : 6 ), ihvar, ihvar
                            END IF
   511                   CONTINUE
   512                CONTINUE   
@@ -10905,9 +11909,9 @@
          IF ( out > 0 ) WRITE( out, 2520 )
          RETURN
       END IF
-!     if ( neltyp > 0 ) go to 930
+!     if ( neltype > 0 ) go to 930
       qprod = .FALSE.
-      DO 591 itype = 1, MIN( 2, neltyp ) 
+      DO 591 itype = 1, MIN( 2, neltype ) 
          IF ( ETYPES( itype ) /= cqsqr .AND.                                   &
               ETYPES( itype ) /= cqprod ) GO TO 930
          IF ( ETYPES( itype ) == cqprod ) qprod = .TRUE.
@@ -10938,178 +11942,174 @@
       ELSE
          ad0 = 'AD02'
       END IF
-      IF ( neltyp == 0 ) THEN
-         IF ( single ) THEN
-            IF ( loutff ) WRITE( outff, 3003 ) FIELDI( 1 )(1:6),               &
-           FIELDI(  3 )(1:6), FIELDI(  4 )(1:6),                               &
-           FIELDI( 18 )(1:6), ( FIELDI(  i )(1:6), i = 5, 10 ),                &
-           FIELDI( 19 )(1:6), FIELDI( 11 )(1:6),                               &
-         ( FIELDI(  i )(1:6), i = 22, 31 ),                                    &
-           FIELDI( 12 )(1:6), FIELDI( 32 )(1:6),                               &
-           FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                               &
-         ( FIELDI(  i )(1:6), i = 22, 32 ),                                    &
-           FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                               &
-           FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                               &
-           FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                               &
-           FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                               &
-           FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                               &
-           FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                               &
-           FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                               &
-           FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                               &
-           FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                               &
-           FIELDI( 18 )(1:6), FIELDI( 31 )(1:6), pname, TRIM( version )
-            WRITE( outfd, 3007 ) FIELDI( 33 )(1:6),                            &
-           FIELDI(  3 )(1:6), FIELDI(  4 )(1:6),                               &
-           FIELDI( 18 )(1:6), ( FIELDI(  i )(1:6), i = 5, 10 ),                &
-           FIELDI( 19 )(1:6), FIELDI( 11 )(1:6),                               &
-         ( FIELDI(  i )(1:6), i = 22, 31 ),                                    &
-           FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), ad0, aorb,                    &
-           FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                               &
-         ( FIELDI(  i )(1:6), i = 22, 32 ),                                    &
-           FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                               &
-           FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                               &
-           FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                               &
-           FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                               &
-           FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                               &
-           FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                               &
-           FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                               &
-           FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                               &
-           FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                               &
-           FIELDI( 18 )(1:6), FIELDI( 31 )(1:6), pname, TRIM( version )
-         ELSE   
-            IF ( loutff ) WRITE( outff, 3002 ) FIELDI( 1 )(1:6),               &
-          FIELDI(  3 )(1:6), FIELDI(  4 )(1:6),                                &
-          FIELDI( 18 )(1:6), ( FIELDI(  i )(1:6), i = 5, 10 ),                 &
-          FIELDI( 19 )(1:6), FIELDI( 11 )(1:6),                                &
-        ( FIELDI(  i )(1:6), i = 22, 31 ),                                     &
-          FIELDI( 12 )(1:6), FIELDI( 32 )(1:6),                                &
-          FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                                &
-        ( FIELDI(  i )(1:6), i = 22, 32 ),                                     &
-          FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                                &
-          FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                                &
-          FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                &
-          FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                &
-          FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                &
-          FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                &
-          FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                &
-          FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                &
-          FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                &
-          FIELDI( 18 )(1:6), FIELDI( 31 )(1:6), pname, TRIM( version )
-            WRITE( outfd, 3006 ) FIELDI( 33 )(1:6),                            &
-          FIELDI(  3 )(1:6), FIELDI(  4 )(1:6),                                &
-          FIELDI( 18 )(1:6), ( FIELDI(  i )(1:6), i = 5, 10 ),                 &
-          FIELDI( 19 )(1:6), FIELDI( 11 )(1:6),                                &
-        ( FIELDI(  i )(1:6), i = 22, 31 ),                                     &
-          FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), ad0, aorb,                     &
-          FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                                &
-        ( FIELDI(  i )(1:6), i = 22, 32 ),                                     &
-          FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                                &
-          FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                                &
-          FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                &
-          FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                &
-          FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                &
-          FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                &
-          FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                &
-          FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                &
-          FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                &
-          FIELDI( 18 )(1:6), FIELDI( 31 )(1:6), pname, TRIM( version )
-         END IF
-         IF ( loutff ) WRITE( outff, 3009 ) FIELDI( 32 )(1:6)
-         WRITE( outfd, 3009 ) FIELDI( 32 )(1:6)
-         IF ( loutff ) WRITE( outff, 3201 )
-!        if ( iad0 == 2 ) then
-!          write( ioutfd, 3203 )
-!        else
-            WRITE( outfd, 3201 )
-!        end if
+      IF ( neltype == 0 ) THEN
+        IF ( single ) THEN
+          IF ( loutff ) WRITE( outff, 3003 ) FIELDI( 1 )( 1 : 6 ),             &
+           FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ),                       &
+           FIELDI( 18 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ),        &
+           FIELDI( 19 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),                       &
+         ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),                                &
+           FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ),                       &
+           FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                       &
+         ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                &
+           FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                       &
+           FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                       &
+           FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                       &
+           FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                       &
+           FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                       &
+           FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                       &
+           FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                       &
+           FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                       &
+           FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                       &
+           FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ), pname, TRIM( version )
+          WRITE( outfd, 3007 ) FIELDI( 33 )( 1 : 6 ),                          &
+           FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ),                       &
+           FIELDI( 18 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ),        &
+           FIELDI( 19 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),                       &
+         ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),                                &
+           FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), ad0, aorb,            &
+           FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                       &
+         ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                &
+           FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                       &
+           FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                       &
+           FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                       &
+           FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                       &
+           FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                       &
+           FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                       &
+           FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                       &
+           FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                       &
+           FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                       &
+           FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ), pname, TRIM( version )
+        ELSE   
+          IF ( loutff ) WRITE( outff, 3002 ) FIELDI( 1 )( 1 : 6 ),             &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ),                        &
+          FIELDI( 18 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ),         &
+          FIELDI( 19 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),                        &
+        ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),                                 &
+          FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ),                        &
+          FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                        &
+        ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                 &
+          FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                        &
+          FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                        &
+          FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                        &
+          FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                        &
+          FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                        &
+          FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                        &
+          FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                        &
+          FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                        &
+          FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                        &
+          FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ), pname, TRIM( version )
+          WRITE( outfd, 3006 ) FIELDI( 33 )( 1 : 6 ),                          &
+          FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ),                        &
+          FIELDI( 18 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ),         &
+          FIELDI( 19 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),                        &
+        ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),                                 &
+          FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), ad0, aorb,             &
+          FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                        &
+        ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                 &
+          FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                        &
+          FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                        &
+          FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                        &
+          FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                        &
+          FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                        &
+          FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                        &
+          FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                        &
+          FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                        &
+          FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                        &
+          FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ), pname, TRIM( version )
+        END IF
+        IF ( loutff ) WRITE( outff, 3009 ) FIELDI( 32 )( 1 : 6 )
+        WRITE( outfd, 3009 ) FIELDI( 32 )( 1 : 6 )
+        IF ( loutff ) WRITE( outff, 3201 )
+        WRITE( outfd, 3201 )
       ELSE
-         IF ( single ) THEN
-           IF ( loutff ) WRITE( outff, 3001 ) FIELDI( 1 )(1:6),                &
-       FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),                &
-       ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                    &
-        FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),                  &
-       FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), FIELDI(  5 )(1:6),                &
-       FIELDI( 12 )(1:6), ( FIELDI(  i )(1:6), i = 22, 32 ),                   &
-       FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                                   &
-       FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                                   &
-       FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                   &
-       FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                   &
-       FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                   &
-       FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                   &
-       FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                   &
-       FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                   &
-       FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                   &
-       FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                                   &
-       pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),           &
-       FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                                   &
-       FIELDI( 17 )(1:6), FIELDI( 20 )(1:6), FIELDI( 21 )(1:6)
-            WRITE( outfd, 3001 ) FIELDI( 33 )(1:6),                            &
-       FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),                &
-       ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                    &
-       FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),                   &
-       FIELDI( 12 )(1:6), FIELDI( 32 )(1:6),                                   &
-       FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                                   &
-       ( FIELDI(  i )(1:6), i = 22, 32 ),                                      &
-       FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                                   &
-       FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                                   &
-       FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                   &
-       FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                   &
-       FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                   &
-       FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                   &
-       FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                   &
-       FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                   &
-       FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                   &
-       FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                                   &
-       pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),           &
-       FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                                   &
-       FIELDI( 17 )(1:6), FIELDI( 20 )(1:6), FIELDI( 21 )(1:6)
-            IF ( qprod ) THEN
-               IF ( loutff ) WRITE( outff, 3019 ) 'X     ', 'Y     '
-               WRITE( outfd, 3019 ) 'X     ', 'Y     '
-            ELSE
-               IF ( loutff ) WRITE( outff, 3019 ) 'X     '
-               WRITE( outfd, 3019 ) 'X     '
-            END IF
-         ELSE   
-            IF ( loutff ) WRITE( outff, 3000 ) FIELDI( 1 )(1:6),               &
-       FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),                &
-       ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                    &
-       FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),                   &
-       FIELDI( 12 )(1:6), FIELDI( 32 )(1:6),                                   &
-       FIELDI(  5 )(1:6), FIELDI( 12 )(1:6),                                   &
-       ( FIELDI(  i )(1:6), i = 22, 32 ), FIELDI(  6 )(1:6),                   &
-       FIELDI( 22 )(1:6), FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                &
-       FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                   &
-       FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                   &
-       FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                   &
-       FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                   &
-       FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                   &
-       FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                   &
-       FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                   &
-       FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                                   &
-       pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),           &
-       FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                                   &
-       FIELDI( 17 )(1:6), FIELDI( 20 )(1:6),                                   &
-       FIELDI( 21 )(1:6)
-            WRITE( outfd, 3000 ) FIELDI( 33 )(1:6),                            &
-       FIELDI(  3 )(1:6), FIELDI(  4 )(1:6), FIELDI( 18 )(1:6),                &
-       ( FIELDI(  i )(1:6), i = 5, 10 ), FIELDI( 19 )(1:6),                    &
-       FIELDI( 11 )(1:6), ( FIELDI(  i )(1:6), i = 22, 31 ),                   &
-       FIELDI( 12 )(1:6), FIELDI( 32 )(1:6), FIELDI(  5 )(1:6),                &
-       FIELDI( 12 )(1:6), ( FIELDI(  i )(1:6), i = 22, 32 ),                   &
-       FIELDI(  6 )(1:6), FIELDI( 22 )(1:6),                                   &
-       FIELDI(  7 )(1:6), FIELDI( 23 )(1:6),                                   &
-       FIELDI(  8 )(1:6), FIELDI( 24 )(1:6),                                   &
-       FIELDI(  9 )(1:6), FIELDI( 25 )(1:6),                                   &
-       FIELDI( 10 )(1:6), FIELDI( 26 )(1:6),                                   &
-       FIELDI( 19 )(1:6), FIELDI( 27 )(1:6),                                   &
-       FIELDI( 11 )(1:6), FIELDI( 28 )(1:6),                                   &
-       FIELDI(  3 )(1:6), FIELDI( 29 )(1:6),                                   &
-       FIELDI(  4 )(1:6), FIELDI( 30 )(1:6),                                   &
-       FIELDI( 18 )(1:6), FIELDI( 31 )(1:6),                                   &
-       pname, TRIM( version ), FIELDI( 13 )(1:6), FIELDI( 14 )(1:6),           &
-       FIELDI( 15 )(1:6), FIELDI( 16 )(1:6),                                   &
-       FIELDI( 17 )(1:6), FIELDI( 20 )(1:6), FIELDI( 21 )(1:6)
+        IF ( single ) THEN
+          IF ( loutff ) WRITE( outff, 3001 ) FIELDI( 1 )( 1 : 6 ),             &
+       FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ),    &
+       ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),            &
+        FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),          &
+       FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),    &
+       FIELDI( 12 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),           &
+       FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                           &
+       FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                           &
+       FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                           &
+       FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                           &
+       FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                           &
+       FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                           &
+       FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                           &
+       FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                           &
+       FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                           &
+       FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                           &
+       pname, TRIM( version ), FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),   &
+       FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                           &
+       FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), FIELDI( 21 )( 1 : 6 )
+         WRITE( outfd, 3001 ) FIELDI( 33 )( 1 : 6 ),                           &
+       FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ),    &
+       ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),            &
+       FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),           &
+       FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ),                           &
+       FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                           &
+       ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),                                  &
+       FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                           &
+       FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                           &
+       FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                           &
+       FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                           &
+       FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                           &
+       FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                           &
+       FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                           &
+       FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                           &
+       FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                           &
+       FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                           &
+       pname, TRIM( version ), FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),   &
+       FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                           &
+       FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), FIELDI( 21 )( 1 : 6 )
+          IF ( qprod ) THEN
+            IF ( loutff ) WRITE( outff, 3019 ) 'X     ', 'Y     '
+            WRITE( outfd, 3019 ) 'X     ', 'Y     '
+          ELSE
+            IF ( loutff ) WRITE( outff, 3019 ) 'X     '
+             WRITE( outfd, 3019 ) 'X     '
+          END IF
+        ELSE   
+          IF ( loutff ) WRITE( outff, 3000 ) FIELDI( 1 )( 1 : 6 ),             &
+       FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ),    &
+       ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),            &
+       FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),           &
+       FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ),                           &
+       FIELDI(  5 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),                           &
+       ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ), FIELDI(  6 )( 1 : 6 ),           &
+       FIELDI( 22 )( 1 : 6 ), FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),    &
+       FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                           &
+       FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                           &
+       FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                           &
+       FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                           &
+       FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                           &
+       FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                           &
+       FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                           &
+       FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                           &
+       pname, TRIM( version ), FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),   &
+       FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                           &
+       FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ),                           &
+       FIELDI( 21 )( 1 : 6 )
+          WRITE( outfd, 3000 ) FIELDI( 33 )( 1 : 6 ),                          &
+       FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ),    &
+       ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),            &
+       FIELDI( 11 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 31 ),           &
+       FIELDI( 12 )( 1 : 6 ), FIELDI( 32 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),    &
+       FIELDI( 12 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 22, 32 ),           &
+       FIELDI(  6 )( 1 : 6 ), FIELDI( 22 )( 1 : 6 ),                           &
+       FIELDI(  7 )( 1 : 6 ), FIELDI( 23 )( 1 : 6 ),                           &
+       FIELDI(  8 )( 1 : 6 ), FIELDI( 24 )( 1 : 6 ),                           &
+       FIELDI(  9 )( 1 : 6 ), FIELDI( 25 )( 1 : 6 ),                           &
+       FIELDI( 10 )( 1 : 6 ), FIELDI( 26 )( 1 : 6 ),                           &
+       FIELDI( 19 )( 1 : 6 ), FIELDI( 27 )( 1 : 6 ),                           &
+       FIELDI( 11 )( 1 : 6 ), FIELDI( 28 )( 1 : 6 ),                           &
+       FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                           &
+       FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                           &
+       FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ),                           &
+       pname, TRIM( version ), FIELDI( 13 )( 1 : 6 ), FIELDI( 14 )( 1 : 6 ),   &
+       FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                           &
+       FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ), FIELDI( 21 )( 1 : 6 )
             IF ( qprod ) THEN
                IF ( loutff ) WRITE( outff, 3020 ) 'X     ', 'Y     '
                WRITE( outfd, 3020 ) 'X     ', 'Y     '
@@ -11118,52 +12118,52 @@
                WRITE( outfd, 3020 ) 'X     '
             END IF
          END IF
-         IF ( loutff ) WRITE( outff, 3009 ) FIELDI( 32 )(1:6)
-         WRITE( outfd, 3009 ) FIELDI( 32 )(1:6)
+         IF ( loutff ) WRITE( outff, 3009 ) FIELDI( 32 )( 1 : 6 )
+         WRITE( outfd, 3009 ) FIELDI( 32 )( 1 : 6 )
          IF ( loutff ) WRITE( outff, 3050 ) nloop,                             &
-                FIELDI( 21 )(1:6), FIELDI(  5 )(1:6),                          &
-                FIELDI( 13 )(1:6), FIELDI( 11 )(1:6),                          &
-                FIELDI( 21 )(1:6),                                             &
-                FIELDI( 16 )(1:6), FIELDI(  7 )(1:6),                          &
-                FIELDI( 13 )(1:6), FIELDI( 17 )(1:6),                          &
-                FIELDI(  9 )(1:6), FIELDI( 13 )(1:6),                          &
-                FIELDI( 20 )(1:6), FIELDI( 19 )(1:6),                          &
-                FIELDI( 13 )(1:6),                                             &
-                FIELDI( 12 )(1:6), FIELDI( 15 )(1:6),                          &
-                FIELDI( 10 )(1:6), FIELDI( 13 )(1:6)
+                FIELDI( 21 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),                  &
+                FIELDI( 13 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),                  &
+                FIELDI( 21 )( 1 : 6 ),                                         &
+                FIELDI( 16 )( 1 : 6 ), FIELDI(  7 )( 1 : 6 ),                  &
+                FIELDI( 13 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),                  &
+                FIELDI(  9 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 ),                  &
+                FIELDI( 20 )( 1 : 6 ), FIELDI( 19 )( 1 : 6 ),                  &
+                FIELDI( 13 )( 1 : 6 ),                                         &
+                FIELDI( 12 )( 1 : 6 ), FIELDI( 15 )( 1 : 6 ),                  &
+                FIELDI( 10 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 )
          WRITE( outfd, 3050 ) nloop,                                           &
-                FIELDI( 21 )(1:6), FIELDI(  5 )(1:6),                          &
-                FIELDI( 13 )(1:6), FIELDI( 11 )(1:6),                          &
-                FIELDI( 21 )(1:6),                                             &
-                FIELDI( 16 )(1:6), FIELDI(  7 )(1:6),                          &
-                FIELDI( 13 )(1:6), FIELDI( 17 )(1:6),                          &
-                FIELDI(  9 )(1:6), FIELDI( 13 )(1:6),                          &
-                FIELDI( 20 )(1:6), FIELDI( 19 )(1:6),                          &
-                FIELDI( 13 )(1:6),                                             &
-                FIELDI( 12 )(1:6), FIELDI( 15 )(1:6),                          &
-                FIELDI( 10 )(1:6), FIELDI( 13 )(1:6)
-         IF ( neltyp > 1 ) THEN
+                FIELDI( 21 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),                  &
+                FIELDI( 13 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),                  &
+                FIELDI( 21 )( 1 : 6 ),                                         &
+                FIELDI( 16 )( 1 : 6 ), FIELDI(  7 )( 1 : 6 ),                  &
+                FIELDI( 13 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),                  &
+                FIELDI(  9 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 ),                  &
+                FIELDI( 20 )( 1 : 6 ), FIELDI( 19 )( 1 : 6 ),                  &
+                FIELDI( 13 )( 1 : 6 ),                                         &
+                FIELDI( 12 )( 1 : 6 ), FIELDI( 15 )( 1 : 6 ),                  &
+                FIELDI( 10 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 )
+         IF ( neltype > 1 ) THEN
             IF ( loutff ) WRITE( outff, 3051 )                                 &
-               FIELDI( 14 )(1:6), FIELDI(  6 )(1:6),                           &
-               FIELDI( 13 )(1:6), ( i, i = 1, neltyp )
+               FIELDI( 14 )( 1 : 6 ), FIELDI(  6 )( 1 : 6 ),                   &
+               FIELDI( 13 )( 1 : 6 ), ( i, i = 1, neltype )
             WRITE( outfd, 3051 )                                               &
-               FIELDI( 14 )(1:6), FIELDI(  6 )(1:6),                           &
-               FIELDI( 13 )(1:6), ( i, i = 1, neltyp )
-           IF ( loutff ) WRITE( outff, 3052 ) FIELDI( 14 )(1:6)
-            WRITE( outfd, 3052 ) FIELDI( 14 )(1:6)
+               FIELDI( 14 )( 1 : 6 ), FIELDI(  6 )( 1 : 6 ),                   &
+               FIELDI( 13 )( 1 : 6 ), ( i, i = 1, neltype )
+           IF ( loutff ) WRITE( outff, 3052 ) FIELDI( 14 )( 1 : 6 )
+            WRITE( outfd, 3052 ) FIELDI( 14 )( 1 : 6 )
          END IF
 
 !  make sure that quadratic Hessian terms are included
 
-         DO 640 itype = 1, MIN( 2, neltyp )
+         DO 640 itype = 1, MIN( 2, neltype )
 
 !  diagonal term
 
             IF ( ETYPES( itype ) == cqsqr ) THEN
                IF ( loutff ) WRITE( outff, 3060 ) ETYPES( itype )
                WRITE( outfd, 3060 ) ETYPES( itype )
-               IF ( neltyp > 1 ) WRITE( outff, 3061 ) itype
-               IF ( neltyp > 1 ) WRITE( outfd, 3061 ) itype
+               IF ( neltype > 1 ) WRITE( outff, 3061 ) itype
+               IF ( neltype > 1 ) WRITE( outfd, 3061 ) itype
                IF ( single ) THEN
                  IF ( loutff ) WRITE( outff, 3055 ) 'E'
                  WRITE( outfd, 3053 ) 'E', 'E'
@@ -11171,9 +12171,9 @@
                  IF ( loutff ) WRITE( outff, 3055 ) 'D'
                  WRITE( outfd, 3053 ) 'D', 'D'
                END IF
-               LDEFND( itype ) = .TRUE.
+               DEFINED( itype ) = .TRUE.
                isetty = isetty + 1
-               IF ( isetty < neltyp ) THEN
+               IF ( isetty < neltype ) THEN
                   IF ( loutff ) WRITE( outff, 3191 ) nloop
                   WRITE( outfd, 3191 ) nloop
                END IF
@@ -11183,7 +12183,7 @@
             ELSE IF ( ETYPES( itype ) == cqprod ) THEN
                IF ( loutff ) WRITE( outff, 3060 ) ETYPES( itype )
                WRITE( outfd, 3060 ) ETYPES( itype )
-               IF ( neltyp > 1 ) THEN
+               IF ( neltype > 1 ) THEN
                   IF ( loutff ) WRITE( outff, 3061 ) itype
                   WRITE( outfd, 3061 ) itype
                END IF
@@ -11194,9 +12194,9 @@
                  IF ( loutff ) WRITE( outff, 3056 )
                  WRITE( outfd, 3054 ) 'D', 'D', 'D'
                END IF
-               LDEFND( itype ) = .TRUE.
+               DEFINED( itype ) = .TRUE.
                isetty = isetty + 1
-               IF ( isetty < neltyp ) THEN
+               IF ( isetty < neltype ) THEN
                   IF ( loutff ) WRITE( outff, 3191 ) nloop
                   WRITE( outfd, 3191 ) nloop
                END IF
@@ -11249,18 +12249,18 @@
                END IF
                IF ( iad0 == 1 ) THEN
                   WRITE( outfd, 3122 )                                         &
-                     FIELDI( 12 )(1:6), FIELDI( 3  )(1:6),                     &
-                     FIELDI( 13 )(1:6), FIELDI( 3  )(1:6),                     &
-                     FIELDI( 17 )(1:6), FIELDI( 17 )(1:6),                     &
+                     FIELDI( 12 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),             &
+                     FIELDI( 13 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),             &
+                     FIELDI( 17 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),             &
                      ninvar
                ELSE
                   WRITE( outfd, 3123 )                                         &
-                     FIELDI( 12 )(1:6), FIELDI( 3  )(1:6),                     &
-                     FIELDI( 13 )(1:6), FIELDI( 3  )(1:6),                     &
-                     FIELDI( 17 )(1:6), FIELDI( 17 )(1:6),                     &
+                     FIELDI( 12 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),             &
+                     FIELDI( 13 )( 1 : 6 ), FIELDI( 3  )( 1 : 6 ),             &
+                     FIELDI( 17 )( 1 : 6 ), FIELDI( 17 )( 1 : 6 ),             &
                      ninvar
                END IF
-               WRITE( outfd, 3150 ) FIELDI( 12 )(1:6)
+               WRITE( outfd, 3150 ) FIELDI( 12 )( 1 : 6 )
                IF ( iad0 == 1 ) THEN
                  WRITE( outfd, 3151 ) 
                ELSE
@@ -11270,13 +12270,11 @@
                   DO 901 is = 1, js
                      ihvar = ( js * ( js - 1 ) ) / 2 + is
                      IF ( is == js ) THEN
-                        WRITE( outfd, 3163 )                                   &
-                           FIELDI(  3 )(1:6),                                  &
-                           FIELDI( 15 )(1:6), ihvar, ihvar
+                        WRITE( outfd, 3163 ) FIELDI(  3 )( 1 : 6 ),            &
+                           FIELDI( 15 )( 1 : 6 ), ihvar, ihvar
                      ELSE
-                        WRITE( outfd, 3164 )                                   &
-                           FIELDI(  3 )(1:6),                                  &
-                           FIELDI( 15 )(1:6), ihvar, ihvar
+                        WRITE( outfd, 3164 ) FIELDI(  3 )( 1 : 6 ),            &
+                           FIELDI( 15 )( 1 : 6 ), ihvar, ihvar
                      END IF
   901             CONTINUE
   902          CONTINUE   
@@ -11290,9 +12288,9 @@
             IF ( out > 0 ) WRITE( out, 2610 )
             GO TO 800
          END IF
-         IF ( isetty < neltyp .AND. loutff )                                   &
+         IF ( isetty < neltype .AND. loutff )                                   &
             WRITE( outff, 3191 ) nloop
-         IF ( isetty < neltyp ) WRITE( outfd, 3191 ) nloop
+         IF ( isetty < neltype ) WRITE( outfd, 3191 ) nloop
       END IF
 
 ! ---------- successful run. wind up output
@@ -11305,18 +12303,26 @@
         WRITE( outfd, 3200 ) nloop
       END IF
       IF ( nointe ) WRITE( outra, 4070 )
-      IF ( neltyp == 0 ) WRITE( outra, 4080 )
+      IF ( neltype == 0 ) WRITE( outra, 4080 )
       WRITE( outra, 4090 )
 
 !   check that all element types have been defined
 
   930 CONTINUE
-      DO 940 itype = 1, neltyp
-         IF ( .NOT. LDEFND( itype ) ) THEN
+      DO 940 itype = 1, neltype
+         IF ( .NOT. DEFINED( itype ) ) THEN
             status = 68
             IF ( out > 0 ) WRITE( out, 2680 ) ETYPES( itype )
          END IF
   940 CONTINUE
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from MAKE_elfun_ad-',                        &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
@@ -11683,9 +12689,9 @@
                      A6,'(',A6,'(',A6,'+1:',A6,'+', i6, ')),', /,              &
               '     *                      DATA_AD02, ERROR_AD02, 0)' )
  4000 FORMAT( '      SUBROUTINE RANGE( IELEMN, TRANSP, W1,',                   &
-              ' W2, NELVAR, ninvar,', /,                                       &
+              ' W2, nelvar, ninvar,', /,                                       &
               '     *                  itype, LW1, LW2 )', /,                  &
-              '      INTEGER IELEMN, NELVAR, ninvar, itype,',                  &
+              '      INTEGER IELEMN, nelvar, ninvar, itype,',                  &
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      DOUBLE PRECISION W1( LW1 ), W2( LW2 )', /,                &
@@ -11696,9 +12702,9 @@
               'C', /,                                                          &
               '      INTEGER I' )
  4001 FORMAT( '      SUBROUTINE RANGE( IELEMN, TRANSP, W1,',                   &
-              ' W2, NELVAR, ninvar,', /,                                       &
+              ' W2, nelvar, ninvar,', /,                                       &
               '     *                  itype, LW1, LW2 )', /,                  &
-              '      INTEGER IELEMN, NELVAR, ninvar, itype,',                  &
+              '      INTEGER IELEMN, nelvar, ninvar, itype,',                  &
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      REAL             W1( LW1 ), W2( LW2 )', /,                &
@@ -11709,9 +12715,9 @@
               'C', /,                                                          &
               '      INTEGER I' )
  4002 FORMAT( '      SUBROUTINE RANGE( IELEMN, TRANSP, W1,',                   &
-              ' W2, NELVAR, ninvar,', /,                                       &
+              ' W2, nelvar, ninvar,', /,                                       &
               '     *                  itype, LW1, LW2 )', /,                  &
-              '      INTEGER IELEMN, NELVAR, ninvar, itype,',                  &
+              '      INTEGER IELEMN, nelvar, ninvar, itype,',                  &
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      DOUBLE PRECISION W1( LW1 ), W2( LW2 )', /,                &
@@ -11721,9 +12727,9 @@
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
               'C' )
  4003 FORMAT( '      SUBROUTINE RANGE( IELEMN, TRANSP, W1,',                   &
-              ' W2, NELVAR, ninvar,', /,                                       &
+              ' W2, nelvar, ninvar,', /,                                       &
               '     *                  itype, LW1, LW2 )', /,                  &
-              '      INTEGER IELEMN, NELVAR, ninvar, itype,',                  &
+              '      INTEGER IELEMN, nelvar, ninvar, itype,',                  &
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      REAL             W1( LW1 ), W2( LW2 )', /,                &
@@ -11742,7 +12748,7 @@
               'C  Elements without internal variables.', /,                    &
               'C', /,                                                          &
               '99998 CONTINUE', /,                                             &
-              '      DO 99999 i = 1, NELVAR', /,                               &
+              '      DO 99999 i = 1, nelvar', /,                               &
               '         W2( i ) = W1( i )', /,                                 &
               '99999 CONTINUE', /,                                             &
               '      RETURN' )
@@ -11755,26 +12761,31 @@
 
 !-*-*-*-  S I F D E C O D E   M A K E _ g r o u p   S U B R O U T I N E  -*-*-*-
 
-      SUBROUTINE MAKE_group( input, out, outgr, status, ngrtyp,                &
-                             ngrmax, nlmax, ninmax, pname, ANAMES,             &
-                             RENAME, INNAME, LONAME, MINAME, EXNAME, GTYPES,   &
-                             LDEFND, GPNAME, IGPA, ngpmax, debug, length,      &
+      SUBROUTINE MAKE_group( input, out, outgr, status, ngtype,                &
+                             pname, GANAMES,                     &
+                             len_renames, RENAMES, len_innames, INNAMES,       &
+                             len_lonames, LONAMES, len_minames, MINAMES,       &
+                             len_exnames, EXNAMES,       &
+                             GPNAME, DEFINED, &
+                             GTYPES, GTYPESP_ptr, ngpmax, debug, length,    &
                              ITABLE, KEY, INLIST, single, nuline, gotlin,      &
                              print_level )
-      INTEGER :: input, out, outgr, status, length
-      INTEGER :: nlmax, ngrtyp, ninmax, ngpmax, ngrmax
-      INTEGER :: print_level
+      INTEGER :: input, out, outgr, status, length, print_level
+      INTEGER :: ngpmax, ngtype
+      INTEGER :: len_renames, len_innames, len_lonames, len_minames, len_exnames
       LOGICAL :: gotlin, debug, single
-      CHARACTER ( len = 8 ) :: pname
-      CHARACTER ( len = max_record_length ) :: nuline
-      INTEGER :: ITABLE( length ), IGPA( ngrmax )
+      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = max_record_length ) :: nuline
+      INTEGER :: ITABLE( length ), GTYPESP_ptr( ngtype + 1 )
       INTEGER :: INLIST( length )
-      LOGICAL :: LDEFND( nlmax  )
-      CHARACTER ( len = 12 ) :: KEY   ( length )
-      CHARACTER ( len = 10 ) :: RENAME( ninmax ), INNAME( ninmax )
-      CHARACTER ( len = 10 ) :: GPNAME( ngpmax ), EXNAME( ninmax )
-      CHARACTER ( len = 10 ) :: LONAME( ninmax ), GTYPES( ngrmax )
-      CHARACTER ( len = 10 ) :: ANAMES( ngrmax ), MINAME( ninmax )
+      LOGICAL, DIMENSION( ngtype ) :: DEFINED
+      CHARACTER ( LEN = 12 ) :: KEY   ( length )
+      CHARACTER ( LEN = 10 ) :: GTYPES( ngtype )
+      CHARACTER ( LEN = 10 ) :: GANAMES( ngtype ), GPNAME( ngpmax )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LONAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: MINAMES, EXNAMES
+
 
 !  -------------------------------------------------------------------
 !  make a group function evaluation subroutine from a gps group 
@@ -11803,99 +12814,70 @@
 !  see also http://www.cuter.rl.ac.uk/sifdec/Doc/sif.pdf
 !  and      http://www.numerical.rl.ac.uk/lancelot/sif/sifhtml.html
 
-!  returns with negative values of inform indicate that insufficient
+!  returns with negative values of status indicate that insufficient
 !  array space has been allowed, as follows:
 
-!    inform = - 1  when length not large enough
-!    inform = - 2  when max( ninnam, nrenam, nlonam, nenam, nminam )
-!                  > ninmax
+!    status = - 1  when length not large enough
+!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be 
+!                  extended further
 !  -------------------------------------------------------------------
+
+!  parameter definitions
+
+      INTEGER, PARAMETER :: mblank = 1, mfixed = 2, mfree = 3, mname = 4
+      INTEGER, PARAMETER :: mtemp = 5, mglob = 6, mindiv = 7, mendat = 8
+      INTEGER, PARAMETER :: iires = 20
+      INTEGER, PARAMETER :: nincrs = 2
+      INTEGER, PARAMETER :: maxnul = 20
+      INTEGER, DIMENSION( mendat ), PARAMETER :: LENIND                        &
+        = (/ 0, 12, 11, 6, 11, 7, 11, 6 /)
+      CHARACTER ( LEN = 12 ), DIMENSION( mendat ), PARAMETER :: INDIC8         &
+        = (/ '            ', 'FIXED FORMAT', 'FREE FORMAT ', 'GROUPS      ',   &
+             'TEMPORARIES ', 'GLOBALS     ', 'INDIVIDUALS ', 'ENDATA      '  /)
+      CHARACTER ( LEN = 8 ), DIMENSION( iires ), PARAMETER :: FIELDI           &
+        = (/ 'GROUP   ', 'GVALUE  ', 'LGVALU  ', 'FVALUE  ', 'NCALCG  ',       &
+             'ITYPEG  ', 'ICALCG  ', 'DERIVS  ', 'IGRTYP  ', 'IGROUP  ',       &
+             'GPVALU  ', 'ISTGPA  ', 'IPSTRT  ', 'JCALCG  ', 'LTYPEG  ',       &
+             'LSTGPA  ', 'LCALCG  ', 'LFVALU  ', 'LGPVLU  ', 'IGSTAT  ' /)
+      CHARACTER ( LEN = 6 ), DIMENSION( nincrs ), PARAMETER :: INCRSE          &
+        = (/ 'LENGTH', 'NINMAX' /)
 
 !  local variables
 
       INTEGER :: i, ifield, ifree, itype, intype, ivar, k1, k2
-      INTEGER :: ninnam, nloop, nrenam, nminam, npname
-      INTEGER :: nexnam, nincrs, lineno, iires, k, ilines, nlines
-      INTEGER :: mblank, mfixed, mfree, mname, mtemp, mglob
-      INTEGER :: mindiv, mendat, maxnul, nlonam
+      INTEGER :: ninnames, nloop, nrenames, nminames, npname
+      INTEGER :: nlonames, nexnames, lineno, k, ilines, nlines
+      INTEGER :: used_length, new_length, min_length, alloc_status
       LOGICAL :: defnam, endpar, endgen, firstg
-      LOGICAL :: setf, setg, seth, startp, fixed
-      LOGICAL :: endf
-      PARAMETER        ( iires = 20 )
-      PARAMETER        ( nincrs = 2 )
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 6 ) :: INCRSE( nincrs )
-      CHARACTER ( len = 8 ) :: field2, field3, FIELDI( iires )
-      CHARACTER ( len = 12 ) :: field
-      CHARACTER ( len = 41 ) :: field7
-
-!  parameter definitions
-
-      CHARACTER ( len = max_record_length ) :: blnkln
-      PARAMETER        ( mblank =  1, mfixed =  2, mfree = 3  )
-      PARAMETER        ( mname =  4, mtemp =  5 )
-      PARAMETER        ( mglob =  6, mindiv =  7, mendat =  8 )
-      INTEGER :: LENIND( mendat )
-      CHARACTER ( len = 12 ) :: INDIC8( mendat ), header
-      PARAMETER        ( maxnul = 20 )
-      CHARACTER ( len = 65 ) :: NULINA( maxnul )
-
-!  data declarations
-
-      DATA INCRSE / 'LENGTH', 'NINMAX' /
-      DATA INDIC8( mblank ) / '            ' /, LENIND( mblank ) / 0  / 
-      DATA INDIC8( mfixed ) / 'FIXED FORMAT' /, LENIND( mfixed ) / 12 /
-      DATA INDIC8( mfree  ) / 'FREE FORMAT ' /, LENIND( mfree  ) / 11 /
-      DATA INDIC8( mname  ) / 'GROUPS      ' /, LENIND( mname  ) / 6  /
-      DATA INDIC8( mtemp  ) / 'TEMPORARIES ' /, LENIND( mtemp  ) / 11 / 
-      DATA INDIC8( mglob  ) / 'GLOBALS     ' /, LENIND( mglob  ) / 7  /
-      DATA INDIC8( mindiv ) / 'INDIVIDUALS ' /, LENIND( mindiv ) / 11 / 
-      DATA INDIC8( mendat ) / 'ENDATA      ' /, LENIND( mendat ) / 6  /
-      DATA FIELDI(  1 ) / 'GROUP   ' /,  FIELDI(  2 ) / 'GVALUE  ' /
-      DATA FIELDI(  3 ) / 'LGVALU  ' /,  FIELDI(  4 ) / 'FVALUE  ' /
-      DATA FIELDI(  5 ) / 'NCALCG  ' /,  FIELDI(  6 ) / 'ITYPEG  ' /
-      DATA FIELDI(  7 ) / 'ICALCG  ' /,  FIELDI(  8 ) / 'DERIVS  ' /
-      DATA FIELDI(  9 ) / 'IGRTYP  ' /,  FIELDI( 10 ) / 'IGROUP  ' /
-      DATA FIELDI( 11 ) / 'GPVALU  ' /,  FIELDI( 12 ) / 'ISTGPA  ' /
-      DATA FIELDI( 13 ) / 'IPSTRT  ' /,  FIELDI( 14 ) / 'JCALCG  ' /
-      DATA FIELDI( 15 ) / 'LTYPEG  ' /,  FIELDI( 16 ) / 'LSTGPA  ' /
-      DATA FIELDI( 17 ) / 'LCALCG  ' /,  FIELDI( 18 ) / 'LFVALU  ' /
-      DATA FIELDI( 19 ) / 'LGPVLU  ' /,  FIELDI( 20 ) / 'IGSTAT  ' /
+      LOGICAL :: setf, setg, seth, startp, fixed, endf
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 8 ) :: field2, field3
+      CHARACTER ( LEN = 12 ) :: field, header
+      CHARACTER ( LEN = 24 ) :: bad_alloc
+      CHARACTER ( LEN = 41 ) :: field7
+      CHARACTER ( LEN = max_record_length ) :: blnkln
+      CHARACTER ( LEN = 65 ), DIMENSION( maxnul ) :: NULINA
 
       IF ( out > 0 ) WRITE( out, 2900 )
 
 !  set initial values for integer variables
 
-      ninnam = 0
-      nrenam = 0
-      nlonam = 0
-      nexnam = 0
-      nminam = 0
-      lineno = 0
-      intype = 1
-      ilines = 0
-      nlines = 0
+      ninnames = 0 ; nrenames = 0 ; nlonames = 0 ; nexnames = 0 ; nminames = 0
+      lineno = 0 ; intype = 1 ; ilines = 0 ; nlines = 0
 
 !  set initial values for logical variables
 
-      defnam = .FALSE.
-      endpar = .FALSE.
-      seth = .FALSE.
-      startp = .FALSE.
-      endgen = .FALSE.
-      firstg = .TRUE.
-      fixed = .TRUE.
+      defnam = .FALSE. ; endpar = .FALSE. ; seth = .FALSE. ; startp = .FALSE.
+      endgen = .FALSE. ; firstg = .TRUE. ; fixed = .TRUE.
 
 !  find which group-types are nontrivial
 
-      DO 20 itype = 1, ngrtyp
-         LDEFND( itype ) = .FALSE.
-   20 CONTINUE
+      DEFINED( : ngtype ) = .FALSE.
 
 !  insert the list of group-type arguments into the dictionary
 
-      DO 30 itype = 1, ngrtyp
-         field = ANAMES( itype ) // 'PG'
+      DO 30 itype = 1, ngtype
+         field = GANAMES( itype ) // 'PG'
          CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
          IF ( ifree <= 0 ) THEN
             IF ( ifree == 0 ) THEN
@@ -11903,20 +12885,27 @@
                GO TO 700
             END IF
          ELSE
-            nrenam = nrenam + 1
-            IF ( nrenam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nrenames = nrenames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nrenames - 1 ; min_length = nrenames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( RENAMES, len_renames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              END IF
+              len_renames = new_length
             END IF
-            RENAME( nrenam ) = ANAMES( itype )
+            RENAMES( nrenames ) = GANAMES( itype )
          END IF
    30 CONTINUE
 
 !  include the names of the group parameters used
 !  in this dictionary
 
-      IF ( ngrtyp > 0 ) THEN
-         npname = IGPA( ngrtyp + 1 ) - 1
+      IF ( ngtype > 0 ) THEN
+         npname = GTYPESP_ptr( ngtype + 1 ) - 1
          DO 40 i = 1, npname
             field = GPNAME( i ) // 'PG'
             CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
@@ -11926,12 +12915,19 @@
                   GO TO 700
                END IF
             ELSE
-               nrenam = nrenam + 1
-               IF ( nrenam > ninmax ) THEN
-                  status = - 2
-                  GO TO 700
+               IF ( nrenames > len_renames ) THEN
+                 used_length = nrenames - 1 ; min_length = nrenames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( RENAMES, len_renames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                 END IF
+                 len_renames = new_length
                END IF
-               RENAME( nrenam ) = GPNAME( i )
+               nrenames = nrenames + 1
+               RENAMES( nrenames ) = GPNAME( i )
             END IF
    40    CONTINUE
       END IF
@@ -11939,7 +12935,7 @@
 !  set a blank line
 
       DO i = 1, max_record_length
-        BLNKLN( I: i ) = ' '
+        BLNKLN( i : i ) = ' '
       END DO
 
 !  read next line
@@ -12002,16 +12998,16 @@
 
 !  consider the header part of the card
 
-      header = NULINE( 1: 12 )
+      header = NULINE( 1 : 12 )
 
 !  ignore blank lines
 
       IF ( header == INDIC8( mblank ) ) GO TO 100
-      IF ( NULINE( 1: 1 ) /= ' ' ) THEN
+      IF ( NULINE( 1 : 1 ) /= ' ' ) THEN
 
 !  ignore comment cards
 
-         IF ( NULINE( 1: 1 ) == '*' ) GO TO 100
+         IF ( NULINE( 1 : 1 ) == '*' ) GO TO 100
 
 !  check if we have entered fixed-format input
 
@@ -12031,7 +13027,7 @@
 
          IF ( .NOT. defnam  ) THEN
             IF ( header /= INDIC8( mname ) ) THEN
-               IF ( ngrtyp > 0 ) GO TO 930
+               IF ( ngtype > 0 ) GO TO 930
                IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010)
                gotlin = .TRUE.
                GO TO 600
@@ -12040,7 +13036,7 @@
 !  indicator card is groups
 !  -------------------------
 
-               IF ( pname  /= NULINE( 15: 22 ) ) THEN
+               IF ( pname  /= NULINE( 15 : 22 ) ) THEN
                   status = 51
                   IF ( out > 0 ) WRITE( out, 2510 )
                   GO TO 800
@@ -12072,7 +13068,7 @@
 
          IF ( intype >= mglob .AND. .NOT. endpar ) THEN
             endpar = .TRUE.
-            nloop = ngrtyp + 1
+            nloop = ngtype + 1
 
 !  insert the list of reserved integer/real/logical variables into
 !  the dictionary
@@ -12128,7 +13124,7 @@
                           FIELDI( 11 )( 1 : 6 ), FIELDI( 19 )( 1 : 6 ),        &
                           pname, TRIM( version )
             END IF
-            IF ( ngrtyp == 0 ) THEN
+            IF ( ngtype == 0 ) THEN
               WRITE( outgr, 3009 ) FIELDI( 20 )( 1 : 6 )
               GO TO 910
             END IF
@@ -12138,33 +13134,33 @@
 
 ! --------- insert integer declarations
 
-            IF ( ninnam > 0 )                                                  &
-               WRITE( outgr, 3010 ) ( INNAME( i ), i = 1, ninnam )
+            IF ( ninnames > 0 )                                                &
+               WRITE( outgr, 3010 ) ( INNAMES( i ), i = 1, ninnames )
 
 ! --------- insert real declarations
 
-            IF ( nrenam > 0 ) THEN
+            IF ( nrenames > 0 ) THEN
                IF ( single ) THEN
-                  WRITE( outgr, 3019 ) ( RENAME( i ), i = 1, nrenam )
+                  WRITE( outgr, 3019 ) ( RENAMES( i ), i = 1, nrenames )
                ELSE
-                  WRITE( outgr, 3020 ) ( RENAME( i ), i = 1, nrenam )
+                  WRITE( outgr, 3020 ) ( RENAMES( i ), i = 1, nrenames )
                END IF
             END IF
 
 ! --------- insert logical declarations
 
-            IF ( nlonam > 0 )                                                  &
-               WRITE( outgr, 3023 ) ( LONAME( i ), i = 1, nlonam )
+            IF ( nlonames > 0 )                                                &
+               WRITE( outgr, 3023 ) ( LONAMES( i ), i = 1, nlonames )
 
 ! --------- insert intrinsic declarations
 
-            IF ( nminam > 0 )                                                  &
-               WRITE( outgr, 3021 ) ( MINAME( i ), i = 1, nminam )
+            IF ( nminames > 0 )                                                &
+               WRITE( outgr, 3021 ) ( MINAMES( i ), i = 1, nminames )
 
 ! --------- insert external declarations
 
-            IF ( nexnam > 0 )                                                  &
-               WRITE( outgr, 3022 ) ( EXNAME( i ), i = 1, nexnam )
+            IF ( nexnames > 0 )                                                &
+               WRITE( outgr, 3022 ) ( EXNAMES( i ), i = 1, nexnames )
             WRITE( outgr, 3009 ) FIELDI( 20 )( 1 : 6 )
          END IF
 
@@ -12184,8 +13180,8 @@
                    FIELDI(  9 )( 1 : 6 ), nloop,                               &
                    FIELDI( 13 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),               &
                    FIELDI( 10 )( 1 : 6 )
-            IF ( ngrtyp > 1 ) THEN
-               WRITE( outgr, 3051 ) ( i, i = 1, ngrtyp )
+            IF ( ngtype > 1 ) THEN
+               WRITE( outgr, 3051 ) ( i, i = 1, ngtype )
                WRITE( outgr, 3052 ) FIELDI(  9 )( 1 : 6 )
             END IF
          END IF
@@ -12200,7 +13196,7 @@
 !  check that the first non comment card is the groups indicator card
 
          IF ( .NOT. defnam  ) THEN
-            IF ( ngrtyp > 0 ) GO TO 930
+            IF ( ngtype > 0 ) GO TO 930
             IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010 )
             gotlin = .TRUE.
             GO TO 600
@@ -12209,18 +13205,16 @@
 !  a data card has been found
 !  read the character fields 1, 2, 3 and 7 from the card
 
-         field1 = NULINE(  2:  3 )
-         field2 = NULINE(  5: 12 )
-         field3 = NULINE( 15: 22 )
-         field7 = NULINE( 25: 65 )
+         field1 = NULINE(  2 :  3 )
+         field2 = NULINE(  5 : 12 )
+         field3 = NULINE( 15 : 22 )
+         field7 = NULINE( 25 : 65 )
 
 !  check that field3 is blank on 'a', 'f' and 'g' cards
 
-            IF ( FIELD1( 1: 1 ) == 'A' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'F' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'G' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'H' ) THEN
-               IF ( ( FIELD1( 1: 1 ) /= 'A' .AND. field2 /=                    &
+            IF ( field1( 1 : 1 ) == 'A' .OR. field1( 1 : 1 ) == 'F' .OR.       &
+                 field1( 1 : 1 ) == 'G' .OR. field1( 1 : 1 ) == 'H' ) THEN
+               IF ( ( field1( 1 : 1 ) /= 'A' .AND. field2 /=                   &
                     '       ' ) .OR.FIELD3 /= '       ' ) THEN
                   status = 73
                   IF ( out > 0 ) WRITE( out, 2730 )
@@ -12260,12 +13254,18 @@
                GO TO 700
             END IF
          ELSE
-            nexnam = nexnam + 1
-            IF ( nexnam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nexnames = nexnames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nexnames - 1 ; min_length = nexnames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EXNAMES, len_exnames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
+              len_exnames = new_length
             END IF
-            EXNAME( nexnam ) = field2
+            EXNAMES( nexnames ) = field2
          END IF
       ELSE
 
@@ -12280,37 +13280,56 @@
             END IF
          ELSE
             IF ( field1 == 'R ' ) THEN
-               nrenam = nrenam + 1
-               IF ( nrenam > ninmax ) THEN
-                  status = - 2
-                  GO TO 700
+               nrenames = nrenames + 1
+               IF ( nrenames > len_renames ) THEN
+                 used_length = nrenames - 1 ; min_length = nrenames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( RENAMES, len_renames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                   bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_renames = new_length
                END IF
-               RENAME( nrenam ) = field2
+               RENAMES( nrenames ) = field2
+            ELSE IF ( field1 == 'M ' ) THEN
+               nminames = nminames + 1
+               IF ( nminames > len_minames ) THEN
+                 used_length = nminames - 1 ; min_length = nminames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( MINAMES, len_minames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_minames = new_length
+               END IF
+               MINAMES( nminames ) = field2
+            ELSE IF ( field1 == 'L ' ) THEN
+               nlonames = nlonames + 1
+               IF ( nlonames > len_lonames ) THEN
+                 used_length = nlonames - 1 ; min_length = nlonames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( LONAMES, len_lonames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_lonames = new_length
+               END IF
+               LONAMES( nlonames ) = field2
             ELSE
-               IF ( field1 == 'M ' ) THEN
-                  nminam = nminam + 1
-                  IF ( nminam > ninmax ) THEN
-                     status = - 2
-                     GO TO 700
-                  END IF
-                  MINAME( nminam ) = field2
-               ELSE
-                  IF ( field1 == 'L ' ) THEN
-                     nlonam = nlonam + 1
-                     IF ( nlonam > ninmax ) THEN
-                        status = - 2
-                        GO TO 700
-                     END IF
-                     LONAME( nlonam ) = field2
-                  ELSE
-                     ninnam = ninnam + 1
-                     IF ( ninnam > ninmax ) THEN
-                        status = - 2
-                        GO TO 700
-                     END IF
-                     INNAME( ninnam ) = field2
-                  END IF
+               ninnames = ninnames + 1
+               IF ( ninnames > len_innames ) THEN
+                 used_length = ninnames - 1 ; min_length = ninnames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( INNAMES, len_innames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                   bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
                END IF
+               INNAMES( ninnames ) = field2
             END IF
          END IF
       END IF
@@ -12370,7 +13389,7 @@
             END IF   
          END IF
       ELSE
-         IF ( FIELD1( 2: 2 ) == '+' .AND. startp ) THEN
+         IF ( field1( 2 : 2 ) == '+' .AND. startp ) THEN
 
 ! --------- continue a parameter assignment
 
@@ -12420,7 +13439,7 @@
                IF ( out > 0 ) WRITE( out, 2610 )
                GO TO 800
             END IF
-            IF ( itype < ngrtyp ) WRITE( outgr, 3191 ) nloop
+            IF ( itype < ngtype ) WRITE( outgr, 3191 ) nloop
          END IF
 
 !  find itype, the group-type
@@ -12440,25 +13459,25 @@
 
          itype = INLIST( ifield )
          WRITE( outgr, 3060 ) field2
-         IF ( ngrtyp > 1 ) WRITE( outgr, 3061 ) itype
-         WRITE( outgr, 3062 ) ANAMES( itype )( 1 : 6 ),                        &
+         IF ( ngtype > 1 ) WRITE( outgr, 3061 ) itype
+         WRITE( outgr, 3062 ) GANAMES( itype )( 1 : 6 ),                       &
                    FIELDI(  4 )( 1 : 6 ), FIELDI( 10 )( 1 : 6 )
 
 ! --------- set group parameters
 
-         k1 = IGPA( itype )
-         k2 = IGPA( itype + 1 ) - 1
+         k1 = GTYPESP_ptr( itype )
+         k2 = GTYPESP_ptr( itype + 1 ) - 1
          DO 435 k = k1, k2
             ivar = k - k1 + 1
             WRITE( outgr, 3063 ) GPNAME( k ), FIELDI( 11 )( 1 : 6 ),           &
                 FIELDI( 13 )( 1 : 6 ), ivar
   435    CONTINUE
-         IF ( LDEFND( itype ) ) THEN
+         IF ( DEFINED( itype ) ) THEN
             status = 64
             IF ( out > 0 ) WRITE( out, 2640 )
             GO TO 800
          ELSE
-            LDEFND( itype ) = .TRUE.
+            DEFINED( itype ) = .TRUE.
          END IF
 
 !  initialize logicals which determine whether the data has been
@@ -12470,8 +13489,8 @@
          seth = .FALSE.
          endf = .TRUE.
       ELSE
-         IF ( FIELD1( 1: 1 ) == 'A' .OR. FIELD1( 1: 1 )                        &
-              == 'I' .OR. FIELD1( 1: 1 ) == 'E' ) THEN
+         IF ( field1( 1 : 1 ) == 'A' .OR. field1( 1 : 1 ) == 'I' .OR.          &
+              field1( 1 : 1 ) == 'E' ) THEN
             IF ( setf ) THEN
                IF ( .NOT. endf ) THEN
                   WRITE( outgr, 3120 )
@@ -12482,7 +13501,7 @@
 !  start a parameter assignment. check to see that the parameter has
 !  been defined
 
-            IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+            IF ( field1( 2 : 2 ) == ' ' ) THEN
                startp = .TRUE.
                field = field2 // '  PG'
                CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
@@ -12494,7 +13513,7 @@
 
 ! --------- make group-specific parameter assignments
 
-               IF ( FIELD1( 1: 1 ) == 'A' ) THEN
+               IF ( field1( 1 : 1 ) == 'A' ) THEN
                   IF ( .NOT. setf ) THEN
                      WRITE( outgr, 3080 ) FIELD2( 1 : 6 ), field7
                   ELSE
@@ -12518,7 +13537,7 @@
                      IF ( out > 0 ) WRITE( out, 2580 )
                      GO TO 800
                   END IF
-                  IF ( FIELD1( 1: 1 ) == 'I' ) THEN
+                  IF ( field1( 1 : 1 ) == 'I' ) THEN
                      IF ( .NOT. setf ) THEN
                         WRITE( outgr, 3081 ) FIELD2( 1 : 6 ),                  &
                                               FIELD3( 1 : 6 ), field7
@@ -12537,7 +13556,7 @@
                   END IF   
                END IF
             ELSE
-               IF ( FIELD1( 2: 2 ) == '+' ) THEN
+               IF ( field1( 2 : 2 ) == '+' ) THEN
                   IF ( startp ) THEN
 
 ! --------- continuation of a parameter assignment
@@ -12556,11 +13575,11 @@
             END IF
          ELSE
             startp = .FALSE.
-            IF ( FIELD1( 1: 1 ) == 'F' ) THEN
+            IF ( field1( 1 : 1 ) == 'F' ) THEN
 
 !  set the function value
 
-               IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+               IF ( field1( 2 : 2 ) == ' ' ) THEN
                   setf = .TRUE.
                   endf = .FALSE.
 
@@ -12569,7 +13588,7 @@
                   WRITE( outgr, 3100 ) FIELDI(  8 )( 1 : 6 ),                  &
                   FIELDI( 2 )( 1 : 6 ), FIELDI( 10 )( 1 : 6 ), field7
                ELSE
-                  IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                  IF ( field1( 2 : 2 ) == '+' ) THEN
                      IF ( setf ) THEN
 
 ! --------- continuation of g
@@ -12583,7 +13602,7 @@
                   END IF
                END IF
             ELSE
-               IF ( FIELD1( 1: 1 ) == 'G' ) THEN
+               IF ( field1( 1 : 1 ) == 'G' ) THEN
 
 !  no function value has been specified
 
@@ -12595,7 +13614,7 @@
 
 !  set the first derivative value
 
-                  IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+                  IF ( field1( 2 : 2 ) == ' ' ) THEN
                      IF ( .NOT. setg ) THEN
                         setg = .TRUE.
 
@@ -12609,7 +13628,7 @@
                      WRITE( outgr, 3130 ) FIELDI( 2 )( 1 : 6 ),                &
                             FIELDI( 10 )( 1 : 6 ), 2, field7
                   ELSE
-                     IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                     IF ( field1( 2 : 2 ) == '+' ) THEN
                         IF ( setg ) THEN
 
 ! --------- continuation of gdash
@@ -12623,11 +13642,11 @@
                      END IF
                   END IF
                ELSE
-                  IF ( FIELD1( 1: 1 ) == 'H' ) THEN
+                  IF ( field1( 1 : 1 ) == 'H' ) THEN
 
 !  set the second derivative value
 
-                     IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+                     IF ( field1( 2 : 2 ) == ' ' ) THEN
                         IF ( .NOT. seth ) THEN
 
 !  the first derivative has not been set
@@ -12645,7 +13664,7 @@
                         WRITE( outgr, 3130 ) FIELDI( 2 )( 1 : 6 ),             &
                                FIELDI( 10 )( 1 : 6 ), 3, field7
                      ELSE
-                        IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                        IF ( field1( 2 : 2 ) == '+' ) THEN
                            IF ( seth ) THEN
 
 ! --------- continuation of g2dash
@@ -12680,7 +13699,7 @@
          IF ( out > 0 ) WRITE( out, 2520 )
          RETURN
       END IF
-      IF ( ngrtyp > 0 ) GO TO 930
+      IF ( ngtype > 0 ) GO TO 930
       IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010 )
 
 !  a dummy routine will be substituted
@@ -12768,7 +13787,7 @@
             IF ( out > 0 ) WRITE( out, 2610 )
             GO TO 800
          END IF
-         IF ( itype < ngrtyp ) WRITE( outgr, 3191 ) nloop
+         IF ( itype < ngtype ) WRITE( outgr, 3191 ) nloop
       END IF
 
 ! ---------- end do loop
@@ -12784,12 +13803,20 @@
 !   check that all element types have been defined
 
   930 CONTINUE
-      DO 940 itype = 1, ngrtyp
-         IF ( .NOT. LDEFND( itype ) ) THEN
+      DO 940 itype = 1, ngtype
+         IF ( .NOT. DEFINED( itype ) ) THEN
             status = 53
             IF ( out > 0 ) WRITE( out, 2530 ) GTYPES( itype )
          END IF
   940 CONTINUE
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
@@ -12909,25 +13936,29 @@
 !-*-  S I F D E C O D E   M A K E _ g r o u p _ a d    S U B R O U T I N E  -*-
 
       SUBROUTINE MAKE_group_ad( input, out, outgf, outgd, outem, status,       &
-                                 ngrtyp, ngrmax, nlmax, ninmax, pname,         &
-                                 ANAMES, RENAME, INNAME, LONAME, MINAME,       &
-                                 EXNAME, GTYPES, LDEFND, GPNAME, IGPA, ngpmax, &
+                                 ngtype, pname, GANAMES, &
+                                 len_renames, RENAMES, len_innames, INNAMES,   &
+                                 len_lonames, LONAMES, len_minames, MINAMES,   &
+                                 len_exnames, EXNAMES,       &
+                                 GPNAME, DEFINED, GTYPES, GTYPESP_ptr, ngpmax, &
                                  debug, length, ITABLE, KEY, INLIST, single,   &
                                  nuline, gotlin, iauto, iad0, print_level )
       INTEGER :: input, out, outgf, status, length
-      INTEGER :: nlmax, ngrtyp, ninmax, ngpmax, ngrmax
+      INTEGER :: ngpmax, ngtype
       INTEGER :: print_level, outgd, outem, iauto, iad0
+      INTEGER :: len_renames, len_innames, len_lonames, len_minames, len_exnames
       LOGICAL :: gotlin, debug, single
-      CHARACTER ( len = 8 ) ::  pname
-      CHARACTER ( len = max_record_length ) :: nuline
-      INTEGER :: ITABLE( length ), IGPA( ngrmax )
+      CHARACTER ( LEN = 8 ) ::  pname
+      CHARACTER ( LEN = max_record_length ) :: nuline
+      INTEGER :: ITABLE( length ), GTYPESP_ptr( ngtype + 1 )
       INTEGER :: INLIST( length )
-      LOGICAL :: LDEFND( nlmax  )
-      CHARACTER ( len = 12 ) :: KEY   ( length )
-      CHARACTER ( len = 10 ) :: RENAME( ninmax ), INNAME( ninmax )
-      CHARACTER ( len = 10 ) :: GPNAME( ngpmax ), EXNAME( ninmax )
-      CHARACTER ( len = 10 ) :: LONAME( ninmax ), GTYPES( ngrmax )
-      CHARACTER ( len = 10 ) :: ANAMES( ngrmax ), MINAME( ninmax )
+      LOGICAL, DIMENSION( ngtype ) :: DEFINED
+      CHARACTER ( LEN = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ) :: GPNAME( ngpmax ), GTYPES( ngtype )
+      CHARACTER ( LEN = 10 ) :: GANAMES( ngtype )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LONAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: MINAMES, EXNAMES
 
 !  --------------------------------------------------------------------
 !  make a group function evaluation subroutine, suitable for 
@@ -12956,128 +13987,105 @@
 !  see also http://www.cuter.rl.ac.uk/sifdec/Doc/sif.pdf
 !  and      http://www.numerical.rl.ac.uk/lancelot/sif/sifhtml.html
 
-!  returns with negative values of inform indicate that insufficient
+!  returns with negative values of status indicate that insufficient
 !  array space has been allowed, as follows:
 
-!    inform = - 1  when length not large enough
-!    inform = - 2  when max( ninnam, nrenam, nlonam, nenam, nminam )
-!                  > ninmax
+!    status = - 1  when length not large enough
+!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be 
+!                  extended further
 !  -------------------------------------------------------------------
+
+!  parameter definitions
+
+      INTEGER, PARAMETER :: mblank = 1, mfixed = 2, mfree = 3, mname = 4
+      INTEGER, PARAMETER :: mtemp = 5, mglob = 6, mindiv = 7, mendat = 8
+      INTEGER, PARAMETER :: iires = 21
+      INTEGER, PARAMETER :: nincrs = 2
+      INTEGER, PARAMETER :: maxnul = 20
+      INTEGER, DIMENSION( mendat ), PARAMETER :: LENIND                        &
+        = (/ 0, 12, 11, 6, 11, 7, 11, 6 /)
+      CHARACTER ( LEN = 12 ), DIMENSION( mendat ), PARAMETER :: INDIC8         &
+        = (/ '            ', 'FIXED FORMAT', 'FREE FORMAT ', 'GROUPS      ',   &
+             'TEMPORARIES ', 'GLOBALS     ', 'INDIVIDUALS ', 'ENDATA      '  /)
+      CHARACTER ( LEN = 8 ), DIMENSION( iires ), PARAMETER :: FIELDI           &
+        = (/ 'GROUPF  ', 'GVALUE  ', 'LGVALU  ', 'FVALUE  ', 'NCALCG  ',       &
+             'ITYPEG  ', 'ICALCG  ', 'DERIVS  ', 'IGRTYP  ', 'IGROUP  ',       &
+             'GPVALU  ', 'ISTGPA  ', 'IPSTRT  ', 'JCALCG  ', 'LTYPEG  ',       &
+             'LSTGPA  ', 'LCALCG  ', 'LFVALU  ', 'LGPVLU  ', 'IGSTAT  ',       &
+             'GROUP   ' /)
+      CHARACTER ( LEN = 6 ), DIMENSION( nincrs ), PARAMETER :: INCRSE          &
+        = (/ 'LENGTH', 'NINMAX' /)
 
 !  local variables
 
       INTEGER :: i, ifield, ifree, itype, intype, ivar, k1, k2
-      INTEGER :: ninnam, nloop, nrenam, nminam, npname, nrenm1
-      INTEGER :: nexnam, nincrs, lineno, iires, k, ilines, nlines
-      INTEGER :: mblank, mfixed, mfree, mname, mtemp, mglob, ntem
-      INTEGER :: mindiv, mendat, maxnul, nlonam, nrenm2
-!     INTEGER :: ngtnam
+      INTEGER :: ninnames, nloop, nrenames, nminames, npname, nrenm1
+      INTEGER :: nexnames, lineno, k, ilines, nlines, ntem, nlonames, nrenm2
+      INTEGER :: used_length, new_length, min_length, alloc_status
       LOGICAL :: defnam, endpar, endgen, firstg
-      LOGICAL :: setf, startp, fixed, startv
-      LOGICAL :: endf, loutgf
-      PARAMETER        ( iires = 21 )
-      PARAMETER        ( nincrs = 2 )
-      CHARACTER ( len = 2 ) :: field1
-      CHARACTER ( len = 4 ) :: ad0
-      CHARACTER ( len = 6 ) :: INCRSE( nincrs )
-      CHARACTER ( len = 8 ) :: field2, field3, FIELDI( iires )
-      CHARACTER ( len = 10 ) :: ctemp
-      CHARACTER ( len = 12 ) :: field
-      CHARACTER ( len = 15 ) :: aorb
-      CHARACTER ( len = 41 ) :: field7
-      CHARACTER ( len = 72 ) :: ctem
+      LOGICAL :: setf, startp, fixed, startv, endf, loutgf
+      CHARACTER ( LEN = 2 ) :: field1
+      CHARACTER ( LEN = 4 ) :: ad0
+      CHARACTER ( LEN = 8 ) :: field2, field3
+      CHARACTER ( LEN = 10 ) :: ctemp
+      CHARACTER ( LEN = 12 ) :: field, header
+      CHARACTER ( LEN = 15 ) :: aorb
+      CHARACTER ( LEN = 24 ) :: bad_alloc
+      CHARACTER ( LEN = 41 ) :: field7
+      CHARACTER ( LEN = 72 ) :: ctem
+      CHARACTER ( LEN = max_record_length ) :: blnkln
+      CHARACTER ( LEN = 65 ), DIMENSION( maxnul ) :: NULINA
 
-!  parameter definitions
-
-      CHARACTER ( len = max_record_length ) :: blnkln
-      PARAMETER        ( mblank =  1, mfixed =  2, mfree = 3  )
-      PARAMETER        ( mname =  4, mtemp =  5 )
-      PARAMETER        ( mglob =  6, mindiv =  7, mendat =  8 )
-      INTEGER :: LENIND( mendat )
-      CHARACTER ( len = 12 ) :: INDIC8( mendat ), header
-      PARAMETER        ( maxnul = 20 )
-      CHARACTER ( len = 65 ) :: NULINA( maxnul )
-
-!  data declarations
-
-      DATA INCRSE / 'LENGTH', 'NINMAX' /
-      DATA INDIC8( mblank ) / '            ' /, LENIND( mblank ) / 0  / 
-      DATA INDIC8( mfixed ) / 'FIXED FORMAT' /, LENIND( mfixed ) / 12 /
-      DATA INDIC8( mfree  ) / 'FREE FORMAT ' /, LENIND( mfree  ) / 11 /
-      DATA INDIC8( mname  ) / 'GROUPS      ' /, LENIND( mname  ) / 6  /
-      DATA INDIC8( mtemp  ) / 'TEMPORARIES ' /, LENIND( mtemp  ) / 11 / 
-      DATA INDIC8( mglob  ) / 'GLOBALS     ' /, LENIND( mglob  ) / 7  /
-      DATA INDIC8( mindiv ) / 'INDIVIDUALS ' /, LENIND( mindiv ) / 11 / 
-      DATA INDIC8( mendat ) / 'ENDATA      ' /, LENIND( mendat ) / 6  /
-      DATA FIELDI(  1 ) / 'GROUPF  ' /,  FIELDI(  2 ) / 'GVALUE  ' /
-      DATA FIELDI(  3 ) / 'LGVALU  ' /,  FIELDI(  4 ) / 'FVALUE  ' /
-      DATA FIELDI(  5 ) / 'NCALCG  ' /,  FIELDI(  6 ) / 'ITYPEG  ' /
-      DATA FIELDI(  7 ) / 'ICALCG  ' /,  FIELDI(  8 ) / 'DERIVS  ' /
-      DATA FIELDI(  9 ) / 'IGRTYP  ' /,  FIELDI( 10 ) / 'IGROUP  ' /
-      DATA FIELDI( 11 ) / 'GPVALU  ' /,  FIELDI( 12 ) / 'ISTGPA  ' /
-      DATA FIELDI( 13 ) / 'IPSTRT  ' /,  FIELDI( 14 ) / 'JCALCG  ' /
-      DATA FIELDI( 15 ) / 'LTYPEG  ' /,  FIELDI( 16 ) / 'LSTGPA  ' /
-      DATA FIELDI( 17 ) / 'LCALCG  ' /,  FIELDI( 18 ) / 'LFVALU  ' /
-      DATA FIELDI( 19 ) / 'LGPVLU  ' /,  FIELDI( 20 ) / 'IGSTAT  ' /
-      DATA FIELDI( 21 ) / 'GROUP   ' /
-!     data fieldi( 21 ) / 'groupd  ' /
       IF ( out > 0 ) WRITE( out, 2900 )
 
 !  set initial values for integer variables
 
-      ninnam = 0
-      nrenam = 0
-      nlonam = 0
-      nexnam = 0
-      nminam = 0
-      lineno = 0
-      intype = 1
-      ilines = 0
-      nlines = 0
-      ntem = 0
+      ninnames = 0 ; nrenames = 0 ; nlonames = 0 ; nexnames = 0 ; nminames = 0
+      lineno = 0 ; intype = 1 ; ilines = 0 ; nlines = 0 ; ntem = 0
       loutgf = outgf > 0
 
 !  set initial values for logical variables
 
-      defnam = .FALSE.
-      endpar = .FALSE.
-      startp = .FALSE.
-      endgen = .FALSE.
-      firstg = .TRUE.
-      fixed = .TRUE.
+      defnam = .FALSE. ; endpar = .FALSE. ; startp = .FALSE. ; endgen = .FALSE.
+      firstg = .TRUE. ; fixed = .TRUE.
 
 !  find which group-types are nontrivial
 
-      DO 20 itype = 1, ngrtyp
-         LDEFND( itype ) = .FALSE.
-   20 CONTINUE
+      DEFINED( : ngtype ) = .FALSE.
 
 !  insert the list of group-type arguments into the dictionary
 
-      DO 30 itype = 1, ngrtyp
-         field = ANAMES( itype ) // 'PG'
-         CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
-         IF ( ifree <= 0 ) THEN
-            IF ( ifree == 0 ) THEN
-               status = - 1
-               GO TO 700
+      DO itype = 1, ngtype
+        field = GANAMES( itype ) // 'PG'
+        CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
+        IF ( ifree <= 0 ) THEN
+          IF ( ifree == 0 ) THEN
+            status = - 1
+            GO TO 700
+          END IF
+        ELSE
+          nrenames = nrenames + 1
+          IF ( nrenames > len_renames ) THEN
+            used_length = nrenames - 1 ; min_length = nrenames
+            new_length = 3 * min_length / 2 + 1 
+            CALL EXTEND_array( RENAMES, len_renames, used_length,              &
+                               new_length, min_length, buffer,                 &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
             END IF
-         ELSE
-            nrenam = nrenam + 1
-            IF ( nrenam > ninmax ) THEN
-               status = - 2
-               GO TO 700
-            END IF
-            RENAME( nrenam ) = ANAMES( itype )
-         END IF
-   30 CONTINUE
-!     ngtnam = nrenam
+            len_renames = new_length
+          END IF
+          RENAMES( nrenames ) = GANAMES( itype )
+        END IF
+      END DO
+!     ngtnam = nrenames
 
 !  include the names of the group parameters used
 !  in this dictionary
 
-      IF ( ngrtyp > 0 ) THEN
-         npname = IGPA( ngrtyp + 1 ) - 1
+      IF ( ngtype > 0 ) THEN
+         npname = GTYPESP_ptr( ngtype + 1 ) - 1
          DO 40 i = 1, npname
             field = GPNAME( i ) // 'PG'
             CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
@@ -13087,12 +14095,19 @@
                   GO TO 700
                END IF
             ELSE
-               nrenam = nrenam + 1
-               IF ( nrenam > ninmax ) THEN
-                  status = - 2
-                  GO TO 700
+               nrenames = nrenames + 1
+               IF ( nrenames > len_renames ) THEN
+                 used_length = nrenames - 1 ; min_length = nrenames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( RENAMES, len_renames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                 END IF
+                 len_renames = new_length
                END IF
-               RENAME( nrenam ) = GPNAME( i )
+               RENAMES( nrenames ) = GPNAME( i )
             END IF
    40    CONTINUE
       END IF
@@ -13100,7 +14115,7 @@
 !  set a blank line
 
       DO i = 1, max_record_length
-        BLNKLN( I: i ) = ' '
+        BLNKLN( i : i ) = ' '
       END DO
 
 !  read next line
@@ -13163,16 +14178,16 @@
 
 !  consider the header part of the card
 
-      header = NULINE( 1: 12 )
+      header = NULINE( 1 : 12 )
 
 !  ignore blank lines
 
       IF ( header == INDIC8( mblank ) ) GO TO 100
-      IF ( NULINE( 1: 1 ) /= ' ' ) THEN
+      IF ( NULINE( 1 : 1 ) /= ' ' ) THEN
 
 !  ignore comment cards
 
-         IF ( NULINE( 1: 1 ) == '*' ) GO TO 100
+         IF ( NULINE( 1 : 1 ) == '*' ) GO TO 100
 
 !  check if we have entered fixed-format input
 
@@ -13192,7 +14207,7 @@
 
          IF ( .NOT. defnam  ) THEN
             IF ( header /= INDIC8( mname ) ) THEN
-               IF ( ngrtyp > 0 ) GO TO 930
+               IF ( ngtype > 0 ) GO TO 930
                IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010)
                gotlin = .TRUE.
                GO TO 600
@@ -13201,7 +14216,7 @@
 !  indicator card is groups
 !  -------------------------
 
-               IF ( pname  /= NULINE( 15: 22 ) ) THEN
+               IF ( pname  /= NULINE( 15 : 22 ) ) THEN
                   status = 51
                   IF ( out > 0 ) WRITE( out, 2510 )
                   GO TO 800
@@ -13233,7 +14248,7 @@
 
          IF ( intype >= mglob .AND. .NOT. endpar ) THEN
             endpar = .TRUE.
-            nloop = ngrtyp + 1
+            nloop = ngtype + 1
 
 !  insert the list of reserved integer/real/logical variables into
 !  the dictionary
@@ -13348,7 +14363,7 @@
             ELSE
                WRITE( outgd, 3007 )
             END IF
-            IF ( ngrtyp == 0 ) THEN
+            IF ( ngtype == 0 ) THEN
                IF ( loutgf ) WRITE( outgf, 3009 ) FIELDI( 20 )( 1 : 6 )
                WRITE( outgd, 3009 ) FIELDI( 20 )( 1 : 6 )
                GO TO 910
@@ -13362,32 +14377,32 @@
 
 ! --------- insert integer declarations
 
-            IF ( ninnam > 0 .AND. loutgf )                                     &
-               WRITE( outgf, 3010 ) ( INNAME( i ), i = 1, ninnam )
-            IF ( ninnam > 0 )                                                  &
-               WRITE( outgd, 3010 ) ( INNAME( i ), i = 1, ninnam )
+            IF ( ninnames > 0 .AND. loutgf )                                   &
+               WRITE( outgf, 3010 ) ( INNAMES( i ), i = 1, ninnames )
+            IF ( ninnames > 0 )                                                &
+               WRITE( outgd, 3010 ) ( INNAMES( i ), i = 1, ninnames )
 
 !  order the real values so that the list of variables which belong
 !  to intrinsic or external functions follow those which do not
 
-            IF ( nrenam > 0 ) THEN
+            IF ( nrenames > 0 ) THEN
                nrenm1 = 0
-               nrenm2 = nrenam + 1
+               nrenm2 = nrenames + 1
   140          CONTINUE
                IF ( nrenm1 + 1 == nrenm2 ) GO TO 180
-               DO 150 i = 1, nminam
-                  IF ( RENAME( nrenm1 + 1 ) == MINAME( i ) ) GO TO 170
+               DO 150 i = 1, nminames
+                  IF ( RENAMES( nrenm1 + 1 ) == MINAMES( i ) ) GO TO 170
   150          CONTINUE
-               DO 160 i = 1, nexnam
-                  IF ( RENAME( nrenm1 + 1 ) == EXNAME( i ) ) GO TO 170
+               DO 160 i = 1, nexnames
+                  IF ( RENAMES( nrenm1 + 1 ) == EXNAMES( i ) ) GO TO 170
   160          CONTINUE
                nrenm1 = nrenm1 + 1
                GO TO 140
   170          CONTINUE
                nrenm2 = nrenm2 - 1
-               ctemp = RENAME( nrenm2 )
-               RENAME( nrenm2 ) = RENAME( nrenm1 + 1 )
-               RENAME( nrenm1 + 1 ) = ctemp
+               ctemp = RENAMES( nrenm2 )
+               RENAMES( nrenm2 ) = RENAMES( nrenm1 + 1 )
+               RENAMES( nrenm1 + 1 ) = ctemp
                GO TO 140
   180          CONTINUE
 
@@ -13395,40 +14410,40 @@
 
                IF ( single ) THEN
                   IF ( loutgf )                                                &
-                  WRITE( outgf, 3019 ) ( RENAME( i ), i = 1, nrenam )
+                  WRITE( outgf, 3019 ) ( RENAMES( i ), i = 1, nrenames )
                ELSE
                   IF ( loutgf )                                                &
-                  WRITE( outgf, 3020 ) ( RENAME( i ), i = 1, nrenam )
+                  WRITE( outgf, 3020 ) ( RENAMES( i ), i = 1, nrenames )
                END IF
                IF ( iad0 == 1 ) THEN
                   IF ( nrenm1 > 0 ) WRITE( outgd, 3018 )                       &
-                       ( RENAME( i ), i = 1, nrenm1 )
+                       ( RENAMES( i ), i = 1, nrenm1 )
                ELSE
                   IF ( nrenm1 > 0 ) WRITE( outgd, 3017 )                       &
-                       ( ad0, RENAME( i ), i = 1, nrenm1 )
+                       ( ad0, RENAMES( i ), i = 1, nrenm1 )
                END IF
-               IF ( nrenm2 <= nrenam ) WRITE( outgd, 3017 )                    &
-                    ( ad0, RENAME( i ), i = nrenm2, nrenam )
+               IF ( nrenm2 <= nrenames ) WRITE( outgd, 3017 )                  &
+                    ( ad0, RENAMES( i ), i = nrenm2, nrenames )
             END IF
 
 ! --------- insert logical declarations
 
-            IF ( nlonam > 0 .AND. loutgf )                                     &
-               WRITE( outgf, 3023 ) ( LONAME( i ), i = 1, nlonam )
-            IF ( nlonam > 0 )                                                  &
-               WRITE( outgd, 3023 ) ( LONAME( i ), i = 1, nlonam )
+            IF ( nlonames > 0 .AND. loutgf )                                   &
+               WRITE( outgf, 3023 ) ( LONAMES( i ), i = 1, nlonames )
+            IF ( nlonames > 0 )                                                &
+               WRITE( outgd, 3023 ) ( LONAMES( i ), i = 1, nlonames )
 
 ! --------- insert intrinsic declarations
 
-            IF ( nminam > 0 .AND. loutgf )                                     &
-               WRITE( outgf, 3021 ) ( MINAME( i ), i = 1, nminam )
+            IF ( nminames > 0 .AND. loutgf )                                   &
+               WRITE( outgf, 3021 ) ( MINAMES( i ), i = 1, nminames )
 
 ! --------- insert external declarations
 
-            IF ( nexnam > 0 .AND. loutgf )                                     &
-               WRITE( outgf, 3022 ) ( EXNAME( i ), i = 1, nexnam )
-            IF ( nexnam > 0 )                                                  &
-               WRITE( outgd, 3022 ) ( EXNAME( i ), i = 1, nexnam )
+            IF ( nexnames > 0 .AND. loutgf )                                   &
+               WRITE( outgf, 3022 ) ( EXNAMES( i ), i = 1, nexnames )
+            IF ( nexnames > 0 )                                                &
+               WRITE( outgd, 3022 ) ( EXNAMES( i ), i = 1, nexnames )
             IF ( loutgf ) WRITE( outgf, 3009 ) FIELDI( 20 )( 1 : 6 )
             WRITE( outgd, 3009 ) FIELDI( 20 )( 1 : 6 )
          END IF
@@ -13454,7 +14469,7 @@
               WRITE( outgd, 3011 )
 !             do i = 1, ngtnam
               DO i = 1, nrenm1
-                 WRITE( outgd, 3016 ) ad0, RENAME( i )
+                 WRITE( outgd, 3016 ) ad0, RENAMES( i )
               END DO
             END IF
             WRITE( outgd, 3050 ) nloop,  FIELDI( 14 )( 1 : 6 ),                &
@@ -13465,9 +14480,9 @@
                    FIELDI(  9 )( 1 : 6 ), nloop,                               &
                    FIELDI( 13 )( 1 : 6 ), FIELDI( 12 )( 1 : 6 ),               &
                    FIELDI( 10 )( 1 : 6 )
-            IF ( ngrtyp > 1 ) THEN
-               IF ( loutgf ) WRITE( outgf, 3051 ) ( i, i = 1, ngrtyp )
-               WRITE( outgd, 3051 ) ( i, i = 1, ngrtyp )
+            IF ( ngtype > 1 ) THEN
+               IF ( loutgf ) WRITE( outgf, 3051 ) ( i, i = 1, ngtype )
+               WRITE( outgd, 3051 ) ( i, i = 1, ngtype )
                IF ( loutgf ) WRITE( outgf, 3052 ) FIELDI(  9 )( 1 : 6 )
                WRITE( outgd, 3052 ) FIELDI(  9 )( 1 : 6 )
             END IF
@@ -13483,7 +14498,7 @@
 !  check that the first non comment card is the groups indicator card
 
          IF ( .NOT. defnam  ) THEN
-            IF ( ngrtyp > 0 ) GO TO 930
+            IF ( ngtype > 0 ) GO TO 930
             IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010 )
             gotlin = .TRUE.
             GO TO 600
@@ -13492,18 +14507,16 @@
 !  a data card has been found
 !  read the character fields 1, 2, 3 and 7 from the card
 
-         field1 = NULINE(  2:  3 )
-         field2 = NULINE(  5: 12 )
-         field3 = NULINE( 15: 22 )
-         field7 = NULINE( 25: 65 )
+         field1 = NULINE(  2 :  3 )
+         field2 = NULINE(  5 : 12 )
+         field3 = NULINE( 15 : 22 )
+         field7 = NULINE( 25 : 65 )
 
 !  check that field3 is blank on 'a', 'f' and 'g' cards
 
-            IF ( FIELD1( 1: 1 ) == 'A' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'F' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'G' .OR.                                    &
-                 FIELD1( 1: 1 ) == 'H' ) THEN
-               IF ( ( FIELD1( 1: 1 ) /= 'A' .AND. field2 /=                    &
+            IF ( field1( 1 : 1 ) == 'A' .OR. field1( 1 : 1 ) == 'F' .OR.       &
+                 field1( 1 : 1 ) == 'G' .OR. field1( 1 : 1 ) == 'H' ) THEN
+               IF ( ( field1( 1 : 1 ) /= 'A' .AND. field2 /=                   &
                     '       ' ) .OR.FIELD3 /= '       ' ) THEN
                   status = 73
                   IF ( out > 0 ) WRITE( out, 2730 )
@@ -13543,12 +14556,18 @@
                GO TO 700
             END IF
          ELSE
-            nexnam = nexnam + 1
-            IF ( nexnam > ninmax ) THEN
-               status = - 2
-               GO TO 700
+            nexnames = nexnames + 1
+            IF ( nrenames > len_renames ) THEN
+              used_length = nexnames - 1 ; min_length = nexnames
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( EXNAMES, len_exnames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                 bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
+              len_exnames = new_length
             END IF
-            EXNAME( nexnam ) = field2
+            EXNAMES( nexnames ) = field2
          END IF
       ELSE
 
@@ -13563,37 +14582,56 @@
             END IF
          ELSE
             IF ( field1 == 'R ' ) THEN
-               nrenam = nrenam + 1
-               IF ( nrenam > ninmax ) THEN
-                  status = - 2
-                  GO TO 700
+               nrenames = nrenames + 1
+               IF ( nrenames > len_renames ) THEN
+                 used_length = nrenames - 1 ; min_length = nrenames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( RENAMES, len_renames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_renames = new_length
                END IF
-               RENAME( nrenam ) = field2
+               RENAMES( nrenames ) = field2
+            ELSE IF ( field1 == 'M ' ) THEN
+               nminames = nminames + 1
+               IF ( nminames > len_minames ) THEN
+                 used_length = nminames - 1 ; min_length = nminames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( MINAMES, len_minames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_minames = new_length
+               END IF
+               MINAMES( nminames ) = field2
+            ELSE IF ( field1 == 'L ' ) THEN
+               nlonames = nlonames + 1
+               IF ( nlonames > len_lonames ) THEN
+                 used_length = nlonames - 1 ; min_length = nlonames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( LONAMES, len_lonames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                    bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
+                 len_lonames = new_length
+               END IF
+               LONAMES( nlonames ) = field2
             ELSE
-               IF ( field1 == 'M ' ) THEN
-                  nminam = nminam + 1
-                  IF ( nminam > ninmax ) THEN
-                     status = - 2
-                     GO TO 700
-                  END IF
-                  MINAME( nminam ) = field2
-               ELSE
-                  IF ( field1 == 'L ' ) THEN
-                     nlonam = nlonam + 1
-                     IF ( nlonam > ninmax ) THEN
-                        status = - 2
-                        GO TO 700
-                     END IF
-                     LONAME( nlonam ) = field2
-                  ELSE
-                     ninnam = ninnam + 1
-                     IF ( ninnam > ninmax ) THEN
-                        status = - 2
-                        GO TO 700
-                     END IF
-                     INNAME( ninnam ) = field2
-                  END IF
+               ninnames = ninnames + 1
+               IF ( ninnames > len_innames ) THEN
+                 used_length = ninnames - 1 ; min_length = ninnames
+                 new_length = 3 * min_length / 2 + 1 
+                 CALL EXTEND_array( INNAMES, len_innames, used_length,         &
+                                    new_length, min_length, buffer,            &
+                                    status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                   bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
                END IF
+               INNAMES( ninnames ) = field2
             END IF
          END IF
       END IF
@@ -13661,7 +14699,7 @@
             END IF   
          END IF
       ELSE
-         IF ( FIELD1( 2: 2 ) == '+' .AND. startp ) THEN
+         IF ( field1( 2 : 2 ) == '+' .AND. startp ) THEN
 
 ! --------- continue a parameter assignment
 
@@ -13714,9 +14752,9 @@
                IF ( out > 0 ) WRITE( out, 2610 )
                GO TO 800
             END IF
-            IF ( itype < ngrtyp .AND. loutgf )                                 &
+            IF ( itype < ngtype .AND. loutgf )                                 &
                WRITE( outgf, 3191 ) nloop
-            IF ( itype < ngrtyp ) WRITE( outgd, 3191 ) nloop
+            IF ( itype < ngtype ) WRITE( outgd, 3191 ) nloop
          END IF
 
 !  find itype, the group-type
@@ -13737,24 +14775,24 @@
          itype = INLIST( ifield )
          IF ( loutgf ) WRITE( outgf, 3060 ) field2
          WRITE( outgd, 3060 ) field2
-         IF ( ngrtyp > 1 .AND. loutgf ) WRITE( outgf, 3061 ) itype
-         IF ( ngrtyp > 1 ) WRITE( outgd, 3061 ) itype
-         IF ( loutgf ) WRITE( outgf, 3062 ) ANAMES( itype )( 1 : 6 ),          &
+         IF ( ngtype > 1 .AND. loutgf ) WRITE( outgf, 3061 ) itype
+         IF ( ngtype > 1 ) WRITE( outgd, 3061 ) itype
+         IF ( loutgf ) WRITE( outgf, 3062 ) GANAMES( itype )( 1 : 6 ),         &
                    FIELDI(  4 )( 1 : 6 ), FIELDI( 10 )( 1 : 6 )
          IF ( iad0 == 1 ) THEN
             WRITE( outgd, 3064 )                                               &
                       FIELDI(  4 )( 1 : 6 ), FIELDI( 10 )( 1 : 6 ),            &
-                      ANAMES( itype )( 1 : 6 )
+                      GANAMES( itype )( 1 : 6 )
          ELSE
             WRITE( outgd, 3065 )                                               &
                       FIELDI(  4 )( 1 : 6 ), FIELDI( 10 )( 1 : 6 ),            &
-                      ANAMES( itype )( 1 : 6 )
+                      GANAMES( itype )( 1 : 6 )
          END IF
 
 ! --------- set group parameters
 
-         k1 = IGPA( itype )
-         k2 = IGPA( itype + 1 ) - 1
+         k1 = GTYPESP_ptr( itype )
+         k2 = GTYPESP_ptr( itype + 1 ) - 1
          DO 435 k = k1, k2
             ivar = k - k1 + 1
             IF ( loutgf )                                                      &
@@ -13764,12 +14802,12 @@
             WRITE( outgd, 3063 ) GPNAME( k ), FIELDI( 11 )( 1 : 6 ),           &
                 FIELDI( 13 )( 1 : 6 ), ivar
   435    CONTINUE
-         IF ( LDEFND( itype ) ) THEN
+         IF ( DEFINED( itype ) ) THEN
             status = 64
             IF ( out > 0 ) WRITE( out, 2640 )
             GO TO 800
          ELSE
-            LDEFND( itype ) = .TRUE.
+            DEFINED( itype ) = .TRUE.
          END IF
 
 !  initialize logicals which determine whether the data has been
@@ -13780,8 +14818,8 @@
          endf = .TRUE.
          startv = .FALSE.
       ELSE
-         IF ( FIELD1( 1: 1 ) == 'A' .OR. FIELD1( 1: 1 )                        &
-              == 'I' .OR. FIELD1( 1: 1 ) == 'E' ) THEN
+         IF ( field1( 1 : 1 ) == 'A' .OR. field1( 1 : 1 )  == 'I' .OR.         &
+              field1( 1 : 1 ) == 'E' ) THEN
 
 !  finish off the function assignment
 
@@ -13806,7 +14844,7 @@
 !  been defined
 
             IF ( .NOT. setf ) THEN
-               IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+               IF ( field1( 2 : 2 ) == ' ' ) THEN
                   startp = .TRUE.
 
 !  include the global parameters
@@ -13829,7 +14867,7 @@
 
 ! --------- make group-specific parameter assignments
 
-                  IF ( FIELD1( 1: 1 ) == 'A' ) THEN
+                  IF ( field1( 1 : 1 ) == 'A' ) THEN
                      IF ( .NOT. setf ) THEN
                         IF ( loutgf )                                          &
                         WRITE( outgf, 3080 ) FIELD2( 1 : 6 ), field7
@@ -13857,7 +14895,7 @@
                         IF ( out > 0 ) WRITE( out, 2580 )
                         GO TO 800
                      END IF
-                     IF ( FIELD1( 1: 1 ) == 'I' ) THEN
+                     IF ( field1( 1 : 1 ) == 'I' ) THEN
                         IF ( .NOT. setf ) THEN
                            IF ( loutgf )                                       &
                            WRITE( outgf, 3081 ) FIELD2( 1 : 6 ),               &
@@ -13888,7 +14926,7 @@
                      END IF   
                   END IF
                ELSE
-                  IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                  IF ( field1( 2 : 2 ) == '+' ) THEN
                      IF ( startp ) THEN
 
 ! --------- continuation of a parameter assignment
@@ -13912,11 +14950,11 @@
             END IF
          ELSE
             startp = .FALSE.
-            IF ( FIELD1( 1: 1 ) == 'F' ) THEN
+            IF ( field1( 1 : 1 ) == 'F' ) THEN
 
 !  set the function value
 
-               IF ( FIELD1( 2: 2 ) == ' ' ) THEN
+               IF ( field1( 2 : 2 ) == ' ' ) THEN
                   setf = .TRUE.
                   endf = .FALSE.
 
@@ -13938,7 +14976,7 @@
                   FIELDI( 2 )( 1 : 6 ), FIELDI( 10 )( 1 : 6 ), field7
                   WRITE( outgd, 3101 ) field7
                ELSE
-                  IF ( FIELD1( 2: 2 ) == '+' ) THEN
+                  IF ( field1( 2 : 2 ) == '+' ) THEN
                      IF ( setf ) THEN
 
 ! --------- continuation of g
@@ -13952,8 +14990,7 @@
                      END IF
                   END IF
                END IF
-            ELSE IF ( FIELD1( 1: 1 ) == 'G' .OR.                               &
-                      FIELD1( 1: 1 ) == 'H' ) THEN
+            ELSE IF ( field1( 1 : 1 ) == 'G' .OR. field1( 1 : 1 ) == 'H' ) THEN
                IF ( setf ) THEN
                   IF ( .NOT. endf ) THEN
                      IF ( iad0 == 1 ) THEN
@@ -13990,7 +15027,7 @@
          IF ( out > 0 ) WRITE( out, 2520 )
          RETURN
       END IF
-      IF ( ngrtyp > 0 ) GO TO 930
+      IF ( ngtype > 0 ) GO TO 930
       IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010 )
 
 !  a dummy routine will be substituted
@@ -14135,9 +15172,9 @@
             IF ( out > 0 ) WRITE( out, 2610 )
             GO TO 800
          END IF
-         IF ( itype < ngrtyp .AND. loutgf )                                    &
+         IF ( itype < ngtype .AND. loutgf )                                    &
             WRITE( outgf, 3191 ) nloop
-         IF ( itype < ngrtyp ) WRITE( outgd, 3191 ) nloop
+         IF ( itype < ngtype ) WRITE( outgd, 3191 ) nloop
       END IF
 
 ! ---------- end do loop
@@ -14156,12 +15193,20 @@
 !   check that all element types have been defined
 
   930 CONTINUE
-      DO 940 itype = 1, ngrtyp
-         IF ( .NOT. LDEFND( itype ) ) THEN
+      DO 940 itype = 1, ngtype
+         IF ( .NOT. DEFINED( itype ) ) THEN
             status = 53
             IF ( out > 0 ) WRITE( out, 2530 ) GTYPES( itype )
          END IF
   940 CONTINUE
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
@@ -14346,13 +15391,13 @@
 
       END SUBROUTINE MAKE_group_ad
 
-!-*-*-*-*-*- S I F D E C O D E   O U T R A N    S U B R O U T I N E -*-*-*-*-*-
+!-*-*-*-*- S I F D E C O D E   O U T R A N G E   S U B R O U T I N E -*-*-*-*-
 
-      SUBROUTINE OUTRAN( nelv, ninv, U, outfn, outra, ENAMES, INAMES, single )
+      SUBROUTINE OUTRANGE( nelv, ninv, U, outfn, outra, EVNAMES, IVNAMES, single )
       INTEGER :: nelv, ninv, outfn, outra
       LOGICAL :: single
       REAL ( KIND = wp ) :: U( ninv, nelv )
-      CHARACTER ( len = 10 ) :: ENAMES( * ), INAMES( * )
+      CHARACTER ( LEN = 10 ) :: EVNAMES( * ), IVNAMES( * )
 
 !  --------------------------------------------------------------------
 !  print out the gather and scatter part of the generated range routine
@@ -14364,7 +15409,7 @@
       INTEGER :: i, j, k
       REAL ( KIND = wp ) :: uij
       LOGICAL :: anynnz
-      CHARACTER ( len = 6 ) :: evname, ivname
+      CHARACTER ( LEN = 6 ) :: evname, ivname
 
 !  print out the scatter part
 
@@ -14446,9 +15491,9 @@
       DO 40 i = 1, ninv
          k = 0
          anynnz = .FALSE.
-         ivname = INAMES( i )(1:6)
+         ivname = IVNAMES( i )( 1 : 6 )
          DO 30 j = 1, nelv
-            evname = ENAMES( j )(1:6)
+            evname = EVNAMES( j )( 1 : 6 )
             uij = U( i, j )
 
 !  ignore zero entries
@@ -14558,19 +15603,19 @@
  4111 FORMAT( '         W2(', i6, ' ) = 0.0E+0 ' )
  4112 FORMAT( '         W2(', i6, ' ) =   W2(', i6, ' ) ' )
 
-!  end of subroutine OUTRAN
+!  end of subroutine OUTRANGE
 
-      END SUBROUTINE OUTRAN
+      END SUBROUTINE OUTRANGE
 
-!-*-*-*-*-*- S I F D E C O D E   O U T R N 2    S U B R O U T I N E -*-*-*-*-*-
+!-*-*- S I F D E C O D E   O U T R A N G E _ a d    S U B R O U T I N E -*-*-
 
-      SUBROUTINE OUTRN2( nelv, ninv, U, outff, outfd, outra,                   &
-                         ENAMES, INAMES, single, ad0 )
+      SUBROUTINE OUTRANGE_ad( nelv, ninv, U, outff, outfd, outra,              &
+                              EVNAMES, IVNAMES, single, ad0 )
       INTEGER :: nelv, ninv, outff, outfd, outra
       LOGICAL :: single
-      CHARACTER ( len = 4 ) :: ad0
+      CHARACTER ( LEN = 4 ) :: ad0
       REAL ( KIND = wp ) :: U( ninv, nelv )
-      CHARACTER ( len = 10 ) :: ENAMES( * ), INAMES( * )
+      CHARACTER ( LEN = 10 ) :: EVNAMES( * ), IVNAMES( * )
 
 !  --------------------------------------------------------------------
 !  print out the gather and scatter part of the generated range routine
@@ -14582,7 +15627,7 @@
       INTEGER :: i, j, k
       REAL ( KIND = wp ) :: uij
       LOGICAL :: anynnz, loutff
-      CHARACTER ( len = 6 ) :: evname, ivname
+      CHARACTER ( LEN = 6 ) :: evname, ivname
 
       loutff = outff > 0
 
@@ -14666,9 +15711,9 @@
       DO 40 i = 1, ninv
          k = 0
          anynnz = .FALSE.
-         ivname = INAMES( i )(1:6)
+         ivname = IVNAMES( i )( 1 : 6 )
          DO 30 j = 1, nelv
-            evname = ENAMES( j )(1:6)
+            evname = EVNAMES( j )( 1 : 6 )
             uij = U( i, j )
 
 !  ignore zero entries
@@ -14774,7 +15819,7 @@
          WRITE( outfd, 3131 ) ninv, ninv
       END IF
       DO 50 i = 1, ninv
-         ivname = INAMES( i )(1:6)
+         ivname = IVNAMES( i )( 1 : 6 )
          WRITE( outfd, 3140 ) ivname, i
    50 CONTINUE   
       RETURN
@@ -14821,24 +15866,24 @@
  4111 FORMAT( '         W2(', i6, ' ) = 0.0E+0 ' )
  4112 FORMAT( '         W2(', i6, ' ) =   W2(', i6, ' ) ' )
 
-!  end of subroutine OUTRN2
+!  end of subroutine OUTRANGE_ad
 
-      END SUBROUTINE OUTRN2
+      END SUBROUTINE OUTRANGE_ad
 
 !-*-*-*-*-*-*- S I F D E C O D E   N U N A M E    F U N C T I O N -*-*-*-*-*-*-
 
-      FUNCTION NUNAME( i1, i2, i3, i4, i5, i6, iires, ninmax, nrenam, ninnam,  &
-                       nlonam, nminam, nexnam, nlmax, neltyp, yname, FIELDI,   &
-                       RENAME, INNAME, LONAME, MINAME, EXNAME, ETYPES )
-      CHARACTER ( len = 6 ) :: nuname
-      INTEGER :: i1, i2, i3, i4, i5, i6, iires, nlmax, ninmax
-      INTEGER :: nrenam, ninnam, nlonam, nminam, nexnam, neltyp
-      CHARACTER ( len = 6 ) :: yname
-      CHARACTER ( len = 8 ) :: FIELDI( iires )
-      CHARACTER ( len = 10 ) :: RENAME( ninmax ), INNAME( ninmax )
-      CHARACTER ( len = 10 ) :: LONAME( ninmax )
-      CHARACTER ( len = 10 ) :: MINAME( ninmax ), EXNAME( ninmax )
-      CHARACTER ( len = 10 ) :: ETYPES( nlmax  )
+      FUNCTION NUNAME( i1, i2, i3, i4, i5, i6, iires, nrenames, ninnames,  &
+                       nlonames, nminames, nexnames, neltype, yname, FIELDI,   &
+                       RENAMES, INNAMES, LONAMES, MINAMES, EXNAMES, ETYPES )
+      CHARACTER ( LEN = 6 ) :: nuname
+      INTEGER :: i1, i2, i3, i4, i5, i6, iires
+      INTEGER :: nrenames, ninnames, nlonames, nminames, nexnames, neltype
+      CHARACTER ( LEN = 6 ) :: yname
+      CHARACTER ( LEN = 8 ) :: FIELDI( iires )
+      CHARACTER ( LEN = 10 ) :: RENAMES( nrenames ), INNAMES( ninnames )
+      CHARACTER ( LEN = 10 ) :: LONAMES( nlonames )
+      CHARACTER ( LEN = 10 ) :: MINAMES( nminames ), EXNAMES( nexnames )
+      CHARACTER ( LEN = 10 ) :: ETYPES( neltype )
 
 !  -------------------------------------------------
 !  find a name that does not occur in any other list
@@ -14847,7 +15892,7 @@
 !  local variables
 
       INTEGER :: i
-      CHARACTER ( len = 1 ) :: CHARAC( 36 )
+      CHARACTER ( LEN = 1 ) :: CHARAC( 36 )
       DATA CHARAC / 'Z', 'Y', 'X', 'W', 'V', 'U', 'T', 'S', 'R',               &
                     'Q', 'P', 'O', 'N', 'M', 'L', 'K', 'J', 'I',               &
                     'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A', '0',               &
@@ -14886,26 +15931,26 @@
 
 !  see if the name has already been used
 
-      DO 110 i = 1, nrenam
-         IF ( RENAME( i )(1:6) == nuname ) GO TO 10
+      DO 110 i = 1, nrenames
+         IF ( RENAMES( i )( 1 : 6 ) == nuname ) GO TO 10
   110 CONTINUE
-      DO 120 i = 1, ninnam
-         IF ( INNAME( i )(1:6) == nuname ) GO TO 10
+      DO 120 i = 1, ninnames
+         IF ( INNAMES( i )( 1 : 6 ) == nuname ) GO TO 10
   120 CONTINUE
-      DO 130 i = 1, nlonam
-         IF ( LONAME( i )(1:6) == nuname ) GO TO 10
+      DO 130 i = 1, nlonames
+         IF ( LONAMES( i )( 1 : 6 ) == nuname ) GO TO 10
   130 CONTINUE
-      DO 140 i = 1, nminam
-         IF ( MINAME( i )(1:6) == nuname ) GO TO 10
+      DO 140 i = 1, nminames
+         IF ( MINAMES( i )( 1 : 6 ) == nuname ) GO TO 10
   140 CONTINUE
-      DO 150 i = 1, nexnam
-         IF ( EXNAME( i )(1:6) == nuname ) GO TO 10
+      DO 150 i = 1, nexnames
+         IF ( EXNAMES( i )( 1 : 6 ) == nuname ) GO TO 10
   150 CONTINUE
-      DO 160 i = 1, neltyp
-         IF ( ETYPES( i )(1:6) == nuname ) GO TO 10
+      DO 160 i = 1, neltype
+         IF ( ETYPES( i )( 1 : 6 ) == nuname ) GO TO 10
   160 CONTINUE
       DO 170 i = 1, iires
-         IF ( FIELDI( i )(1:6) == nuname ) GO TO 10
+         IF ( FIELDI( i )( 1 : 6 ) == nuname ) GO TO 10
   170 CONTINUE
       IF ( nuname == yname ) GO TO 10
       RETURN
@@ -14921,9 +15966,9 @@
       INTEGER :: leline, mendat, maxnul, nlines, status, out
       LOGICAL :: issdif
       INTEGER :: LENIND( mendat )
-      CHARACTER ( len = 1 ) :: NULINE( leline )
-      CHARACTER ( len = 12 ) :: INDIC8( mendat )
-      CHARACTER ( len = 65 ) :: NULINA( maxnul )
+      CHARACTER ( LEN = 1 ) :: NULINE( leline )
+      CHARACTER ( LEN = 12 ) :: INDIC8( mendat )
+      CHARACTER ( LEN = 65 ) :: NULINA( maxnul )
 
 !  ----------------------------------------------------
 !  construct a fixed format line from a free format one
@@ -15077,7 +16122,7 @@
 
               ELSE
                 DO 70 j = 2, mendat
-                  len = LENIND( j )
+                  LEN = LENIND( j )
                   DO k = 1, len
                     IF ( NULINE( nstfie + k ) /= INDIC8( j )( K: k ) ) GO TO 70
                   END DO
@@ -15098,7 +16143,7 @@
                 IF ( j /= 4 ) THEN
                   field = .FALSE.
                   nextl = .TRUE.
-                  NULINA( nlines )( 1: 12 ) = INDIC8( j )( 1: 12 )
+                  NULINA( nlines )( 1 : 12 ) = INDIC8( j )( 1 : 12 )
                  END IF
               END IF
             END IF
@@ -15187,10 +16232,10 @@
 
 !  non-executable statements
 
- 2020 FORMAT( ' ** Exit from GPSMPS - indicator card not recognised ' )
- 2440 FORMAT( ' ** Exit from GPSMPS - field ', i1, ' on free-form',            &
+ 2020 FORMAT( ' ** Exit from INTERPRET_gpsmps - indicator card not recognised' )
+ 2440 FORMAT( ' ** Exit from INTERPRET_gpsmps - field ', i1, ' on free-form',  &
               ' card too long' )
- 2450 FORMAT( ' ** Exit from GPSMPS - too many fields on free-form',           &
+ 2450 FORMAT( ' ** Exit from INTERPRET_gpsmps - too many fields on free-form', &
               ' card' )
 
 !  end of subroutine FREE_format
@@ -15199,15 +16244,17 @@
 
 !-*-*-*-*-*- S I F D E C O D E   T R A N S    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE TRANS( out, input, output, tempry, single, iauto,             &
-                        iad0, RNAMES, lnames, ADUMMY, ldummy )
+      SUBROUTINE TRANSLATE_for_ad( out, input, output, tempry, single, iauto,  &
+                                   iad0, RNAMES, lnames, ADUMMY, ldummy )
       INTEGER :: out, input, output, tempry, iauto, iad0, lnames, ldummy
-      CHARACTER ( len = 10 ) :: RNAMES( lnames ), ADUMMY( ldummy )
+      CHARACTER ( LEN = 10 ) :: RNAMES( lnames ), ADUMMY( ldummy )
       LOGICAL :: single
 
 !  -------------------------------------------------------
 !  translate a fortran 77 program so that it is capable of
 !  accepting AD01 or AD02 reals instead of ordinary reals
+
+!  formerly TRANS in SiFDec
 !  -------------------------------------------------------
 
 !  local variables
@@ -15215,24 +16262,24 @@
       INTEGER :: i, i1, i2, ii, j, jj, nreal, nre, lre, mre, ndummy
       LOGICAL :: intri, sub, fun, nofiel, ebrack
       LOGICAL :: freal, endlin, startr
-      CHARACTER ( len = 1 ) :: card
-      CHARACTER ( len = 4 ) :: ad0
-      CHARACTER ( len = 10 ) :: blank, field
-      CHARACTER ( len = 15 ) :: adtype
-      CHARACTER ( len = 72 ) :: nuline, oldlin, bl72
-      CHARACTER ( len = 72 ) :: RELINE( 20 )
+      CHARACTER ( LEN = 1 ) :: card
+      CHARACTER ( LEN = 4 ) :: ad0
+      CHARACTER ( LEN = 10 ) :: blank, field
+      CHARACTER ( LEN = 15 ) :: adtype
+      CHARACTER ( LEN = 72 ) :: nuline, oldlin, bl72
+      CHARACTER ( LEN = 72 ) :: RELINE( 20 )
 
-      CHARACTER ( len = 6 ), PARAMETER :: lsp = ' real '
-      CHARACTER ( len = 6 ), PARAMETER :: usp = ' REAL '
-      CHARACTER ( len = 10 ), PARAMETER :: lf = ' function '
-      CHARACTER ( len = 10 ), PARAMETER :: uf = ' FUNCTION '
-      CHARACTER ( len = 11 ), PARAMETER :: li = ' intrinsic '
-      CHARACTER ( len = 11 ), PARAMETER :: ui = ' INTRINSIC '
-      CHARACTER ( len = 13 ), PARAMETER :: ls = ' subroutine '
-      CHARACTER ( len = 13 ), PARAMETER :: us = ' SUBROUTINE '
-      CHARACTER ( len = 18 ), PARAMETER :: ldp = ' double precision '
-      CHARACTER ( len = 18 ), PARAMETER :: udp = ' DOUBLE PRECISION '
-      CHARACTER ( len = 15 ), PARAMETER :: un = '=AD01_UNDEFINED'
+      CHARACTER ( LEN = 6 ), PARAMETER :: lsp = ' real '
+      CHARACTER ( LEN = 6 ), PARAMETER :: usp = ' REAL '
+      CHARACTER ( LEN = 10 ), PARAMETER :: lf = ' function '
+      CHARACTER ( LEN = 10 ), PARAMETER :: uf = ' FUNCTION '
+      CHARACTER ( LEN = 11 ), PARAMETER :: li = ' intrinsic '
+      CHARACTER ( LEN = 11 ), PARAMETER :: ui = ' INTRINSIC '
+      CHARACTER ( LEN = 13 ), PARAMETER :: ls = ' subroutine '
+      CHARACTER ( LEN = 13 ), PARAMETER :: us = ' SUBROUTINE '
+      CHARACTER ( LEN = 18 ), PARAMETER :: ldp = ' double precision '
+      CHARACTER ( LEN = 18 ), PARAMETER :: udp = ' DOUBLE PRECISION '
+      CHARACTER ( LEN = 15 ), PARAMETER :: un = '=AD01_UNDEFINED'
 
 !  create a blank name
 
@@ -15284,8 +16331,8 @@
 
 !  ignore comments
 
-        IF ( NULINE( 1: 1 ) == 'C' .OR.                                        &
-             NULINE( 1: 1 ) == 'c' ) GO TO 400
+        IF ( NULINE( 1 : 1 ) == 'C' .OR.                                        &
+             NULINE( 1 : 1 ) == 'c' ) GO TO 400
 
 !  is the line a continuation?
 
@@ -15369,7 +16416,7 @@
 
 !  write out comments
 
-          IF ( OLDLIN( 1: 1 ) == 'C' .OR. OLDLIN( 1: 1 ) == 'c' ) GO TO 180
+          IF ( OLDLIN( 1 : 1 ) == 'C' .OR. OLDLIN( 1 : 1 ) == 'c' ) GO TO 180
 
 !  search for cards defining appropriate real values
 
@@ -15432,7 +16479,7 @@
             startr = .TRUE.
           END IF
   110     CONTINUE
-          CALL GETFLD( ii, i1, i2, endlin, oldlin, blank,                    &
+          CALL GETFLD( ii, i1, i2, endlin, oldlin, blank,                      &
                        field, nofiel, ebrack, .FALSE. )
           IF ( nofiel ) GO TO 60
 
@@ -15514,9 +16561,9 @@
             sub = .FALSE.
           ELSE
             fun = .FALSE.
-            IF ( freal .AND. iad0 == 1 )                                      &
+            IF ( freal .AND. iad0 == 1 )                                       &
               WRITE( output, 2030 ) RNAMES( 1 )( 1 : 6 )
-            IF ( freal .AND. iad0 == 2 )                                      &
+            IF ( freal .AND. iad0 == 2 )                                       &
               WRITE( output, 2040 ) ad0, RNAMES( 1 )( 1 : 6 )
           END IF
           REWIND( tempry )
@@ -15582,8 +16629,7 @@
 !  ignore comments
 
       IF ( .NOT. ( sub .OR. fun ) ) THEN
-        IF ( NULINE( 1: 1 ) == 'C' .OR.                                        &
-             NULINE( 1: 1 ) == 'c' ) GO TO 500
+        IF ( NULINE( 1 : 1 ) == 'C' .OR. NULINE( 1 : 1 ) == 'c' ) GO TO 500
 
 !  remove lines mentioning intrinsic functions
 
@@ -15729,14 +16775,14 @@
               '    This is not allowed by the automatic',                      &
               ' differentiation package ', A4, '.' )
 
-!  end of subroutine TRANS
+!  end of subroutine TRANSLATE_for_ad
 
-      END SUBROUTINE TRANS
+      END SUBROUTINE TRANSLATE_for_ad
 
 !-*-*-*-*-*-*- S I F D E C O D E   C H A R A    F U N C T I O N -*-*-*-*-*-*-*-
 
       LOGICAL FUNCTION CHARA( c )
-      CHARACTER ( len = 1 ) :: c
+      CHARACTER ( LEN = 1 ) :: c
 
 !  ----------------------------
 !  is the character c a letter?
@@ -15762,7 +16808,7 @@
 !-*-*-*-*-*-*- S I F D E C O D E   N U M B A    F U N C T I O N -*-*-*-*-*-*-*-
 
       LOGICAL FUNCTION NUMBA( c )
-      CHARACTER ( len = 1 ) :: c
+      CHARACTER ( LEN = 1 ) :: c
 
 !  ----------------------------
 !  is the character c a number?
@@ -15789,7 +16835,7 @@
 
       SUBROUTINE UPPER( c, n )
       INTEGER :: n
-      CHARACTER ( len = * ) :: c
+      CHARACTER ( LEN = * ) :: c
 
 !  -------------------------------
 !  convert character to upper case
@@ -15817,7 +16863,7 @@
 
       SUBROUTINE LOWER( c, n )
       INTEGER :: n
-      CHARACTER ( len = * ) :: c
+      CHARACTER ( LEN = * ) :: c
 
 !  -------------------------------
 !  convert character to lower case
@@ -15847,8 +16893,8 @@
                          field, nofiel, ebrack, ignorb )
       INTEGER :: ii, i1, i2
       LOGICAL :: endlin, nofiel, ebrack, ignorb
-      CHARACTER ( len = 72 ) :: nuline
-      CHARACTER ( len = 10 ) :: blank, field
+      CHARACTER ( LEN = 72 ) :: nuline
+      CHARACTER ( LEN = 10 ) :: blank, field
 
 !  ------------------------------------------------------------
 !  find the first character string in nuline beyond position ii
@@ -15924,9 +16970,9 @@
 
       SUBROUTINE GETDUM( nuline, ii, ADUMMY, ldummy, ndummy, blank )
       INTEGER :: ii, ndummy, ldummy
-      CHARACTER ( len = 10 ) :: blank
-      CHARACTER ( len = 72 ) :: nuline
-      CHARACTER ( len = 10 ) :: ADUMMY( ldummy )
+      CHARACTER ( LEN = 10 ) :: blank
+      CHARACTER ( LEN = 72 ) :: nuline
+      CHARACTER ( LEN = 10 ) :: ADUMMY( ldummy )
 
 !  -------------------------------------------------------------------
 !  determine the list of variables beyond column ii on the line nuline
@@ -15935,7 +16981,7 @@
 !  local variables
 
       INTEGER :: i, jj, j1, j2
-      CHARACTER ( len = 10 ) :: field
+      CHARACTER ( LEN = 10 ) :: field
       LOGICAL nofiel, ebrack, endlin
 
       jj = ii
@@ -15960,7 +17006,7 @@
 
       SUBROUTINE OUTLIN( nuline, iend, output )
       INTEGER :: iend, output
-      CHARACTER ( len = 72 ) :: nuline
+      CHARACTER ( LEN = 72 ) :: nuline
 
 !  -------------------------------------------------------
 !  write out the current line, cutting off trailing blanks
@@ -15981,9 +17027,9 @@
 
       END SUBROUTINE OUTLIN
 
-!-*-*-*-*-*- S I F D E C O D E   R E O R D A    S U B R O U T I N E -*-*-*-*-*-
+!-*-*-*-*- S I F D E C O D E   R E O R D E R    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE REORDA( nc, nnz, IRN, JCN, A, ip, IW )
+      SUBROUTINE REORDER( nc, nnz, IRN, JCN, A, ip, IW )
       INTEGER :: nc, nnz
       INTEGER :: IRN( nnz ), JCN( nnz )
       INTEGER :: IW( * ), IP( * )
@@ -16064,9 +17110,9 @@
       END DO
       RETURN
 
-!  end of subroutine REORDA
+!  end of subroutine REORDER
 
-      END SUBROUTINE REORDA
+      END SUBROUTINE REORDER
 
 !-  S I F D E C O D E   H A S H _ i n i t i a l i z e    S U B R O U T I N E  -
 
@@ -16115,7 +17161,7 @@
       SUBROUTINE HASH_insert( length, nchar, field, KEY, ITABLE, ifree )
       INTEGER :: nchar, ifree, length
       INTEGER :: ITABLE( length )
-      CHARACTER ( len = 1 ) :: FIELD( nchar ), KEY( nchar, length )
+      CHARACTER ( LEN = 1 ) :: FIELD( nchar ), KEY( nchar, length )
 
 !  ----------------------------------------------------------------
 !  Insert in chained scatter table (Williams, CACM 2, 21-24, 1959)
@@ -16133,7 +17179,7 @@
 !  local variables
 
       INTEGER :: i, j, k
-      CHARACTER ( len = 1 ) :: BFIELD( nbytes )
+      CHARACTER ( LEN = 1 ) :: BFIELD( nbytes )
       INTEGER :: IVALUE( 2 )
 
 !  find a starting position, ifree, for the insertion. Perform the hashing on 
@@ -16242,7 +17288,7 @@
       SUBROUTINE HASH_search( length, nchar, field, KEY, ITABLE, ifree )
       INTEGER :: length, nchar, ifree
       INTEGER :: ITABLE( length )
-      CHARACTER ( len = 1 ) :: FIELD( nchar ), KEY( nchar, length )
+      CHARACTER ( LEN = 1 ) :: FIELD( nchar ), KEY( nchar, length )
 
 !  -------------------------------------------------------------------
 !  search within chained scatter table (Williams, CACM 2, 21-24, 1959)
@@ -16260,7 +17306,7 @@
 !  local variables
 
       INTEGER :: i, j, k
-      CHARACTER ( len = 1 ) :: BFIELD( nbytes )
+      CHARACTER ( LEN = 1 ) :: BFIELD( nbytes )
       INTEGER :: IVALUE( 2 )
 
 !  find a starting position, ifree, for the chain leading to the required 
@@ -16376,5 +17422,1181 @@
 !  end of function HASH_is_prime
 
       END FUNCTION HASH_is_prime
+
+! -*-*- a l l o c a t e _ a r r a y _ i n t e g e r  S U B R O U T I N E -*-*-
+
+     SUBROUTINE ALLOCATE_array_integer( ARRAY, new_length, alloc_status )
+
+!  -----------------------------------------------------------------------
+!  reallocate an integer array so that its length is at least new_length.
+!  If the array is lready allocated and of length at least new_length, the
+!  allocation will be skipped and new_length replaced by SIZE(ARRAY)
+!  -----------------------------------------------------------------------
+
+!  History -
+!   fortran 2003 version first released in SIFDECODE/CUTEst, 26th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( OUT ) :: alloc_status
+     INTEGER, INTENT( INOUT ) :: new_length
+     INTEGER, ALLOCATABLE, DIMENSION( : ) :: ARRAY
+
+     IF ( ALLOCATED( ARRAY ) ) THEN
+       IF ( SIZE( ARRAY ) < new_length ) THEN
+         DEALLOCATE( ARRAY, STAT = alloc_status )
+         IF ( alloc_status /= 0 ) RETURN
+       ELSE
+         new_length = SIZE( ARRAY )
+         alloc_status = 0
+         RETURN
+       END IF
+     END IF
+     ALLOCATE( ARRAY( new_length ), STAT = alloc_status )
+
+     RETURN
+
+!  end of subroutine ALLOCATE_array_integer
+
+     END SUBROUTINE ALLOCATE_array_integer
+
+! -*-*-*-  A L L O C A T E _ a r r a y _ r e a l  S U B R O U T I N E  -*-*-*-*-
+
+     SUBROUTINE ALLOCATE_array_real( ARRAY, new_length, alloc_status )
+
+!  -----------------------------------------------------------------------
+!  reallocate a real array so that its length is at least new_length.
+!  If the array is lready allocated and of length at least new_length, the
+!  allocation will be skipped and new_length replaced by SIZE(ARRAY)
+!  -----------------------------------------------------------------------
+
+!  History -
+!   fortran 2003 version first released in SIFDECODE/CUTEst, 26th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( OUT ) :: alloc_status
+     INTEGER, INTENT( INOUT ) :: new_length
+     REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
+
+     IF ( ALLOCATED( ARRAY ) ) THEN
+       IF ( SIZE( ARRAY ) < new_length ) THEN
+         DEALLOCATE( ARRAY, STAT = alloc_status )
+         IF ( alloc_status /= 0 ) RETURN
+       ELSE
+         new_length = SIZE( ARRAY )
+         alloc_status = 0
+         RETURN
+       END IF
+     END IF
+     ALLOCATE( ARRAY( new_length ), STAT = alloc_status )
+
+     RETURN
+
+!  end of subroutine ALLOCATE_array_real
+
+     END SUBROUTINE ALLOCATE_array_real
+
+! -*-*-  A L L O C A T E _ a r r a y _ l o g i c a l  S U B R O U T I N E  -*-*-
+
+     SUBROUTINE ALLOCATE_array_logical( ARRAY, new_length, alloc_status )
+
+!  -----------------------------------------------------------------------
+!  reallocate a real array so that its length is at least new_length.
+!  If the array is lready allocated and of length at least new_length, the
+!  allocation will be skipped and new_length replaced by SIZE(ARRAY)
+!  -----------------------------------------------------------------------
+
+!  History -
+!   fortran 2003 version first released in SIFDECODE/CUTEst, 26th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( OUT ) :: alloc_status
+     INTEGER, INTENT( INOUT ) :: new_length
+     LOGICAL, ALLOCATABLE, DIMENSION( : ) :: ARRAY
+
+     IF ( ALLOCATED( ARRAY ) ) THEN
+       IF ( SIZE( ARRAY ) < new_length ) THEN
+         DEALLOCATE( ARRAY, STAT = alloc_status )
+         IF ( alloc_status /= 0 ) RETURN
+       ELSE
+         new_length = SIZE( ARRAY )
+         alloc_status = 0
+         RETURN
+       END IF
+     END IF
+     ALLOCATE( ARRAY( new_length ), STAT = alloc_status )
+
+     RETURN
+
+!  end of subroutine ALLOCATE_array_logical
+
+     END SUBROUTINE ALLOCATE_array_logical
+
+! -  A L L O C A T E _ a r r a y _ c h a r a c t e r 1 0  S U B R O U T I N E  -
+
+     SUBROUTINE ALLOCATE_array_character10( ARRAY, new_length, alloc_status )
+
+!  -----------------------------------------------------------------------
+!  reallocate a real array so that its length is at least new_length.
+!  If the array is lready allocated and of length at least new_length, the
+!  allocation will be skipped and new_length replaced by SIZE(ARRAY)
+!  -----------------------------------------------------------------------
+
+!  History -
+!   fortran 2003 version first released in SIFDECODE/CUTEst, 26th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( OUT ) :: alloc_status
+     INTEGER, INTENT( INOUT ) :: new_length
+     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
+
+     IF ( ALLOCATED( ARRAY ) ) THEN
+       IF ( SIZE( ARRAY ) < new_length ) THEN
+         DEALLOCATE( ARRAY, STAT = alloc_status )
+         IF ( alloc_status /= 0 ) RETURN
+       ELSE
+         new_length = SIZE( ARRAY )
+         alloc_status = 0
+         RETURN
+       END IF
+     END IF
+     ALLOCATE( ARRAY( new_length ), STAT = alloc_status )
+
+     RETURN
+
+!  end of subroutine ALLOCATE_array_character10
+
+     END SUBROUTINE ALLOCATE_array_character10
+
+! -*-*- a l l o c a t e _ a r r a y 2 _ i n t e g e r  S U B R O U T I N E -*-*-
+
+     SUBROUTINE ALLOCATE_array2_integer( ARRAY, new_length1, new_length2,      &
+                                         alloc_status )
+
+!  -----------------------------------------------------------------------
+!  reallocate an integer array so that its length is at least new_length.
+!  If the array is lready allocated and of length at least new_length, the
+!  allocation will be skipped and new_length replaced by SIZE(ARRAY)
+!  -----------------------------------------------------------------------
+
+!  History -
+!   fortran 2003 version first released in SIFDECODE/CUTEst, 26th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( OUT ) :: alloc_status
+     INTEGER, INTENT( INOUT ) :: new_length1, new_length2
+     INTEGER, ALLOCATABLE, DIMENSION( : , : ) :: ARRAY
+
+     IF ( ALLOCATED( ARRAY ) ) THEN
+       IF ( SIZE( ARRAY, 1 ) /= new_length1 .OR.                               &
+            SIZE( ARRAY, 2 ) < new_length2 ) THEN
+         DEALLOCATE( ARRAY, STAT = alloc_status )
+         IF ( alloc_status /= 0 ) RETURN
+       ELSE
+         new_length1 = SIZE( ARRAY, 1 ) ; new_length2 = SIZE( ARRAY, 2 )
+         alloc_status = 0
+         RETURN
+       END IF
+     END IF
+     ALLOCATE( ARRAY( new_length1, new_length2 ), STAT = alloc_status )
+
+     RETURN
+
+!  end of subroutine ALLOCATE_array2_integer
+
+     END SUBROUTINE ALLOCATE_array2_integer
+
+! -*-*-  A L L O C A T E _ a r r a y 2 _ r e a l  S U B R O U T I N E  -*-*-*-
+
+     SUBROUTINE ALLOCATE_array2_real( ARRAY, new_length1, new_length2,         &
+                                      alloc_status )
+
+!  -----------------------------------------------------------------------
+!  reallocate a real array so that its length is at least new_length.
+!  If the array is lready allocated and of length at least new_length, the
+!  allocation will be skipped and new_length replaced by SIZE(ARRAY)
+!  -----------------------------------------------------------------------
+
+!  History -
+!   fortran 2003 version first released in SIFDECODE/CUTEst, 26th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( OUT ) :: alloc_status
+     INTEGER, INTENT( INOUT ) :: new_length1, new_length2
+     REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: ARRAY
+
+     IF ( ALLOCATED( ARRAY ) ) THEN
+       IF ( SIZE( ARRAY, 1 ) /= new_length1 .OR.                               &
+            SIZE( ARRAY, 2 ) < new_length2 ) THEN
+         DEALLOCATE( ARRAY, STAT = alloc_status )
+         IF ( alloc_status /= 0 ) RETURN
+       ELSE
+         new_length1 = SIZE( ARRAY, 1 ) ; new_length2 = SIZE( ARRAY, 2 )
+         alloc_status = 0
+         RETURN
+       END IF
+     END IF
+     ALLOCATE( ARRAY( new_length1, new_length2 ), STAT = alloc_status )
+
+     RETURN
+
+!  end of subroutine ALLOCATE_array2_real
+
+     END SUBROUTINE ALLOCATE_array2_real
+
+! - A L L O C A T E _ a r r a y 2 _ c h a r a c t e r 1 0  S U B R O U T I N E -
+
+     SUBROUTINE ALLOCATE_array2_character10( ARRAY, new_length1, new_length2,  &
+                                             alloc_status )
+
+!  -----------------------------------------------------------------------
+!  reallocate a real array so that its length is at least new_length.
+!  If the array is lready allocated and of length at least new_length, the
+!  allocation will be skipped and new_length replaced by SIZE(ARRAY)
+!  -----------------------------------------------------------------------
+
+!  History -
+!   fortran 2003 version first released in SIFDECODE/CUTEst, 26th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( OUT ) :: alloc_status
+     INTEGER, INTENT( INOUT ) :: new_length1, new_length2
+     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( :, : ) :: ARRAY
+
+     IF ( ALLOCATED( ARRAY ) ) THEN
+       IF ( SIZE( ARRAY, 1 ) /= new_length1 .OR.                               &
+            SIZE( ARRAY, 2 ) < new_length2 ) THEN
+         DEALLOCATE( ARRAY, STAT = alloc_status )
+         IF ( alloc_status /= 0 ) RETURN
+       ELSE
+         new_length1 = SIZE( ARRAY, 1 ) ; new_length2 = SIZE( ARRAY, 2 )
+         alloc_status = 0
+         RETURN
+       END IF
+     END IF
+     ALLOCATE( ARRAY( new_length1, new_length2 ), STAT = alloc_status )
+
+     RETURN
+
+!  end of subroutine ALLOCATE_array2_character10
+
+     END SUBROUTINE ALLOCATE_array2_character10
+
+! -*-*-  E X T E N D _ a r r a y _ i n t e g e r  S U B R O U T I N E - -*-*-
+
+     SUBROUTINE EXTEND_array_integer( ARRAY, old_length, used_length,          &
+                                      new_length, min_length, buffer,          &
+                                      status, alloc_status )
+
+!  -------------------------------------------------------------------------
+!  extend an integer array so that its length is increaed from old_length to 
+!  as close to new_length as possible while keeping existing data intact
+!  -------------------------------------------------------------------------
+
+!  History -
+!   fortran 90 version released pre GALAHAD Version 1.0. February 7th 1995 as
+!     EXTEND_array_integer as part of the GALAHAD module EXTEND
+!   fortran 2003 version released in SIFDECODE/CUTEst, 5th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( IN ) :: old_length, buffer
+     INTEGER, INTENT( OUT ) :: status, alloc_status
+     INTEGER, INTENT( INOUT ) :: used_length, min_length, new_length
+     INTEGER, ALLOCATABLE, DIMENSION( : ) :: ARRAY
+
+!  local variables
+
+     INTEGER :: length
+     LOGICAL :: file_open
+     INTEGER, ALLOCATABLE, DIMENSION( : ) :: DUMMY
+
+!  make sure that the new length is larger than the old
+
+     IF ( new_length <= old_length ) new_length = 2 * old_length
+
+!  ensure that the input data is consistent
+
+     used_length = MIN( used_length, old_length )
+     min_length = MAX( old_length + 1, MIN( min_length, new_length ) )
+
+!  if possible, allocate DUMMY to hold the old values of ARRAY
+
+     ALLOCATE( DUMMY( used_length ), STAT = alloc_status )
+
+!  if the allocation failed, resort to using an external unit
+
+     IF ( alloc_status /= 0 ) GO TO 100
+
+     DUMMY( : used_length ) = ARRAY( : used_length )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+     length = new_length
+
+  10 CONTINUE
+     ALLOCATE( ARRAY( length ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       length = length + ( length - min_length ) / 2
+
+!  if there is insufficient room for both ARRAY and DUMMY, use an external unit
+
+       IF ( length < min_length ) THEN
+
+!  rewind the buffer i/o unit
+
+         INQUIRE( UNIT = buffer, OPENED = file_open )
+         IF ( file_open ) THEN
+           REWIND( UNIT = buffer )
+         ELSE
+           OPEN( UNIT = buffer )
+         END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+         WRITE( UNIT = buffer, FMT = * ) DUMMY( : used_length )
+
+!  extend the length of ARRAY
+
+         DEALLOCATE( DUMMY )
+         GO TO 110
+       END IF
+       GO TO 10
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     ARRAY( : used_length ) = DUMMY( : used_length )
+     DEALLOCATE( DUMMY )
+     new_length = length
+     GO TO 200
+
+!  use an external unit for writing
+
+ 100 CONTINUE
+
+!  rewind the buffer i/o unit
+
+     INQUIRE( UNIT = buffer, OPENED = file_open )
+     IF ( file_open ) THEN
+       REWIND( UNIT = buffer )
+     ELSE
+       OPEN( UNIT = buffer )
+     END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+     WRITE( UNIT = buffer, FMT = * ) ARRAY( : used_length )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+
+ 110 CONTINUE
+     ALLOCATE( ARRAY( new_length ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       new_length = min_length + ( new_length - min_length ) / 2
+       IF ( new_length < min_length ) THEN
+         status = 12
+         RETURN
+       END IF
+       GO TO 110
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     REWIND( UNIT = buffer )
+     READ( UNIT = buffer, FMT = * ) ARRAY( : used_length )
+
+!  successful exit
+
+ 200 CONTINUE
+write(6,*) old_length, new_length
+     status = 0
+     RETURN
+
+!  end of subroutine EXTEND_array_integer
+
+     END SUBROUTINE EXTEND_array_integer
+
+!-*-*-*-*-*-  E X T E N D _ a r r a y _ r e a l  S U B R O U T I N E -*-*-*-*-*-
+
+     SUBROUTINE EXTEND_array_real( ARRAY, old_length, used_length,             &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+
+!  ---------------------------------------------------------------------
+!  extend a real array so that its length is increaed from old_length to 
+!  as close to new_length as possible while keeping existing data intact
+!  ---------------------------------------------------------------------
+
+!  History -
+!   fortran 90 version released pre GALAHAD Version 1.0. February 7th 1995 as
+!     EXTEND_array_real as part of the GALAHAD module EXTEND
+!   fortran 2003 version released in SIFDECODE/CUTEst, 5th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( IN ) :: old_length, buffer
+     INTEGER, INTENT( OUT ) :: status, alloc_status
+     INTEGER, INTENT( INOUT ) :: used_length, min_length, new_length
+     REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
+
+!  local variables
+
+     INTEGER :: length
+     LOGICAL :: file_open
+     REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: DUMMY
+
+!  make sure that the new length is larger than the old
+
+     IF ( new_length <= old_length ) new_length = 2 * old_length
+
+!  ensure that the input data is consistent
+
+     used_length = MIN( used_length, old_length )
+     min_length = MAX( old_length + 1, MIN( min_length, new_length ) )
+
+!  if possible, allocate DUMMY to hold the old values of ARRAY
+
+     ALLOCATE( DUMMY( used_length ), STAT = alloc_status )
+
+!  if the allocation failed, resort to using an external unit
+
+     IF ( alloc_status /= 0 ) GO TO 100
+
+     DUMMY( : used_length ) = ARRAY( : used_length )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+     length = new_length
+
+  10 CONTINUE
+     ALLOCATE( ARRAY( length ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       length = length + ( length - min_length ) / 2
+
+!  if there is insufficient room for both ARRAY and DUMMY, use an external unit
+
+       IF ( length < min_length ) THEN
+
+!  rewind the buffer i/o unit
+
+         INQUIRE( UNIT = buffer, OPENED = file_open )
+         IF ( file_open ) THEN
+           REWIND( UNIT = buffer )
+         ELSE
+           OPEN( UNIT = buffer )
+         END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+         WRITE( UNIT = buffer, FMT = * ) DUMMY( : used_length )
+
+!  extend the length of ARRAY
+
+         DEALLOCATE( DUMMY )
+         GO TO 110
+       END IF
+       GO TO 10
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+       ARRAY( : used_length ) = DUMMY( : used_length )
+       DEALLOCATE( DUMMY )
+       new_length = length
+       GO TO 200
+
+!  use an external unit for writing
+
+ 100   CONTINUE
+
+!  rewind the buffer i/o unit
+
+     INQUIRE( UNIT = buffer, OPENED = file_open )
+     IF ( file_open ) THEN
+       REWIND( UNIT = buffer )
+     ELSE
+       OPEN( UNIT = buffer )
+     END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+     WRITE( UNIT = buffer, FMT = * ) ARRAY( : used_length )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+
+ 110 CONTINUE
+     ALLOCATE( ARRAY( new_length ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       new_length = min_length + ( new_length - min_length ) / 2
+       IF ( new_length < min_length ) THEN
+          status = 12
+          RETURN
+       END IF
+       GO TO 110
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     REWIND( UNIT = buffer )
+     READ( UNIT = buffer, FMT = * ) ARRAY( : used_length )
+
+!  successful exit
+
+ 200 CONTINUE
+     status = 0
+write(6,*) old_length, new_length
+     RETURN
+
+!  end of subroutine EXTEND_array_real
+
+     END SUBROUTINE EXTEND_array_real
+
+!-*-  E X T E N D _ a r r a y _ c h a r a c t e r 1 0  S U B R O U T I N E  -*-
+
+     SUBROUTINE EXTEND_array_character10( ARRAY, old_length, used_length,      &
+                                          new_length, min_length, buffer,      &
+                                          status, alloc_status )
+
+!  ----------------------------------------------------------------------------
+!  extend a character * 10 array so that its length is increaed from old_length
+!  to as close to new_length as possible while keeping existing data intact
+!  ----------------------------------------------------------------------------
+
+!  History -
+!   fortran 90 version released pre GALAHAD Version 1.0. February 7th 1995 as
+!     EXTEND_array_real as part of the GALAHAD module EXTEND
+!   fortran 2003 version released in SIFDECODE/CUTEst, 5th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( IN ) :: old_length, buffer
+     INTEGER, INTENT( OUT ) :: status, alloc_status
+     INTEGER, INTENT( INOUT ) :: used_length, min_length, new_length
+     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
+
+!  local variables
+
+     INTEGER :: length
+     LOGICAL :: file_open
+     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: DUMMY
+
+!  make sure that the new length is larger than the old
+
+     IF ( new_length <= old_length ) new_length = 2 * old_length
+
+!  ensure that the input data is consistent
+
+     used_length = MIN( used_length, old_length )
+     min_length = MAX( old_length + 1, MIN( min_length, new_length ) )
+
+!  if possible, allocate DUMMY to hold the old values of ARRAY
+
+     ALLOCATE( DUMMY( used_length ), STAT = alloc_status )
+
+!  if the allocation failed, resort to using an external unit
+
+     IF ( alloc_status /= 0 ) GO TO 100
+
+     DUMMY( : used_length ) = ARRAY( : used_length )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+     length = new_length
+
+  10 CONTINUE
+     ALLOCATE( ARRAY( length ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       length = length + ( length - min_length ) / 2
+
+!  if there is insufficient room for both ARRAY and DUMMY, use an external unit
+
+       IF ( length < min_length ) THEN
+
+!  rewind the buffer i/o unit
+
+         INQUIRE( UNIT = buffer, OPENED = file_open )
+         IF ( file_open ) THEN
+           REWIND( UNIT = buffer )
+         ELSE
+           OPEN( UNIT = buffer )
+         END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+         WRITE( UNIT = buffer, FMT = * ) DUMMY( : used_length )
+
+!  extend the length of ARRAY
+
+         DEALLOCATE( DUMMY )
+         GO TO 110
+       END IF
+       GO TO 10
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+       ARRAY( : used_length ) = DUMMY( : used_length )
+       DEALLOCATE( DUMMY )
+       new_length = length
+       GO TO 200
+
+!  use an external unit for writing
+
+ 100   CONTINUE
+
+!  rewind the buffer i/o unit
+
+     INQUIRE( UNIT = buffer, OPENED = file_open )
+     IF ( file_open ) THEN
+       REWIND( UNIT = buffer )
+     ELSE
+       OPEN( UNIT = buffer )
+     END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+     WRITE( UNIT = buffer, FMT = * ) ARRAY( : used_length )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+
+ 110 CONTINUE
+     ALLOCATE( ARRAY( new_length ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       new_length = min_length + ( new_length - min_length ) / 2
+       IF ( new_length < min_length ) THEN
+          status = 12
+          RETURN
+       END IF
+       GO TO 110
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     REWIND( UNIT = buffer )
+     READ( UNIT = buffer, FMT = * ) ARRAY( : used_length )
+
+!  successful exit
+
+ 200 CONTINUE
+     status = 0
+write(6,*) old_length, new_length
+     RETURN
+
+!  end of subroutine EXTEND_array_character10
+
+     END SUBROUTINE EXTEND_array_character10
+
+! -*-*-  E X T E N D _ a r r a y 2 _ i n t e g e r  S U B R O U T I N E - -*-*-
+
+     SUBROUTINE EXTEND_array2_integer( ARRAY, old_length1, old_length2,        &
+                                       used_length1, used_length2,             &
+                                       new_length1, new_length2,               &
+                                       min_length1, min_length2, buffer,       &
+                                       status, alloc_status )
+
+!  -------------------------------------------------------------------------
+!  extend an integer array so that its length is increaed from old_length to 
+!  as close to new_length as possible while keeping existing data intact
+!  -------------------------------------------------------------------------
+
+!  History -
+!   fortran 90 version released pre GALAHAD Version 1.0. February 7th 1995 as
+!     EXTEND_array_integer as part of the GALAHAD module EXTEND
+!   fortran 2003 version released in SIFDECODE/CUTEst, 5th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( IN ) :: old_length1, old_length2, buffer
+     INTEGER, INTENT( OUT ) :: status, alloc_status
+     INTEGER, INTENT( INOUT ) :: used_length1, used_length2
+     INTEGER, INTENT( INOUT ) :: new_length1, new_length2
+     INTEGER, INTENT( INOUT ) :: min_length1, min_length2
+     INTEGER, ALLOCATABLE, DIMENSION( : , : ) :: ARRAY
+
+!  local variables
+
+     INTEGER :: length1, length2
+     LOGICAL :: file_open
+     INTEGER, ALLOCATABLE, DIMENSION( : , : ) :: DUMMY
+
+!  ensure that the input data is consistent
+
+     used_length1 = MIN( used_length1, old_length1 )
+     used_length2 = MIN( used_length2, old_length2 )
+     min_length1 = MAX( old_length1, MIN( min_length1, new_length1 ) )
+     min_length2 = MAX( old_length2, MIN( min_length2, new_length2 ) )
+
+!  if possible, allocate DUMMY to hold the old values of ARRAY
+
+     ALLOCATE( DUMMY( used_length1, used_length2 ), STAT = alloc_status )
+
+!  if the allocation failed, resort to using an external unit
+
+     IF ( alloc_status /= 0 ) GO TO 100
+
+     DUMMY( : used_length1, : used_length2 )                                   &
+       = ARRAY( : used_length1, : used_length2 )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+     length1 = new_length1 ; length2 = new_length2
+
+  10 CONTINUE
+     ALLOCATE( ARRAY( length1, length2 ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       length1 = length1 + ( length1 - min_length1 ) / 2
+       length2 = length2 + ( length2 - min_length2 ) / 2
+
+!  if there is insufficient room for both ARRAY and DUMMY, use an external unit
+
+       IF ( length1 < min_length1 .OR. length2 < min_length2 ) THEN
+
+!  rewind the buffer i/o unit
+
+         INQUIRE( UNIT = buffer, OPENED = file_open )
+         IF ( file_open ) THEN
+           REWIND( UNIT = buffer )
+         ELSE
+           OPEN( UNIT = buffer )
+         END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+         WRITE( UNIT = buffer, FMT = * )                                       &
+           DUMMY( : used_length1 , : used_length2 )
+
+!  extend the length of ARRAY
+
+         DEALLOCATE( DUMMY )
+         GO TO 110
+       END IF
+       GO TO 10
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     ARRAY( : used_length1, : used_length2 )                                   &
+       = DUMMY( : used_length1, : used_length2 ) 
+     DEALLOCATE( DUMMY )
+     new_length1 = length1 ; new_length2 = length2
+     GO TO 200
+
+!  use an external unit for writing
+
+ 100 CONTINUE
+
+!  rewind the buffer i/o unit
+
+     INQUIRE( UNIT = buffer, OPENED = file_open )
+     IF ( file_open ) THEN
+       REWIND( UNIT = buffer )
+     ELSE
+       OPEN( UNIT = buffer )
+     END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+     WRITE( UNIT = buffer, FMT = * ) ARRAY( : used_length1, : used_length2 )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+
+ 110 CONTINUE
+     ALLOCATE( ARRAY( new_length1, new_length2 ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       new_length1 = min_length1 + ( new_length1 - min_length1 ) / 2
+       new_length2 = min_length2 + ( new_length2 - min_length2 ) / 2
+       IF ( new_length1 < min_length1 .OR. new_length2 < min_length2 ) THEN
+         status = 12
+         RETURN
+       END IF
+       GO TO 110
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     REWIND( UNIT = buffer )
+     READ( UNIT = buffer, FMT = * ) ARRAY( : used_length1, : used_length2 )
+
+!  successful exit
+
+ 200 CONTINUE
+write(6,*) old_length1, new_length1, old_length2, new_length2
+     status = 0
+     RETURN
+
+!  end of subroutine EXTEND_array2_integer
+
+     END SUBROUTINE EXTEND_array2_integer
+
+!-*-*-*-*-  E X T E N D _ a r r a y 2 _ r e a l  S U B R O U T I N E  -*-*-*-*-
+
+     SUBROUTINE EXTEND_array2_real( ARRAY, old_length1, old_length2,           &
+                                    used_length1, used_length2,                &
+                                    new_length1, new_length2,                  &
+                                    min_length1, min_length2, buffer,          &
+                                    status, alloc_status )
+
+!  ---------------------------------------------------------------------
+!  extend a real array so that its length is increaed from old_length to 
+!  as close to new_length as possible while keeping existing data intact
+!  ---------------------------------------------------------------------
+
+!  History -
+!   fortran 90 version released pre GALAHAD Version 1.0. February 7th 1995 as
+!     EXTEND_array_real as part of the GALAHAD module EXTEND
+!   fortran 2003 version released in SIFDECODE/CUTEst, 5th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( IN ) :: old_length1, old_length2, buffer
+     INTEGER, INTENT( OUT ) :: status, alloc_status
+     INTEGER, INTENT( INOUT ) :: used_length1, used_length2
+     INTEGER, INTENT( INOUT ) :: new_length1, new_length2
+     INTEGER, INTENT( INOUT ) :: min_length1, min_length2
+     REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : , : ) :: ARRAY
+
+!  local variables
+
+     INTEGER :: length1, length2
+     LOGICAL :: file_open
+     REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : , : ) :: DUMMY
+
+!  ensure that the input data is consistent
+
+     used_length1 = MIN( used_length1, old_length1 )
+     used_length2 = MIN( used_length2, old_length2 )
+     min_length1 = MAX( old_length1, MIN( min_length1, new_length1 ) )
+     min_length2 = MAX( old_length2, MIN( min_length2, new_length2 ) )
+
+!  if possible, allocate DUMMY to hold the old values of ARRAY
+
+     ALLOCATE( DUMMY( used_length1, used_length2 ), STAT = alloc_status )
+
+!  if the allocation failed, resort to using an external unit
+
+     IF ( alloc_status /= 0 ) GO TO 100
+
+     DUMMY( : used_length1, : used_length2 )                                   &
+       = ARRAY( : used_length1, : used_length2 )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+     length1 = new_length1 ; length2 = new_length2
+
+  10 CONTINUE
+     ALLOCATE( ARRAY( length1, length2 ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       length1 = length1 + ( length1 - min_length1 ) / 2
+       length2 = length2 + ( length2 - min_length2 ) / 2
+
+!  if there is insufficient room for both ARRAY and DUMMY, use an external unit
+
+       IF ( length1 < min_length1 .OR. length2 < min_length2 ) THEN
+
+!  rewind the buffer i/o unit
+
+         INQUIRE( UNIT = buffer, OPENED = file_open )
+         IF ( file_open ) THEN
+           REWIND( UNIT = buffer )
+         ELSE
+           OPEN( UNIT = buffer )
+         END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+         WRITE( UNIT = buffer, FMT = * )                                       &
+           DUMMY( : used_length1 , : used_length2 )
+
+!  extend the length of ARRAY
+
+         DEALLOCATE( DUMMY )
+         GO TO 110
+       END IF
+       GO TO 10
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     ARRAY( : used_length1, : used_length2 )                                   &
+       = DUMMY( : used_length1, : used_length2 ) 
+     DEALLOCATE( DUMMY )
+     new_length1 = length1 ; new_length2 = length2
+     GO TO 200
+
+!  use an external unit for writing
+
+ 100 CONTINUE
+
+!  rewind the buffer i/o unit
+
+     INQUIRE( UNIT = buffer, OPENED = file_open )
+     IF ( file_open ) THEN
+       REWIND( UNIT = buffer )
+     ELSE
+       OPEN( UNIT = buffer )
+     END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+     WRITE( UNIT = buffer, FMT = * ) ARRAY( : used_length1, : used_length2 )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+
+ 110 CONTINUE
+     ALLOCATE( ARRAY( new_length1, new_length2 ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       new_length1 = min_length1 + ( new_length1 - min_length1 ) / 2
+       new_length2 = min_length2 + ( new_length2 - min_length2 ) / 2
+       IF ( new_length1 < min_length1 .OR. new_length2 < min_length2 ) THEN
+         status = 12
+         RETURN
+       END IF
+       GO TO 110
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     REWIND( UNIT = buffer )
+     READ( UNIT = buffer, FMT = * ) ARRAY( : used_length1, : used_length2 )
+
+!  successful exit
+
+ 200 CONTINUE
+write(6,*) old_length1, new_length1, old_length2, new_length2
+     status = 0
+     RETURN
+
+!  end of subroutine EXTEND_array2_real
+
+     END SUBROUTINE EXTEND_array2_real
+
+!-*-  E X T E N D _ a r r a y 2 _ c h a r a c t e r 1 0  S U B R O U T I N E -*-
+
+     SUBROUTINE EXTEND_array2_character10( ARRAY, old_length1, old_length2,    &
+                                           used_length1, used_length2,         &
+                                           new_length1, new_length2,           &
+                                           min_length1, min_length2, buffer,   &
+                                           status, alloc_status )
+
+!  ----------------------------------------------------------------------------
+!  extend a character * 10 array so that its length is increaed from old_length
+!  to as close to new_length as possible while keeping existing data intact
+!  ----------------------------------------------------------------------------
+
+!  History -
+!   fortran 90 version released pre GALAHAD Version 1.0. February 7th 1995 as
+!     EXTEND_array_real as part of the GALAHAD module EXTEND
+!   fortran 2003 version released in SIFDECODE/CUTEst, 5th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( IN ) :: old_length1, old_length2, buffer
+     INTEGER, INTENT( OUT ) :: status, alloc_status
+     INTEGER, INTENT( INOUT ) :: used_length1, used_length2
+     INTEGER, INTENT( INOUT ) :: new_length1, new_length2
+     INTEGER, INTENT( INOUT ) :: min_length1, min_length2
+     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : , : ) :: ARRAY
+
+!  local variables
+
+     INTEGER :: length1, length2
+     LOGICAL :: file_open
+     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : , :) :: DUMMY
+
+!  ensure that the input data is consistent
+
+     used_length1 = MIN( used_length1, old_length1 )
+     used_length2 = MIN( used_length2, old_length2 )
+     min_length1 = MAX( old_length1, MIN( min_length1, new_length1 ) )
+     min_length2 = MAX( old_length2, MIN( min_length2, new_length2 ) )
+
+!  if possible, allocate DUMMY to hold the old values of ARRAY
+
+     ALLOCATE( DUMMY( used_length1, used_length2 ), STAT = alloc_status )
+
+!  if the allocation failed, resort to using an external unit
+
+     IF ( alloc_status /= 0 ) GO TO 100
+
+     DUMMY( : used_length1, : used_length2 )                                   &
+       = ARRAY( : used_length1, : used_length2 )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+     length1 = new_length1 ; length2 = new_length2
+
+  10 CONTINUE
+     ALLOCATE( ARRAY( length1, length2 ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       length1 = length1 + ( length1 - min_length1 ) / 2
+       length2 = length2 + ( length2 - min_length2 ) / 2
+
+!  if there is insufficient room for both ARRAY and DUMMY, use an external unit
+
+       IF ( length1 < min_length1 .OR. length2 < min_length2 ) THEN
+
+!  rewind the buffer i/o unit
+
+         INQUIRE( UNIT = buffer, OPENED = file_open )
+         IF ( file_open ) THEN
+           REWIND( UNIT = buffer )
+         ELSE
+           OPEN( UNIT = buffer )
+         END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+         WRITE( UNIT = buffer, FMT = * )                                       &
+           DUMMY( : used_length1 , : used_length2 )
+
+!  extend the length of ARRAY
+
+         DEALLOCATE( DUMMY )
+         GO TO 110
+       END IF
+       GO TO 10
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     ARRAY( : used_length1, : used_length2 )                                   &
+       = DUMMY( : used_length1, : used_length2 ) 
+     DEALLOCATE( DUMMY )
+     new_length1 = length1 ; new_length2 = length2
+     GO TO 200
+
+!  use an external unit for writing
+
+ 100 CONTINUE
+
+!  rewind the buffer i/o unit
+
+     INQUIRE( UNIT = buffer, OPENED = file_open )
+     IF ( file_open ) THEN
+       REWIND( UNIT = buffer )
+     ELSE
+       OPEN( UNIT = buffer )
+     END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+     WRITE( UNIT = buffer, FMT = * ) ARRAY( : used_length1, : used_length2 )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+
+ 110 CONTINUE
+     ALLOCATE( ARRAY( new_length1, new_length2 ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       new_length1 = min_length1 + ( new_length1 - min_length1 ) / 2
+       new_length2 = min_length2 + ( new_length2 - min_length2 ) / 2
+       IF ( new_length1 < min_length1 .OR. new_length2 < min_length2 ) THEN
+         status = 12
+         RETURN
+       END IF
+       GO TO 110
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     REWIND( UNIT = buffer )
+     READ( UNIT = buffer, FMT = * ) ARRAY( : used_length1, : used_length2 )
+
+!  successful exit
+
+ 200 CONTINUE
+write(6,*) old_length1, new_length1, old_length2, new_length2
+     status = 0
+     RETURN
+
+!  end of subroutine EXTEND_array2_character10
+
+     END SUBROUTINE EXTEND_array2_character10
 
     END MODULE SIFDECODE
