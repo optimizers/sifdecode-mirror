@@ -56,7 +56,7 @@
 
 !  maximum number of variables
 
-      INTEGER, PARAMETER :: nmax = 1000000
+      INTEGER, PARAMETER :: n_guess = 1000000
 
 !  maximum number of groups
 
@@ -97,19 +97,11 @@
 
 !  maximum number of nonzeros in linear elements
 
-      INTEGER, PARAMETER :: la = 8000000
-
-!  maximum number of integer parameters
-
-      INTEGER, PARAMETER :: nindex = 100   
-
-!  maximum number of real parameters
-
-      INTEGER, PARAMETER :: nrlndx = 20000 
+      INTEGER, PARAMETER :: nnza_guess = 8000000
 
 !  maximum number of vectors of bounds
 
-      INTEGER, PARAMETER :: nbmax  = 2     
+      INTEGER, PARAMETER :: nbnd_guess  = 2     
 
 !  maximum number of vectors of solutions
 
@@ -117,12 +109,29 @@
 
 !  maximum number of vectors of bounds on the objective function
 
-      INTEGER, PARAMETER :: nobmax = 2     
+      INTEGER, PARAMETER :: nobjbound_guess = 2
+
+!  maximum number of integer parameters
+
+      INTEGER, PARAMETER :: niindex_guess = 100   
+
+!  maximum number of real parameters
+
+      INTEGER, PARAMETER :: nrindex_guess = 20000 
+
+!  maximum number of statements in any level of a do-loop
+
+      INTEGER, PARAMETER :: maxins_guess = 200
+!     INTEGER, PARAMETER :: maxins_guess = 2
+
+!  maximum number of array instructions
+
+      INTEGER, PARAMETER :: maxarray_guess = 150
 
 !  dependencies on the maximum number of nontrivial group types
-!  ngpmax is the total number of group parameters
+!  ngrp_guess is the total number of group parameters
 
-      INTEGER, PARAMETER :: ngpmax = ngtype_guess
+      INTEGER, PARAMETER :: ngrp_guess = 2 * ngtype_guess
 
 !  dependencies on the maximum number of nonlinear element types nev_guess, 
 !  niv_guess and nep_guess are the total number of elemental and internal 
@@ -132,26 +141,10 @@
       INTEGER, PARAMETER :: niv_guess = 5 * netype_guess
       INTEGER, PARAMETER :: nep_guess = 3 * netype_guess
 
-!  dependencies on the maximum number of nonzeros in linear elements
-
-      INTEGER, PARAMETER :: licna = la
-
-!  maximum number of statements in a do-loop
-
-      INTEGER, PARAMETER :: maxins = 200
-
-!  maximum nesting of do-loops
-
-      INTEGER, PARAMETER :: maxlev = 3   
-
-!  maximum number of array instructions
-
-      INTEGER, PARAMETER :: maxara = 150
-
 !  maximum size of dictionary
 
       INTEGER, PARAMETER :: length                                             &
-        = nmax + ng_guess + nel_guess + nauxpar_guess + 1000
+        = n_guess + ng_guess + nel_guess + nauxpar_guess + 1000
 
 !  other parameters used by the decoder
 
@@ -201,19 +194,21 @@
         MODULE PROCEDURE ALLOCATE_array_integer,                               &
                          ALLOCATE_array_real,                                  &
                          ALLOCATE_array_logical,                               &
-                         ALLOCATE_array_character10,                           &
+                         ALLOCATE_array_character,                             &
                          ALLOCATE_array2_integer,                              &
                          ALLOCATE_array2_real,                                 &
-                         ALLOCATE_array2_character10
+                         ALLOCATE_array2_character,                            &
+                         ALLOCATE_array3_integer
       END INTERFACE
 
       INTERFACE EXTEND_array
         MODULE PROCEDURE EXTEND_array_integer,                                 &
                          EXTEND_array_real,                                    &
-                         EXTEND_array_character10,                             &
+                         EXTEND_array_character,                               &
                          EXTEND_array2_integer,                                &
                          EXTEND_array2_real,                                   &
-                         EXTEND_array2_character10
+                         EXTEND_array2_character,                              &
+                         EXTEND_array3_integer
       END INTERFACE
 
     CONTAINS
@@ -238,13 +233,13 @@
 
 !  local variables
 
-      INTEGER :: i, ig, isg, iinex
+      INTEGER :: i, ig, isg, iinex, nevnames, nivnames, nepnames, ngpnames
       INTEGER :: nlinob, nnlnob, nlineq, nnlneq, nlinin, nnlnin, alloc_status
       INTEGER :: nfree, nfixed, nlower, nupper, nboth, nslack, nreal, narray
       INTEGER :: n, ng, nbnd, neltype, nlvars, nobj, nrange, nconst, nobjgr
-      INTEGER :: nnza, ngtype, nstart, nlisgp, nlisep, nnlvrs, nobbnd
+      INTEGER :: nnza, ngtype, nstart, nlisgp, nlisep, nnlvrs, nobbnd, nrival
       INTEGER :: nelvar, nelnum, neling, len1_vstart, len1_cstart, len_defined
-      INTEGER :: nevnames, nivnames, nepnames
+      INTEGER :: len1_blu, len_rinames, len_iinames
       INTEGER :: len_renames = nauxpar_guess
       INTEGER :: len_innames = nauxpar_guess
       INTEGER :: len_lonames = nauxpar_guess
@@ -252,37 +247,16 @@
       INTEGER :: len_exnames = nauxpar_guess
       REAL ( KIND = wp ) :: blo, bup
       LOGICAL :: debug, gotlin
+      CHARACTER ( LEN = 8 ) :: pname
       CHARACTER ( LEN = 10 ) :: nameof, namerh, namera, namebn, namest, nameob
       CHARACTER ( LEN = 24 ) :: bad_alloc
       CHARACTER ( LEN = 72 ) :: lineex
+      CHARACTER ( LEN = max_record_length ) :: nuline
 
 !  array definitions
 
-      INTEGER :: INLIST( length )
-      INTEGER :: ITABLE ( length )
-      INTEGER :: ICNA( licna  )
-      INTEGER :: INDVAL( nindex ), INSTR( 5, maxins, maxlev )
-      INTEGER :: NINSTR( maxlev ), IARRAY( 5, 3, maxara )
-      INTEGER :: ICOORD( la, 2 )
-      INTEGER :: ITYPEV( nmax )
-      REAL ( KIND = wp ) :: DFAULT( nmax )
-      REAL ( KIND = wp ) :: A( la ), BND( 2, nmax, nbmax ), REALVL( nrlndx )
-      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax )
-      REAL ( KIND = wp ) :: CSCALE( nmax )
-      REAL ( KIND = wp ) :: RVALUE( maxara, 3 ), VARRAY( 2, maxara )
-      REAL ( KIND = wp ) :: FBOUND( 2, nobmax )
-      REAL ( KIND = wp ) :: ABYROW( la )
-      REAL ( KIND = wp ) :: X( nmax )
-      REAL ( KIND = wp ) :: VSCALE( nmax )
-      CHARACTER ( LEN = 2 ) :: FARRAY( maxara )
-      CHARACTER ( LEN = 8 ) :: pname
-      CHARACTER ( LEN = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
-      CHARACTER ( LEN = 10 ) :: BNAMES( nbmax  )
-      CHARACTER ( LEN = 10 ) :: VNAMES( nmax   )
-      CHARACTER ( LEN = 10 ) :: OBNAME( nobmax ), GPNAME( ngpmax )
-      CHARACTER ( LEN = 10 ) :: ARRAY( 3, maxara ), CARRAY( 2, maxara )
+      INTEGER :: INLIST( length ), ITABLE( length )
       CHARACTER ( LEN = 12  ) :: KEY( length )
-      CHARACTER ( LEN = max_record_length ) :: nuline
 
       CHARACTER ( LEN = 1 ), DIMENSION( 2 ), PARAMETER :: S = (/ ' ', 's' /)
       CHARACTER ( LEN = 3 ), DIMENSION( 2 ), PARAMETER :: ARE                  &
@@ -290,30 +264,38 @@
 
 !  allocatable array definitions
 
-      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GTYPESP_ptr, ELVAR, A_ptr, IWK
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GTYPESP_ptr, ELVAR, IIVAL, IWK
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: GSTATE, GTYPE, GP_ptr
-      INTEGER, ALLOCATABLE, DIMENSION( : ) :: TYPEE, EP_ptr, EV_ptr
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: TYPEV, TYPEE, EP_ptr, EV_ptr
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELV, INV, ELP
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELING_el, ELING_g, ELING_ptr
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: A_row, A_col
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ABYROW_col, ABYROW_ptr
       INTEGER, ALLOCATABLE, DIMENSION( :, : ) :: IDROWS
-      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B, BL, BU
-      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: EP_val
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B, BL, BU, X, VSCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: A_val, ABYROW_val
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: EP_val, DEFAULT, RIVAL
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: GP_val, GP_val_orig
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RSCALE, GSCALE
-      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: WEIGHT, ESCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: FBOUND_l, FBOUND_u
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: WEIGHT, ESCALE, CSCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B_l_default
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B_u_default
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: B_l, B_u
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: VSTART, CSTART
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: RDROWS
       LOGICAL, ALLOCATABLE, DIMENSION( : ) :: DEFINED
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: VNAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GANAMES, GNAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ETYPES, GTYPES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ONAMES, SNAMES
-      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: BNAMES, LNAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EVNAMES, IVNAMES
-      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EPNAMES
-
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EPNAMES, GPNAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
-      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LONAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LONAMES, OBBNAME
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: MINAMES, EXNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: IINAMES, RINAMES
 
       debug = print_level < 0
       IF ( single ) THEN
@@ -325,22 +307,24 @@
 
 !  read the GPS MPS data
 
-      CALL INTERPRET_gpsmps(                                                   &
-                   la, nmax, ngpmax, nbmax, nobmax, nnza, length,             &
-                   n, ng, nobj, nconst, nrange, nbnd, nstart, neltype, ngtype, &
-                   nelvar, nlvars, nnlvrs, nlisgp, nlisep, nelnum, neling,     &
-                   narray, nindex, maxins, maxlev, maxara, nrlndx, &
-                   nobbnd, nevnames, nivnames, nepnames, pname,  &
-                   ICOORD, ELING_el, ELING_g, INLIST,      &
+      CALL INTERPRET_gpsmps( length,             &
+                   n, ng, nnza, nobj, nconst, nrange, nbnd, nstart, neltype,   &
+                   ngtype, nelvar, nlvars, nnlvrs, nlisgp, nlisep, nelnum,     &
+                   neling, narray, nrival, nobbnd, nevnames, nivnames,         &
+                   nepnames, ngpnames, pname,  &
+                   ELING_el, ELING_g, INLIST,      &
                    ITABLE, GSTATE, ELV, INV, TYPEE, IDROWS, ELVAR,          &
                    ELING_ptr, GTYPE, ELP, GTYPESP_ptr, IWK, EP_ptr, EV_ptr,    &
-                   GP_ptr, INDVAL, INSTR, ninstr, IARRAY, ITYPEV, A, BND,      &
+                   GP_ptr, IIVAL, TYPEV,    &
+                   A_row, A_col, A_val, len1_blu, B_l, B_u,  &
                    len1_vstart, VSTART, len1_cstart, CSTART,                   &
-                   RSCALE, CSCALE, RDROWS, REALVL, DFAULT, RVALUE, VARRAY,     &
-                   EP_val, BNDFLT, GP_val, GP_val_orig, farray, FBOUND, WEIGHT,&
-                   NAMIIN, NAMRIN, GNAMES, VNAMES, BNAMES, ETYPES, IVNAMES,    &
+                   RSCALE, CSCALE, RDROWS, RIVAL, DEFAULT,   &
+                   EP_val, B_l_default, B_u_default,  &
+                   GP_val, GP_val_orig, FBOUND_l, FBOUND_u, WEIGHT,&
+                   len_iinames, IINAMES, len_rinames, RINAMES,                &
+                   GNAMES, VNAMES, BNAMES, ETYPES, IVNAMES,  &
                    LNAMES, ONAMES, EVNAMES, SNAMES, GANAMES, GTYPES, EPNAMES,  &
-                   GPNAME, OBNAME, array, CARRAY, KEY, single, iingps, out,    &
+                   GPNAMES, OBBNAME, KEY, single, iingps, out,  &
                    status, debug )
       IF ( status /= 0 ) THEN
         WRITE( out, 2010 ) status
@@ -377,32 +361,41 @@
       IF ( nbnd > 0 ) namebn = BNAMES( 1 )
       IF ( nstart > 0 ) namest = SNAMES( 1 )
       IF ( nobj > 0 .AND. oneobj ) nameof = ONAMES( 1 )
-      IF ( nobbnd > 0 ) nameob = OBNAME( 1 )
+      IF ( nobbnd > 0 ) nameob = OBBNAME( 1 )
       IF ( print_level /= 0 ) WRITE( out, 2070 )                               &
                                 nconst, nrange, nbnd, nstart, nobj, nobbnd
 
 !  convert to input for GALAHAD or other external packages
 
       CALL MAKE_outsdif( n, nlvars, ng, nelnum, neling, nobj, length, nelvar,  &
-                   licna, la,               &
-                   nmax, nbmax,                    &
-                   nobmax, nlisgp, nlisep, nbnd, nnza,                 &
+                   nlisgp, nlisep, nbnd, nnza,                 &
                    nconst, nstart, nrange, nobjgr, nobbnd, neltype, ngtype,    &
                    pname, nameob, namerh, namera, namebn, namest,              &
-                   nameof, ELING_ptr, ELVAR, EV_ptr, ICNA, A_ptr,      &
-                   ICOORD, INLIST, ITABLE, GSTATE, IDROWS, ELV, INV,         &
+                   nameof, ELING_ptr, ELVAR, EV_ptr, ABYROW_col, ABYROW_ptr,   &
+                   A_row, A_col, INLIST, ITABLE, GSTATE, IDROWS, ELV, INV,     &
                    GTYPESP_ptr, ELING_el, EP_ptr, GP_ptr, TYPEE,         &
-                   GTYPE, ITYPEV, IWK, A, BND, len1_vstart, VSTART,            &
-                   len1_cstart, CSTART, RSCALE, CSCALE, RDROWS, DFAULT,        &
-                   WEIGHT, BNDFLT, GP_val, EP_val, FBOUND, ABYROW, B, BL,  &
+                   GTYPE, TYPEV, IWK, A_val, len1_blu, B_l, B_u,    &
+                   len1_vstart, VSTART, len1_cstart, CSTART,    &
+                   RSCALE, CSCALE, RDROWS, DEFAULT,        &
+                   WEIGHT, B_l_default, B_u_default,  &
+                   GP_val, EP_val, FBOUND_l, FBOUND_u, ABYROW_val, B, BL,  &
                    BU, X, ESCALE, GSCALE, VSCALE, KEY,                 &
                    GNAMES, VNAMES, BNAMES, SNAMES, ONAMES, ETYPES, GTYPES,     &
-                   OBNAME, ialgor, iauto, out, outda, single, status, debug )
+                   OBBNAME, ialgor, iauto, out, outda, single, status, debug )
       IF ( status /= 0 ) THEN
          WRITE( out, 2020 ) status
          RETURN
       END IF
 
+!  deallocate workspace
+
+      DEALLOCATE( A_row, A_col, A_val, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'A' ; GO TO 990 ; END IF
+
+      DEALLOCATE( B_l, B_u, B_l_default, B_u_default, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'B_l/u' ; GO TO 990 ; END IF
 
 !  assign the variables to bound types
 
@@ -414,8 +407,7 @@
       END IF
       nreal = n - nslack
       DO i = 1, nreal
-        blo = BL( i )
-        bup = BU( i )
+        blo = BL( i ) ; bup = BU( i )
         IF ( blo <= - biginf .AND. bup >= biginf ) nfree = nfree  + 1
         IF ( blo <= - biginf .AND. bup < biginf ) nupper = nupper + 1
         IF ( blo > - biginf .AND. bup >= biginf ) nlower = nlower + 1
@@ -459,18 +451,25 @@
 
 !  print details of the problem
 
-      CALL PRINT_details( nmax, nelvar, &
-                          neltype, nevnames, nepnames, ngtype, ngpmax, &
-                          licna, n, ng, nlvars, nelnum, neling, nlisgp, nlisep, &
+      CALL PRINT_details( nelvar, &
+                          neltype, nevnames, nepnames, ngpnames, ngtype, &
+                          n, ng, nlvars, nelnum, neling, &
+                          nlisgp, nlisep, nnza, &
                           GSTATE, ELING_ptr,  &
                           ELVAR, GTYPE, TYPEE, ELV, INV, ELP, GTYPESP_ptr, &
-                          A_ptr, ICNA, GP_ptr, EP_ptr, EV_ptr, &
-                          ELING_el, ITYPEV,  &
-                          IWK, ABYROW, B, BL, BU, X, EP_val, GP_val, GSCALE,   &
+                          GP_ptr, EP_ptr, EV_ptr, ELING_el, TYPEV, IWK,  &
+                          ABYROW_ptr, ABYROW_col, ABYROW_val, B,      &
+                          BL, BU, X, EP_val, GP_val, GSCALE,   &
                           ESCALE, VSCALE, pname, VNAMES, GNAMES, LNAMES,       &
-                          ETYPES, EVNAMES, GANAMES, EPNAMES, GPNAME, GTYPES,   &
+                          ETYPES, EVNAMES, GANAMES, EPNAMES, GPNAMES, GTYPES,  &
                           out, print_level )
       IF ( noname ) pname = '        '
+
+!  deallocate workspace
+
+      DEALLOCATE( ABYROW_col, ABYROW_val, ABYROW_ptr, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ABYROW' ; GO TO 990 ; END IF
 
 !  allocate workspace
 
@@ -478,7 +477,6 @@
       CALL ALLOCATE_array( DEFINED, len_defined, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'DEFINED' ; GO TO 980 ; END IF
-
       CALL ALLOCATE_array( RENAMES, len_renames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'RENAMES' ; GO TO 980 ; END IF
@@ -504,7 +502,7 @@
       IF ( iauto == 0 ) THEN
         CALL MAKE_elfun( iinfn, out, outfn, outra, status,                     &
                          nevnames, nivnames, nepnames,                         &
-                         neltype, pname, EVNAMES, IVNAMES,             &
+                         neltype, pname, EVNAMES, IVNAMES,                     &
                          len_renames, RENAMES, len_innames, INNAMES,           &
                          len_lonames, LONAMES, len_minames, MINAMES,           &
                          len_exnames, EXNAMES,                                 &
@@ -539,13 +537,13 @@
 !  make subroutine group and obtain group information
 
       IF ( iauto == 0 ) THEN
-        CALL MAKE_group( iingr, out, outgr, status, ngtype,                    &
+        CALL MAKE_group( iingr, out, outgr, status, ngtype, ngpnames,          &
                          pname, GANAMES,                               &
                          len_renames, RENAMES, len_innames, INNAMES,           &
                          len_lonames, LONAMES, len_minames, MINAMES,           &
                          len_exnames, EXNAMES,                                 &
-                         GPNAME, DEFINED, GTYPES, GTYPESP_ptr,                 &
-                         ngpmax, debug, length, ITABLE, KEY, INLIST,           &
+                         GPNAMES, DEFINED, GTYPES, GTYPESP_ptr,                &
+                         debug, length, ITABLE, KEY, INLIST,           &
                          single, nuline, gotlin, print_level )
         IF ( status /= 0 ) THEN
           WRITE( out, 2040 ) status
@@ -555,14 +553,15 @@
 !  make subroutines groupf and groupd
 
       ELSE
-        CALL MAKE_group_ad( iingr, out, outgf, outgd, outem, status, ngtype,   &
+        CALL MAKE_group_ad( iingr, out, outgf, outgd, outem, status,  &
+                            ngtype, ngpnames,  &
                             pname, GANAMES,                            &
                             len_renames, RENAMES, len_innames, INNAMES,        &
                             len_lonames, LONAMES, len_minames, MINAMES,        &
                             len_exnames, EXNAMES,                              &
-                            GPNAME, DEFINED,                                   &
+                            GPNAMES, DEFINED,                                  &
                             GTYPES, GTYPESP_ptr,                               &
-                            ngpmax, debug, length, ITABLE, KEY,                &
+                            debug, length, ITABLE, KEY,                &
                             INLIST, single, nuline, gotlin, iauto, iad0,       &
                             print_level )
         IF ( status /= 0 ) THEN
@@ -592,13 +591,14 @@
       END DO
   600 CONTINUE
 
-!  if required, translate any external file to accept automatic 
-!  differentiation constructs
+!  if required, translate any external file to accept automatic differentiation
+!   constructs
 
       IF ( iauto == 1 .OR. iauto == 2 )                                        &
-        CALL TRANSLATE_for_ad( out, outex, outea, outem, single, iauto,        &
-                               iad0, NAMRIN, nrlndx, NAMIIN, nindex )
-      status = 0
+        CALL TRANSLATE_for_ad( out, status, outex, outea, outem, single,       &
+                               iauto, iad0, len_rinames, RINAMES, nrival,     &
+                               len_iinames, IINAMES )
+      IF ( status /= 0 ) WRITE( out, 2170 ) status
       RETURN
 
 !  allocation errors
@@ -606,6 +606,14 @@
   980 CONTINUE
       WRITE( out, "( ' ** Message from SIFDECODE_decode-',                     &
      &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
+!  deallocation errors
+
+  990 CONTINUE
+      WRITE( out, "( ' ** Message from SIFDECODE_decode-',                     &
+     &    /, ' Deallocation error (status = ', I0, ') for ', A )" )            &
         alloc_status, bad_alloc
       RETURN
 
@@ -629,6 +637,7 @@
  2140 FORMAT( ' There ', A, 1X, I0, ' nonlinear equality constraint', A )
  2150 FORMAT( ' There ', A, 1X, I0, ' nonlinear inequality constraint', A )
  2160 FORMAT( /, ' Return from MAKE_group_ad, status = ', I0 )
+ 2170 FORMAT( /, ' Return from TRANSLATE_for_ad, status = ', I0 )
  2200 FORMAT( ' There ', A, 1X, I0, ' free variable', A1 )
  2210 FORMAT( ' There ', A, 1X, I0, ' variable', A,                            &
                 ' bounded only from above ' )
@@ -645,78 +654,68 @@
 
 !-  S I F D E C O D E   I N T E R P R E T _ G P S M P S   S U B R O U T I N E  -
 
-      SUBROUTINE INTERPRET_gpsmps( la, nmax,                   &
-                         ngpmax, nbmax, nobmax, nnza, length, n, ng,           &
-                         nobj, nconst, nrange, nbnd, nstart, neltype,          &
-                         ngtype, nelvar, nlvars, nnlvrs, nlisgp, nlisep,       &
-                         nelnum, neling, narray, nindex,       &
-                         maxins, maxlev, maxara, nrlndx, nobbnd,   &
-                         nevnames, nivnames, nepnames, pname,      &
-                         ICOORD, ELING_el, ELING_g, INLIST, ITABLE, GSTATE,    &
+      SUBROUTINE INTERPRET_gpsmps( length,                                     &
+                         n, ng, nnza, nobj, nconst, nrange, nbnd, nstart,      &
+                         neltype, ngtype, nelvar, nlvars, nnlvrs, nlisgp,      &
+                         nlisep, nelnum, neling, narray, nrival, nobbnd,       &
+                         nevnames, nivnames, nepnames, ngpnames, pname,        &
+                         ELING_el, ELING_g, INLIST, ITABLE, GSTATE,    &
                          ELV, INV, TYPEE, IDROWS, ELVAR, ELING_ptr,         &
                          GTYPE, ELP, GTYPESP_ptr, IWK, EP_ptr, EV_ptr,         &
-                         GP_ptr, INDVAL, INSTR, ninstr, IARRAY, ITYPEV,        &
-                         A, BND, len1_vstart, VSTART, len1_cstart, CSTART,     &
+                         GP_ptr, IIVAL, TYPEV,        &
+                         A_row, A_col, A_val, len1_blu, B_l, B_u,           &
+                         len1_vstart, VSTART, len1_cstart, CSTART,     &
                          RSCALE, CSCALE, RDROWS,                               &
-                         REALVL, DFAULT, RVALUE, VARRAY, EP_val, BNDFLT,       &
-                         GP_val, GP_val_orig, farray, FBOUND, WEIGHT, NAMIIN,  &
-                         NAMRIN, GNAMES, VNAMES, BNAMES, ETYPES, IVNAMES,      &
+                         RIVAL, DEFAULT, EP_val, &
+                         B_l_default, B_u_default,       &
+                         GP_val, GP_val_orig,      &
+                         FBOUND_l, FBOUND_u, WEIGHT,         &
+                         len_iinames, IINAMES, len_rinames, RINAMES,       &
+                         GNAMES, VNAMES, BNAMES, ETYPES, IVNAMES,     &
                          LNAMES, ONAMES, EVNAMES, SNAMES, GANAMES, GTYPES,     &
-                         EPNAMES, GPNAME, OBNAME, array, CARRAY, KEY,          &
+                         EPNAMES, GPNAMES, OBBNAME, KEY,        &
                          single, input, out, status, debug )
-      INTEGER :: la, nmax
-      INTEGER :: nobmax, nobbnd, nrlndx, nelvar
-      INTEGER :: ngpmax, nbmax, nnza, length, n, ng
+      INTEGER :: nobbnd, nrival, nelvar
+      INTEGER :: nnza, length, n, ng
       INTEGER :: nconst, nrange, nbnd, nstart, neltype, ngtype
-      INTEGER :: nlvars, nnlvrs, nelnum, neling, narray, nindex
-      INTEGER :: maxins, maxlev, maxara
+      INTEGER :: nlvars, nnlvrs, nelnum, neling, narray, nobj
       INTEGER :: nlisgp, nlisep, input, out, status
-      INTEGER :: nobj, len1_vstart, len1_cstart
-      INTEGER :: nevnames, nivnames, nepnames
+      INTEGER :: len1_blu, len1_vstart, len1_cstart, len_iinames, len_rinames
+      INTEGER :: nevnames, nivnames, nepnames, ngpnames
       LOGICAL :: single, debug 
       CHARACTER ( LEN = 8 ) :: pname
+
       INTEGER :: INLIST( length )
       INTEGER :: ITABLE ( length )
-      INTEGER :: ITYPEV( nmax )
-      INTEGER :: INDVAL( nindex ), INSTR( 5, maxins, maxlev )
-      INTEGER :: NINSTR( maxlev ), IARRAY( 5, 3, maxara )
-      INTEGER :: ICOORD( la, 2 )
-      REAL ( KIND = wp ) :: DFAULT( nmax )
-      REAL ( KIND = wp ) :: A( la ), BND( 2, nmax, nbmax ), REALVL( nrlndx )
-      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax )
-      REAL ( KIND = wp ) :: CSCALE( nmax )
-      REAL ( KIND = wp ) :: RVALUE( maxara, 3 ), VARRAY( 2, maxara )
-      REAL ( KIND = wp ) :: FBOUND( 2, nobmax )
-      CHARACTER ( LEN = 2 ) :: FARRAY( maxara )
-      CHARACTER ( LEN = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
-      CHARACTER ( LEN = 10 ) :: BNAMES( nbmax  )
-      CHARACTER ( LEN = 10 ) :: VNAMES( nmax   )
-      CHARACTER ( LEN = 10 ) :: OBNAME( nobmax )
-      CHARACTER ( LEN = 10 ) :: GPNAME( ngpmax )
-      CHARACTER ( LEN = 10 ) :: ARRAY( 3, maxara ), CARRAY( 2, maxara )
       CHARACTER ( LEN = 12 ) :: KEY( length )
 
-
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELV, INV, ELP
-      INTEGER, ALLOCATABLE, DIMENSION( : ) :: EV_ptr, TYPEE, EP_ptr
-      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GTYPESP_ptr, ELVAR, IWK
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: EV_ptr, TYPEE, EP_ptr, TYPEV
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: GTYPESP_ptr, ELVAR, IIVAL, IWK
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELING_ptr, GSTATE, GTYPE, GP_ptr
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELING_el, ELING_g
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: A_row, A_col
       INTEGER, ALLOCATABLE, DIMENSION( :, : ) :: IDROWS
-      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RSCALE, WEIGHT
-      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: EP_val
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: A_val, WEIGHT
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: CSCALE, RSCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: EP_val, DEFAULT, RIVAL
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: GP_val_orig, GP_val
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B_l_default
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B_u_default
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: FBOUND_l, FBOUND_u
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: B_l, B_u
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: VSTART, CSTART
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: RDROWS
-
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: OBBNAME, VNAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GANAMES, GNAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GTYPES, ETYPES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ONAMES, SNAMES
-      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: BNAMES, LNAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EVNAMES, IVNAMES
-      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EPNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: EPNAMES, GPNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: IINAMES, RINAMES
 
-!  -------------------------------------------------------------------
+!  ----------------------------------------------------------------------------
 !  read a GPS MPS data file
 
 !  formerly GPSMPS in SiFDec
@@ -768,37 +767,41 @@
 !  see also http://www.cuter.rl.ac.uk/sifdec/Doc/sif.pdf
 !  and      http://www.numerical.rl.ac.uk/lancelot/sif/sifhtml.html
 
-!  -------------------------------------------------------------------
+!  -----------------------------------------------------------------------------
 !  returns with negative values of status indicate that insufficient
 !  array space has been allowed, as follows:
 
 !    status = - 1  when length not large enough
-!    status = - 2  when nnza > la
+!    status = - 2  when A_row, A_col or A_val cannot be extended further
 !    status = - 3  when ELV, INV, ELP or ETYPES cannot be extended further
 !    status = - 4  when GTYPESP_ptr, GANAMES or GTYPES cannot be 
 !                  extended further
 !    status = - 5  when ONAMES cannot be extended further
 !    status = - 6  when GSTATE, GTYPE, GNAMES, RSCALE, IDROWS or RDROWS 
 !                  cannot be extended further
-!    status = - 7  when n > nmax
+!    status = - 7  when TYPEV, CSCALE, DEFAULT or VNAMES
+!                  cannot be extended further
 !    status = - 8  when VSTART, CSTART or SNAMES cannot be extended further
 !    status = - 9  when ELING_el, ELING_p, WEIGHT, EV_ptr, EP_ptr, TYPEE, or 
 !                  LNAMES cannot be extended further
 !    status = - 10 no longer used
-!    status = - 11 when ninstr( 1 or 2 or 3 ) > maxins
-!    status = - 12 when narray > maxara
-!    status = - 13 when nbnd > nbmax
+!    status = - 11 when INSTR1, INSTR2, INSTR3, RVALUE1, RVALUE2 or RVALUE3
+!                  cannot be extended further
+!    status = - 12 when ARRAY, CARRAY, FARRAY IARRAY or VARRAY cannot be 
+!                  extended further
+!    status = - 13 when B_l, B_u, B_l_default, B_u_default or BNAMES cannot 
+!                  be extended further
 !    status = - 14 when EVNAMES cannot be extended further
 !    status = - 15 when ELVAR cannot be extended further
 !    status = - 16 when IVNAMES cannot be extended further
 !    status = - 17 when EP_val cannot be extended further
 !    status = - 18 when GP_val or GP_val_orig cannot be extended further
 !    status = - 19 when EPNAMES cannot be extended further
-!    status = - 20 when ngpn > ngpmax
-!    status = - 21 when nusein > nindex
-!    status = - 22 when nusere > nrlndx
-!    status = - 23 when nobbnd > nobmax
-!  -------------------------------------------------------------------
+!    status = - 20 when GPNAMES cannot be extended further
+!    status = - 21 when IIVAL or IINAMES cannot be extended further
+!    status = - 22 when RIVAL or RINAMES cannot be extended further
+!    status = - 23 when FBOUND_l, FBOUND_u or OBBNAME cannot be extended further
+!  -----------------------------------------------------------------------------
 
 !  parameter definitions
 
@@ -811,6 +814,7 @@
       INTEGER, PARAMETER :: mguses = 25, mobbnd = 26, mendat = 27
       INTEGER, PARAMETER :: nincrs = 23
       INTEGER, PARAMETER :: maxnul = 20
+      INTEGER, PARAMETER :: maxlev = 3   
       INTEGER, DIMENSION( mendat ), PARAMETER :: LENIND                        &
         = (/ 0, 12, 11, 4, 4, 6, 11, 7, 9, 9, 3, 4, 6, 6, 11, 7, 9, 5, 7, 8,   &
              7, 12, 12, 10, 10, 12, 6  /)
@@ -826,17 +830,20 @@
         = (/ 'LENGTH', 'LA    ', 'NLMAX ', 'NGRMAX', 'NOMAX ', 'NGMAX ',       &
              'NMAX  ', 'NSMAX ', 'NELMAX', '      ', 'MAXINS', 'MAXARA',       &
              'NBMAX ', 'NEVMAX', 'NEVMAX', 'NIVMAX', 'NEPVMX', 'NGPVMX',       &
-             'NEPMAX', 'NGPMAX', 'NINDEX', 'NRLNDX', 'NOBMAX' /)
+             'NEPMAX', 'NGPMAX', 'NINDEX', 'NRNDEX', 'NOBMAX' /)
 
 !  local variables
 
       INTEGER :: i, ip, is, intype, intypo, j, k, k1, k2, l, l1, l2, l3, level2
       INTEGER :: ifree, ifield, novals, nvar, ncol
-      INTEGER :: nlines, ilines, ngpn, ngrupe, nelmnt, nusein
-      INTEGER :: iptype, istype, ndtype, nusere, level, ijump, lineno
+      INTEGER :: nlines, ilines, ngrupe, nelmnt, niival
+      INTEGER :: iptype, istype, ndtype, level, ijump, lineno
       INTEGER :: level3, lev1, lev2, lev3, lev1s, lev2s, lev3s
       INTEGER :: lev1e, lev2e, lev3e, lev1i, lev2i, lev3i, levl3a
+      INTEGER :: ninstr1, ninstr2, ninstr3
       INTEGER :: used_length, new_length, min_length, alloc_status
+      INTEGER :: used_length2, new_length2, min_length2
+      INTEGER :: used_length3, new_length3, min_length3
       REAL ( KIND = wp ) :: value4, value6
       LOGICAL :: defnam, inrep, defaut, doloop
       LOGICAL :: end_bound_section, end_start_section, end_quadratic_section
@@ -852,11 +859,17 @@
       CHARACTER ( LEN = max_record_length ) :: nuline, blnkln
       INTEGER, DIMENSION( 4 ) :: LOOP
       CHARACTER ( LEN = 65 ), DIMENSION( maxnul ) :: NULINA
+      INTEGER, ALLOCATABLE, DIMENSION( :, : ) :: INSTR1, INSTR2, INSTR3
+      INTEGER, ALLOCATABLE, DIMENSION( :, :, : ) :: IARRAY
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RVALUE1, RVALUE2
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RVALUE3
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( :, : ) :: VARRAY
+      CHARACTER ( LEN = 2 ), ALLOCATABLE, DIMENSION( : )  :: FARRAY
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( :, : )  :: CARRAY, ARRAY
 
-!  allocatble array dimensions
+!  initial allocatble array dimensions
 
       INTEGER :: len_gp_ptr, len_eling_ptr
-
       INTEGER :: len_elvar = nelvar_guess 
       INTEGER :: len_gtypesp_ptr = MAX( ngtype_guess + 1, 2 )
       INTEGER :: len_ganames = MAX( ngtype_guess, 1 )
@@ -888,50 +901,54 @@
       INTEGER :: len_evnames = nev_guess 
       INTEGER :: len_ivnames = niv_guess 
       INTEGER :: len_epnames = nep_guess 
-
+      INTEGER :: len_gpnames = ngrp_guess
       INTEGER :: len_ep_val = nelp_guess
+      INTEGER :: len_a = nnza_guess
+      INTEGER :: len2_blu = MAX( nbnd_guess, 1 )
+      INTEGER :: len_blu_default = MAX( nbnd_guess, 1 )
+      INTEGER :: len_bnames = MAX( nbnd_guess, 1 )
+      INTEGER :: len_obbname = nobjbound_guess
+      INTEGER :: len_fbound = nobjbound_guess
+      INTEGER :: len_cscale = n_guess
+      INTEGER :: len_typev = n_guess
+      INTEGER :: len_default = n_guess
+      INTEGER :: len_vnames = n_guess
+      INTEGER :: len_iival = niindex_guess
+      INTEGER :: len_rival = nrindex_guess
+      INTEGER :: len1_instr1 = 5
+      INTEGER :: len2_instr1 = MAX( maxins_guess, 1 )
+      INTEGER :: len1_instr2 = 5
+      INTEGER :: len2_instr2 = maxins_guess
+      INTEGER :: len1_instr3 = 5
+      INTEGER :: len2_instr3 = maxins_guess
+      INTEGER :: len_rvalue1 = MAX( maxarray_guess, 1 )
+      INTEGER :: len_rvalue2 = maxarray_guess
+      INTEGER :: len_rvalue3 = maxarray_guess
+      INTEGER :: len_farray = MAX( maxarray_guess, 1 )
+      INTEGER :: len1_array = 3
+      INTEGER :: len2_array = maxarray_guess
+      INTEGER :: len1_carray = 2
+      INTEGER :: len2_carray = maxarray_guess
+      INTEGER :: len1_varray = 2
+      INTEGER :: len2_varray = maxarray_guess
+      INTEGER :: len1_iarray = 5
+      INTEGER :: len2_iarray = 3
+      INTEGER :: len3_iarray = maxarray_guess
 
 !      INTEGER :: len_inlist = length
 !      INTEGER :: len_itable = length
-!      INTEGER :: len_icna = licna 
-!      INTEGER :: len_indval = nindex
-!      INTEGER :: len2_instr = maxins
-!      INTEGER :: len3_instr = maxlev
-!      INTEGER :: len_ninstr = maxlev
-!      INTEGER :: len3_iarray = maxara
-!      INTEGER :: len1_icoord = la
-!      INTEGER :: len_itypev = nmax
-!      INTEGER :: len_dfault = nmax
-!      INTEGER :: len_a = la
-!      INTEGER :: len2_bnd = nmax
-!      INTEGER :: len3_bnd = nbmax
-!      INTEGER :: len_realvl = nrlndx
-!      INTEGER :: len2_bndflt = nbmax 
-!      INTEGER :: len_cscale = nmax
-!      INTEGER :: len1_rvalue = maxara
-!      INTEGER :: len2_varray = maxara
-!      INTEGER :: len2_fbound = nobmax
-!      INTEGER :: len_abyrow = la
-!      INTEGER :: len_b = lb
-!      INTEGER :: len_x = nmax
-!      INTEGER :: len_vscale = nmax
-!      INTEGER :: len_farray = maxara
-!      INTEGER :: len_namiin = nindex
-!      INTEGER :: len_namrin = nrlndx
-!      INTEGER :: len_bnames = nbmax 
-!      INTEGER :: len_vnames = nmax  
-!      INTEGER :: len_obname = nobmax
-!      INTEGER :: len_gpname = ngpmax
-!      INTEGER :: len2_array = maxara
-!      INTEGER :: len2_carray = maxara
 !      INTEGER :: len_key = length
+
+
+      len_iinames = niindex_guess
+      len_rinames = nrindex_guess
 
 !  set initial values for integer variables
 
       intype = 1 ; intypo = 1 ; lineno = 0 ; nvar = 0 ; nnza = 0
       ng = 0 ; nbnd = 0 ; nstart = 0 ; nobj = 0 ; neltype = 0 ; ngtype = 0
       nelnum = 0 ; ngrupe = 0 ; nelvar = 0 ; nlisep = 0 ; nlisgp = 0
-      neling = 0 ; nusein = 0 ; nusere = 0 ; nobbnd = 0 ; ndtype = 0
+      neling = 0 ; niival = 0 ; nrival = 0 ; nobbnd = 0 ; ndtype = 0
       nevnames = 0 ; nivnames = 0 ; nepnames = 0 ; nlvars = - 1 ; nnlvrs = - 1
       nconst = - 1 ; nrange = - 1 ; level = 0 ; ilines = 0 ; nlines = 0
       iptype = 0 ; istype = 0 ; status = 0
@@ -952,6 +969,10 @@
       value4 = 0.0D+0 ; value6 = 0.0D+0
 
 !  allocate arrays
+
+      CALL ALLOCATE_array( TYPEV, len_typev, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'TYPEV' ; GO TO 980 ; END IF
 
       CALL ALLOCATE_array( ELV, len_elv, alloc_status )
       IF ( alloc_status /= 0 ) THEN
@@ -993,6 +1014,14 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'ETYPES' ; GO TO 980 ; END IF
 
+      CALL ALLOCATE_array( IIVAL, len_iival, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IIVAL' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( RIVAL, len_rival, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RIVAL' ; GO TO 980 ; END IF
+
       CALL ALLOCATE_array( GTYPESP_ptr, len_gtypesp_ptr, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'GTYPESP_ptr' ; GO TO 980 ; END IF
@@ -1021,6 +1050,42 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'EP_val' ; GO TO 980 ; END IF
 
+      CALL ALLOCATE_array( A_row, len_a, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'A_row' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( A_col, len_a, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'A_col' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( A_val, len_a, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'A_val' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( B_l_default, len_blu_default, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'B_l_default' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( B_u_default, len_blu_default, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'B_u_default' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( CSCALE, len_cscale, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'CSCALE' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( DEFAULT, len_default, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'DEFAULT' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( FBOUND_l, len_fbound, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'FBOUND_l' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( FBOUND_u, len_fbound, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'FBOUND_u' ; GO TO 980 ; END IF
+
       CALL ALLOCATE_array( RSCALE, len_rscale, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'RSCALE' ; GO TO 980 ; END IF
@@ -1037,6 +1102,14 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'RDROWS' ; GO TO 980 ; END IF
 
+      CALL ALLOCATE_array( BNAMES, len_bnames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'BNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( VNAMES, len_vnames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'VNAMES' ; GO TO 980 ; END IF
+
       CALL ALLOCATE_array( GNAMES, len_gnames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'GNAMES' ; GO TO 980 ; END IF
@@ -1048,6 +1121,10 @@
       CALL ALLOCATE_array( ONAMES, len_onames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'GNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( OBBNAME, len_obbname, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'OBBNAME' ; GO TO 980 ; END IF
 
       CALL ALLOCATE_array( SNAMES, len_snames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
@@ -1065,20 +1142,70 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'EPNAMES' ; GO TO 980 ; END IF
 
-!  set up itable data
+      CALL ALLOCATE_array( GPNAMES, len_gpnames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GPNAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( IINAMES, len_iinames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IINAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( RINAMES, len_rinames, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RINAMES' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( INSTR1, len1_instr1, len2_instr1, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'INSTR1' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( INSTR2, len1_instr2, len2_instr2, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'INSTR2' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( INSTR3, len1_instr3, len2_instr3, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'INSTR3' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( RVALUE1, len_rvalue1, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RVALUE1' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( RVALUE2, len_rvalue2, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RVALUE1' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( RVALUE3, len_rvalue3, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RVALUE1' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( FARRAY, len_farray, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'FARRAY' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( VARRAY, len1_varray, len2_varray, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'VARRAY' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( CARRAY, len1_carray, len2_carray, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'CARRAY' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( ARRAY, len1_array, len2_array, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ARRAY' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( IARRAY, len1_iarray, len2_iarray, len3_iarray,      &
+                           alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IARRAY' ; GO TO 980 ; END IF
+
+!  set up ITABLE data
 
       CALL HASH_initialize( length, ITABLE )
 
 !  initialize row data
 
       RSCALE( :  len_rscale ) = one
-
-!  initialize column data
-
-      ITYPEV( : nmax ) = 0
-      CSCALE( : nmax ) = one
-      BND( 1, : nmax, 1 ) = zero
-      BND( 2, : nmax, 1 ) = biginf
 
 !  initialize dictionary data
 
@@ -1202,7 +1329,7 @@
         GO TO 800
 
   120   CONTINUE
-        IF ( intype == mgroup .OR. intype == MCNSTR) intype = mrows
+        IF ( intype == mgroup .OR. intype == mcnstr ) intype = mrows
         IF ( intype == mrhs .OR. intype == mrhsp ) intype = mconst
         IF ( intype == mvars ) intype = mcols
         IF ( intype == mquadr .OR. intype == mquads .OR.                       &
@@ -1240,6 +1367,18 @@
                                  alloc_status )
             IF ( alloc_status /= 0 ) THEN
               bad_alloc = 'VSTART' ; GO TO 980 ; END IF
+
+            len1_blu = nlvars
+            CALL ALLOCATE_array( B_l, len1_blu, len2_blu,                      &
+                                 alloc_status )
+            IF ( alloc_status /= 0 ) THEN
+              bad_alloc = 'B_l' ; GO TO 980 ; END IF
+
+            len1_blu = nlvars
+            CALL ALLOCATE_array( B_u, len1_blu, len2_blu,                      &
+                                 alloc_status )
+            IF ( alloc_status /= 0 ) THEN
+              bad_alloc = 'B_u' ; GO TO 980 ; END IF
           END IF
         END IF
 
@@ -1250,6 +1389,16 @@
           IF ( nconst == 0 ) THEN
             nconst = 1
             nvar = nvar + 1
+            IF ( nvar > len_default ) THEN
+              used_length = nvar - 1 ; min_length = nvar
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( DEFAULT, len_default, used_length, new_length,&
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                bad_alloc = 'DEFAULT' ; status = - 7 ; GO TO 980 ; END IF
+              len_default = new_length
+            END IF
+            DEFAULT( nvar ) = zero
           END IF
         END IF
 
@@ -1320,7 +1469,7 @@
                                        new_length, min_length, buffer,       &
                                        status, alloc_status )
                     IF ( status /= 0 ) THEN
-                       bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
+                      bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
                     END IF
                     len_ivnames = new_length
                   END IF
@@ -1344,7 +1493,7 @@
                 CALL EXTEND_array( ELV, len_elv, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
+                  bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
                 len_elv = new_length
               END IF
 
@@ -1354,7 +1503,7 @@
                 CALL EXTEND_array( INV, len_inv, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
+                  bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
                 len_inv = new_length
               END IF
 
@@ -1364,7 +1513,7 @@
                 CALL EXTEND_array( ELP, len_elp, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
+                  bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
                 len_elp = new_length
               END IF
             END IF
@@ -1383,6 +1532,30 @@
           IF ( nnlvrs < 0 ) nnlvrs = n - nlvars
           IF ( .NOT. end_element_uses_section ) THEN
             end_element_uses_section = .TRUE.
+
+!  set column data for nonlinear variables
+
+            IF ( n > len_cscale ) THEN
+              used_length = nlvars ; min_length = n
+              new_length = n
+              CALL EXTEND_array( CSCALE, len_cscale, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                bad_alloc = 'CSCALE' ; status = - 7 ; GO TO 980 ; END IF
+              len_cscale = new_length
+            END IF
+
+            IF ( n > len_typev ) THEN
+              used_length = nlvars ; min_length = n
+              new_length = n
+              CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,   &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                bad_alloc = 'TYPEV' ; status = - 7 ; GO TO 980 ; END IF
+              len_typev = new_length
+            END IF
+            TYPEV( nlvars + 1 : n ) = 0
+            CSCALE( nlvars + 1 : n ) = one
 
 !  check that the nonlinear elements have been completely specified
 !  first check the parameter values have been set
@@ -1441,10 +1614,10 @@
                                   used_length, new_length, min_length,         &
                                   buffer, status, alloc_status )
                IF ( status /= 0 ) THEN
-                  bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
+                 bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
                len_gtypesp_ptr = new_length
              END IF
-             GTYPESP_ptr( ngtype + 1 ) = ngpn + 1
+             GTYPESP_ptr( ngtype + 1 ) = ngpnames + 1
            END IF
          END IF
 
@@ -1478,7 +1651,7 @@
                      nlisgp = nlisgp + 1
                      GP_val( nlisgp ) = biginf
                      IF ( out > 0 )                                            &
-                       WRITE( out, 2340 ) GNAMES( j ), GPNAME( ip + i )
+                       WRITE( out, 2340 ) GNAMES( j ), GPNAMES( ip + i )
                    END DO 
                  END IF 
                END IF 
@@ -1495,7 +1668,7 @@
                  IF ( GP_val( nlisgp ) == biginf ) THEN
                    status = 34
                    IF ( out > 0 ) WRITE( out, 2340 )                           &
-                     GNAMES( j ), GPNAME( ip + i )
+                     GNAMES( j ), GPNAMES( ip + i )
                  END IF
                END DO
              END IF
@@ -1544,20 +1717,58 @@
         IF ( level == 0 ) THEN
           doloop = .TRUE.
           narray = 0
-          NINSTR( 1 ) = 0
-          NINSTR( 2 ) = 0
-          NINSTR( 3 ) = 0
+          ninstr1 = 0 ; ninstr2 = 0 ; ninstr3 = 0
 
 !  this is the second or third level of the loop
 
-        ELSE
-          NINSTR( level ) = NINSTR( level ) + 1
-          IF ( NINSTR( level ) > maxins ) THEN
-            status = - 11
-            GO TO 700
+        ELSE IF ( level == 1 ) THEN
+          ninstr1 = ninstr1 + 1
+          IF ( ninstr1 > len2_instr1 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr1 - 1 ; min_length2 = ninstr1
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR1' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr1 = new_length2
           END IF
-          IF ( debug .AND. out > 0 ) WRITE( out, 4010 ) level, NINSTR( level )
-          INSTR( 1, NINSTR( level ), level ) = 1
+          IF ( debug .AND. out > 0 ) WRITE( out, 4010 ) 1, ninstr1
+          INSTR1( 1, ninstr1 ) = 1
+        ELSE IF ( level == 2 ) THEN
+          ninstr2 = ninstr2 + 1
+          IF ( ninstr2 > len2_instr2 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr2 - 1 ; min_length2 = ninstr2
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR2' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr2 = new_length2
+          END IF
+          IF ( debug .AND. out > 0 ) WRITE( out, 4010 ) 2, ninstr2
+          INSTR2( 1, ninstr2 ) = 1
+        ELSE
+          ninstr3 = ninstr3 + 1
+          IF ( ninstr3 > len2_instr3 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr3 - 1 ; min_length2 = ninstr3
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR3' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr3 = new_length2
+          END IF
+          IF ( debug .AND. out > 0 ) WRITE( out, 4010 ) 3, ninstr3
+          INSTR3( 1, ninstr3 ) = 1
         END IF
 
 !  record the location of the do-loop variable in the array inlist
@@ -1568,18 +1779,37 @@
           IF ( ifree == 0 ) GO TO 700
           ifree = - ifree
         ELSE
-          nusein = nusein + 1
-          IF ( nusein > nindex ) THEN
-            status = - 21
-            GO TO 700
+          niival = niival + 1
+          IF ( niival > len_iival ) THEN
+            used_length = niival - 1 ; min_length = niival
+            new_length = 3 * min_length / 2 + 1
+            CALL EXTEND_array( IIVAL, len_iival, used_length, new_length,      &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'IIVAL' ; status = - 21 ; GO TO 980 ; END IF
+            len_iival = new_length
           END IF
-          INLIST( ifree ) = nusein
-          NAMIIN( nusein ) = FIELD( 1 : 7 )
+
+          IF ( niival > len_iinames ) THEN
+            used_length = niival - 1 ; min_length = niival
+            new_length = 3 * min_length / 2 + 1
+            CALL EXTEND_array( IINAMES, len_iinames, used_length, new_length,  &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'IINAMES' ; status = - 21 ; GO TO 980 ; END IF
+            len_iinames = new_length
+          END IF
+          INLIST( ifree ) = niival
+          IINAMES( niival ) = FIELD( 1 : 7 )
         END IF
         IF ( level == 0 ) THEN
           LOOP( 1 ) = INLIST( ifree )
+        ELSE IF ( level == 1 ) THEN
+          INSTR1( 2, ninstr1 ) = INLIST( ifree )
+        ELSE IF ( level == 2 ) THEN
+          INSTR2( 2, ninstr2 ) = INLIST( ifree )
         ELSE
-          INSTR( 2, NINSTR( level ), level ) = INLIST( ifree )
+          INSTR3( 2, ninstr3 ) = INLIST( ifree )
         END IF
 
 !  record the starting value of the do-loop variable
@@ -1593,8 +1823,12 @@
         END IF
         IF ( level == 0 ) THEN
           LOOP( 2 ) = INLIST( ifield )
+        ELSE IF ( level == 1 ) THEN
+          INSTR1( 3, ninstr1 ) = INLIST( ifield )
+        ELSE IF ( level == 2 ) THEN
+          INSTR2( 3, ninstr2 ) = INLIST( ifield )
         ELSE
-          INSTR( 3, NINSTR( level ), level ) = INLIST( ifield )
+          INSTR3( 3, ninstr3 ) = INLIST( ifield )
         END IF
 
 !  record the finishing value of the do-loop variable and
@@ -1610,9 +1844,15 @@
         IF ( level == 0 ) THEN
           LOOP( 3 ) = INLIST( ifield )
           LOOP( 4 ) = - 1
+        ELSE IF ( level == 1 ) THEN
+          INSTR1( 4, ninstr1 ) = INLIST( ifield )
+          INSTR1( 5, ninstr1 ) = - 1
+        ELSE IF ( level == 2 ) THEN
+          INSTR2( 4, ninstr2 ) = INLIST( ifield )
+          INSTR2( 5, ninstr2 ) = - 1
         ELSE
-          INSTR( 4, NINSTR( level ), level ) = INLIST( ifield )
-          INSTR( 5, NINSTR( level ), level ) = - 1
+          INSTR3( 4, ninstr3 ) = INLIST( ifield )
+          INSTR3( 5, ninstr3 ) = - 1
         END IF
         level = level + 1
         GO TO 100
@@ -1626,14 +1866,19 @@
 
         adddoloop = .FALSE.
         IF ( level == 1 ) THEN
-          adddoloop = ( FIELD2( 1 : 10 ) == NAMIIN( LOOP( 1 ) ) )
-        ELSE IF( level > 1 ) THEN
+          adddoloop = ( FIELD2( 1 : 10 ) == IINAMES( LOOP( 1 ) ) )
+        ELSE IF( level == 2 ) THEN
           adddoloop = ( FIELD2( 1 : 10 ) ==                                    &
-            NAMIIN( INSTR( 2, NINSTR( level - 1 ), level - 1 ) ) )
+            IINAMES( INSTR1( 2, ninstr1 ) ) )
+        ELSE IF( level == 3 ) THEN
+          adddoloop = ( FIELD2( 1 : 10 ) ==                                    &
+            IINAMES( INSTR2( 2, ninstr2 ) ) )
         ENDIF
         IF ( adddoloop ) THEN
-          IF ( debug .AND. out > 0 .AND. level > 1 )                           &
-            WRITE( out, 4030 ) level - 1, NINSTR( level - 1 )
+          IF ( debug .AND. out > 0 .AND. level == 2 )                          &
+            WRITE( out, 4030 ) 1, ninstr1
+          IF ( debug .AND. out > 0 .AND. level == 3 )                          &
+            WRITE( out, 4030 ) 2, ninstr2
           field = FIELD3( 1 : 10 ) // 'II'
           CALL HASH_search( length, 12, field, KEY, ITABLE, ifield )
           IF ( ifield <= 0 ) THEN
@@ -1643,8 +1888,10 @@
           END IF
           IF ( level == 1 ) THEN
             LOOP( 4 ) = INLIST( ifield )
-          ELSE
-            INSTR( 5, NINSTR( level - 1 ), level - 1 ) = INLIST( ifield )
+          ELSE IF ( level == 2 ) THEN
+            INSTR1( 5, ninstr1 ) = INLIST( ifield )
+          ELSE IF ( level == 3 ) THEN
+            INSTR2( 5, ninstr2 ) = INLIST( ifield )
           END IF
         END IF
         GO TO 100
@@ -1658,25 +1905,111 @@
 !  terminate the current level of loop
 
       IF ( field1 == 'OD' ) THEN
-        NINSTR( level ) = NINSTR( level ) + 1
-        IF ( NINSTR( level ) > maxins ) THEN
-           status = - 11
-           GO TO 700
+        IF ( level == 1 ) THEN
+          ninstr1 = ninstr1 + 1
+          IF ( ninstr1 > len2_instr1 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr1 - 1 ; min_length2 = ninstr1
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR1' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr1 = new_length2
+          END IF
+          INSTR1( 1, ninstr1 ) = 2
+          IF ( debug .AND. out > 0 ) WRITE( out, 4020 ) 1, ninstr1
+        ELSE IF ( level == 2 ) THEN
+          ninstr2 = ninstr2 + 1
+          IF ( ninstr2 > len2_instr2 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr2 - 1 ; min_length2 = ninstr2
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR2' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr2 = new_length2
+          END IF
+          INSTR2( 1, ninstr2 ) = 2
+          IF ( debug .AND. out > 0 ) WRITE( out, 4020 ) 2, ninstr2
+        ELSE IF ( level == 3 ) THEN
+          ninstr3 = ninstr3 + 1
+          IF ( ninstr3 > len2_instr3 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr3 - 1 ; min_length2 = ninstr3
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR3' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr3 = new_length2
+          END IF
+          INSTR3( 1, ninstr3 ) = 2
+          IF ( debug .AND. out > 0 ) WRITE( out, 4020 ) 3, ninstr3
         END IF
-        INSTR( 1, NINSTR( level ), level ) = 2
-        IF ( debug .AND. out > 0 ) WRITE( out, 4020 ) level, NINSTR( level )
         level = level - 1
       ELSE
-        DO i = level, 1, - 1
-          NINSTR( level ) = NINSTR( level ) + 1
-          IF ( NINSTR( level ) > maxins ) THEN
-            status = - 11
-            GO TO 700
+        IF ( level == 3 ) THEN
+          ninstr3 = ninstr3 + 1
+          IF ( ninstr3 > len2_instr3 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr3 - 1 ; min_length2 = ninstr3
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR3' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr3 = new_length2
           END IF
-          INSTR( 1, NINSTR( level ), level ) = 2
-          IF ( debug .AND. out > 0 ) WRITE( out, 4020 ) level, NINSTR( level )
-          level = level - 1
-        END DO
+          INSTR3( 1, ninstr3 ) = 2
+          IF ( debug .AND. out > 0 ) WRITE( out, 4020 ) 3, ninstr3
+          level = 2
+        END IF
+        IF ( level == 2 ) THEN
+          ninstr2 = ninstr2 + 1
+          IF ( ninstr2 > len2_instr2 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr2 - 1 ; min_length2 = ninstr2
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR2' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr2 = new_length2
+          END IF
+          INSTR2( 1, ninstr2 ) = 2
+          IF ( debug .AND. out > 0 ) WRITE( out, 4020 ) 2, ninstr2
+          level = 1
+        END IF
+        IF ( level == 1 ) THEN
+          ninstr1 = ninstr1 + 1
+          IF ( ninstr1 > len2_instr1 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr1 - 1 ; min_length2 = ninstr1
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR1' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr1 = new_length2
+          END IF
+          INSTR1( 1, ninstr1 ) = 2
+          IF ( debug .AND. out > 0 ) WRITE( out, 4020 ) 1, ninstr1
+          level = 0
+        END IF
       END IF
 
 !  execute do-loop instructions
@@ -1686,12 +2019,12 @@
 
 !  execute level-1 do-loop instructions
 
-        lev1s = INDVAL( LOOP( 2 ) )
-        lev1e = INDVAL( LOOP( 3 ) )
+        lev1s = IIVAL( LOOP( 2 ) )
+        lev1e = IIVAL( LOOP( 3 ) )
         IF ( LOOP( 4 ) <= 0 ) THEN
           lev1i = 1
         ELSE
-          lev1i = INDVAL( LOOP( 4 ) )
+          lev1i = IIVAL( LOOP( 4 ) )
         END IF
 
 !  mock do-loop
@@ -1704,9 +2037,9 @@
 
 !  set the loop value
 
-          INDVAL( LOOP( 1 ) ) = lev1
+          IIVAL( LOOP( 1 ) ) = lev1
           IF ( debug .AND. out > 0 ) WRITE( out, 5000 )                        &
-            1, NAMIIN( LOOP( 1 ) ), lev1
+            1, IINAMES( LOOP( 1 ) ), lev1
 
 !  execute the remaining list of level-1 instructions
 
@@ -1715,20 +2048,20 @@
 
 !  see if the level-1 loop is to be terminated
 
-          IF ( INSTR( 1, l1, 1 ) == 2 ) GO TO 300
+          IF ( INSTR1( 1, l1 ) == 2 ) GO TO 300
 
 !  see if a level-2 loop is to be started
 
-          IF ( INSTR( 1, l1, 1 ) /= 1 ) GO TO 295
+          IF ( INSTR1( 1, l1 ) /= 1 ) GO TO 295
 
 !  execute level-2 do-loop instructions
 
-          lev2s = INDVAL( INSTR( 3, l1, 1 ) )
-          lev2e = INDVAL( INSTR( 4, l1, 1 ) )
-          IF ( INSTR( 5, l1, 1 ) <= 0 ) THEN
+          lev2s = IIVAL( INSTR1( 3, l1 ) )
+          lev2e = IIVAL( INSTR1( 4, l1 ) )
+          IF ( INSTR1( 5, l1 ) <= 0 ) THEN
             lev2i = 1
           ELSE
-            lev2i = INDVAL( INSTR( 5, l1, 1 ) )
+            lev2i = IIVAL( INSTR1( 5, l1 ) )
           END IF
           level2 = l2
           levl3a = l3
@@ -1744,9 +2077,9 @@
 
 !  set the loop value
 
-          INDVAL( INSTR( 2, l1, 1 ) ) = lev2
+          IIVAL( INSTR1( 2, l1 ) ) = lev2
           IF ( debug .AND. out > 0 ) WRITE( out, 5000 )                        &
-                  2, NAMIIN( INSTR( 2, l1, 1 ) ), lev2
+                  2, IINAMES( INSTR1( 2, l1 ) ), lev2
 
 !  execute the remaining list of level-2 instructions
 
@@ -1755,20 +2088,20 @@
 
 !  see if the level-2 loop is to be terminated
 
-          IF ( INSTR( 1, l2, 2 ) == 2 ) GO TO 290
+          IF ( INSTR2( 1, l2 ) == 2 ) GO TO 290
 
 !  see if a level-3 loop is to be started
 
-          IF ( INSTR( 1, l2, 2 ) /= 1 ) GO TO 283
+          IF ( INSTR2( 1, l2 ) /= 1 ) GO TO 283
 
 !  execute level-3 do-loop instructions
 
-          lev3s = INDVAL( INSTR( 3, l2, 2 ) )
-          lev3e = INDVAL( INSTR( 4, l2, 2 ) )
-          IF ( INSTR( 5, l2, 2 ) <= 0 ) THEN
+          lev3s = IIVAL( INSTR2( 3, l2 ) )
+          lev3e = IIVAL( INSTR2( 4, l2 ) )
+          IF ( INSTR2( 5, l2 ) <= 0 ) THEN
             lev3i = 1
           ELSE
-            lev3i = INDVAL( INSTR( 5, l2, 2 ) )
+            lev3i = IIVAL( INSTR2( 5, l2 ) )
           END IF
           level3 = l3
 
@@ -1782,9 +2115,9 @@
 
 !  set the loop value
 
-          INDVAL( INSTR( 2, l2, 2 ) ) = lev3
+          IIVAL( INSTR2( 2, l2 ) ) = lev3
           IF ( debug .AND. out > 0 )                                           &
-             WRITE( out, 5000 ) 3, NAMIIN( INSTR( 2, l2, 2 ) ), lev3
+             WRITE( out, 5000 ) 3, IINAMES( INSTR2( 2, l2 ) ), lev3
 
 !  execute the remaining list of level-3 instructions
 
@@ -1793,28 +2126,28 @@
 
 !  see if the level-3 loop is to be terminated
 
-          IF ( INSTR( 1, l3, 3 ) == 2 ) GO TO 280
+          IF ( INSTR3( 1, l3 ) == 2 ) GO TO 280
 
 !  execute level-3 index instructions
 
-          IF ( INSTR( 1, l3, 3 ) >= 21 .AND. INSTR( 1, l3, 3 ) <= 50 ) THEN
-            CALL GETIIN( nindex, INDVAL, nrlndx, REALVL, INSTR( 1, l3, 3 ) )
+          IF ( INSTR3( 1, l3 ) >= 21 .AND. INSTR3( 1, l3 ) <= 50 ) THEN
+            CALL GETIIN( niival, nrival, IIVAL, RIVAL, INSTR3( 1, l3 ) )
             IF ( debug .AND. out > 0 ) WRITE( out, 5010 ) 3, l3,               &
-              NAMIIN( INSTR( 2, l3, 3 ) ), INDVAL( INSTR( 2, l3, 3 ) )
+              IINAMES( INSTR3( 2, l3 ) ), IIVAL( INSTR3( 2, l3 ) )
           END IF
-          IF ( INSTR( 1, l3, 3 ) >= 51 .AND. INSTR( 1, l3, 3 ) <= 99 ) THEN
-            CALL GETRIN( nindex, nrlndx, INDVAL, REALVL, RVALUE( l3, 3 ),      &
-                         INSTR( 1, l3, 3 ), status )
+          IF ( INSTR3( 1, l3 ) >= 51 .AND. INSTR3( 1, l3 ) <= 99 ) THEN
+            CALL GETRIN( niival, nrival, IIVAL, RIVAL, RVALUE3( l3 ),          &
+                         INSTR3( 1, l3 ), status )
             IF ( status > 0 ) GO TO 800
             IF ( debug .AND. out > 0 ) WRITE( out, 5020 ) 3, l3,               &
-                NAMRIN( INSTR( 2, l3, 3 ) ), REALVL( INSTR( 2, l3, 3 ) )
+                RINAMES( INSTR3( 2, l3 ) ), RIVAL( INSTR3( 2, l3 ) )
           END IF
-          IF ( INSTR( 1, l3, 3 ) >= 100 ) THEN
-            narray = INSTR( 2, l3, 3 )
-            CALL GETLIN( nindex, nrlndx, INDVAL, IARRAY( 1, 1, narray ),       &
+          IF ( INSTR3( 1, l3 ) >= 100 ) THEN
+            narray = INSTR3( 2, l3 )
+            CALL GETLIN( niival, nrival, IIVAL, IARRAY( 1, 1, narray ),        &
                          VARRAY( 1, narray ), ARRAY( 1, narray ),              &
-                         CARRAY( 1, narray ), FARRAY( narray ), REALVL,        &
-                         NAMIIN, novals, INSTR( 1, l3, 3 ), field1,            &
+                         CARRAY( 1, narray ), FARRAY( narray ), RIVAL,         &
+                         IINAMES, novals, INSTR3( 1, l3 ), field1,             &
                          field2, field3, value4, field5, value6, out,          &
                          status, length, KEY, ITABLE, INLIST )
             IF ( status > 0 ) GO TO 800
@@ -1833,7 +2166,7 @@
 
   281     CONTINUE
           l3 = l3 + 1
-          IF ( INSTR( 1, l3, 3 ) /= 2 ) GO TO 281
+          IF ( INSTR3( 1, l3 ) /= 2 ) GO TO 281
 
 !  end of level-3 do-loop
 
@@ -1841,24 +2174,24 @@
 
 !  execute level-2 index instructions
 
-          IF ( INSTR( 1, l2, 2 ) >= 21 .AND. INSTR( 1, l2, 2 ) <= 50 ) THEN
-            CALL GETIIN( nindex, INDVAL, nrlndx, REALVL, INSTR( 1, l2, 2 ) )
+          IF ( INSTR2( 1, l2 ) >= 21 .AND. INSTR2( 1, l2 ) <= 50 ) THEN
+            CALL GETIIN( niival, nrival, IIVAL, RIVAL, INSTR2( 1, l2 ) )
             IF ( debug .AND. out > 0 ) WRITE( out, 5010 ) 2, l2,               &
-                  NAMIIN( INSTR( 2, l2, 2 ) ), INDVAL( INSTR( 2, l2, 2 ) )
+                  IINAMES( INSTR2( 2, l2 ) ), IIVAL( INSTR2( 2, l2 ) )
           END IF
-          IF ( INSTR( 1, l2, 2 ) >= 51 .AND. INSTR( 1, l2, 2 ) <= 99 ) THEN
-            CALL GETRIN( nindex, nrlndx, INDVAL, REALVL, RVALUE( l2, 2 ),      &
-                         INSTR( 1, l2, 2 ), status )
+          IF ( INSTR2( 1, l2 ) >= 51 .AND. INSTR2( 1, l2 ) <= 99 ) THEN
+            CALL GETRIN( niival, nrival, IIVAL, RIVAL, RVALUE2( l2 ),          &
+                         INSTR2( 1, l2 ), status )
             IF ( status > 0 ) GO TO 800
             IF ( debug .AND. out > 0 ) WRITE( out, 5020 ) 2, l2,               &
-               NAMRIN( INSTR( 2, l2, 2 ) ), REALVL( INSTR( 2, l2, 2 ) )
+               RINAMES( INSTR2( 2, l2 ) ), RIVAL( INSTR2( 2, l2 ) )
           END IF
-          IF ( INSTR( 1, l2, 2 ) >= 100 ) THEN
-            narray = INSTR( 2, l2, 2 )
-            CALL GETLIN( nindex, nrlndx, INDVAL, IARRAY( 1, 1, narray ),       &
+          IF ( INSTR2( 1, l2 ) >= 100 ) THEN
+            narray = INSTR2( 2, l2 )
+            CALL GETLIN( niival, nrival, IIVAL, IARRAY( 1, 1, narray ),        &
                          VARRAY( 1, narray ), ARRAY( 1, narray ),              &
-                         CARRAY( 1, narray ), FARRAY( narray ), REALVL,        &
-                         NAMIIN, novals, INSTR( 1, l2, 2 ), field1,            &
+                         CARRAY( 1, narray ), FARRAY( narray ), RIVAL,         &
+                         IINAMES, novals, INSTR2( 1, l2 ), field1,             &
                          field2, field3, value4, field5, value6, out,          &
                          status, length, KEY, ITABLE, INLIST )
             IF ( status > 0 ) GO TO 800
@@ -1877,7 +2210,7 @@
 
   292     CONTINUE
           l2 = l2 + 1
-          IF ( INSTR( 1, l2, 2 ) /= 2 ) GO TO 292
+          IF ( INSTR2( 1, l2 ) /= 2 ) GO TO 292
           level2 = l2
 
 !  end of level-2 do-loop
@@ -1886,24 +2219,24 @@
 
 !  execute level-1 index instructions
 
-          IF ( INSTR( 1, l1, 1 ) >= 21 .AND. INSTR( 1, l1, 1 ) <= 50 ) THEN
-            CALL GETIIN( nindex, INDVAL, nrlndx, REALVL, INSTR( 1, l1, 1 ) )
+          IF ( INSTR1( 1, l1 ) >= 21 .AND. INSTR1( 1, l1 ) <= 50 ) THEN
+            CALL GETIIN( niival, nrival, IIVAL, RIVAL, INSTR1( 1, l1 ) )
             IF ( debug .AND. out > 0 ) WRITE( out, 5010 ) 1, l1,               &
-              NAMIIN( INSTR( 2, l1, 1 ) ), INDVAL( INSTR( 2, l1, 1 ) )
+              IINAMES( INSTR1( 2, l1 ) ), IIVAL( INSTR1( 2, l1 ) )
           END IF
-          IF ( INSTR( 1, l1, 1 ) >= 51 .AND. INSTR( 1, l1, 1 ) <= 99 ) THEN
-            CALL GETRIN( nindex, nrlndx, INDVAL, REALVL, RVALUE( l1, 1 ),      &
-                         INSTR( 1, l1, 1 ), status )
+          IF ( INSTR1( 1, l1 ) >= 51 .AND. INSTR1( 1, l1 ) <= 99 ) THEN
+            CALL GETRIN( niival, nrival, IIVAL, RIVAL, RVALUE1( l1 ),          &
+                         INSTR1( 1, l1 ), status )
             IF ( status > 0 ) GO TO 800
             IF ( debug .AND. out > 0 ) WRITE( out, 5020 ) 1, l1,               &
-                NAMRIN( INSTR( 2, l1, 1 ) ), REALVL( INSTR( 2, l1, 1 ) )
+                RINAMES( INSTR1( 2, l1 ) ), RIVAL( INSTR1( 2, l1 ) )
           END IF
-          IF ( INSTR( 1, l1, 1 ) >= 100 ) THEN
-            narray = INSTR( 2, l1, 1 )
-            CALL GETLIN( nindex, nrlndx, INDVAL, IARRAY( 1, 1, narray ),       &
+          IF ( INSTR1( 1, l1 ) >= 100 ) THEN
+            narray = INSTR1( 2, l1 )
+            CALL GETLIN( niival, nrival, IIVAL, IARRAY( 1, 1, narray ),        &
                           VARRAY( 1, narray ), ARRAY( 1, narray ),             &
-                          CARRAY( 1, narray ), FARRAY( narray ), REALVL,       &
-                          NAMIIN, novals, INSTR( 1, l1, 1 ), field1,           &
+                          CARRAY( 1, narray ), FARRAY( narray ), RIVAL,        &
+                          IINAMES, novals, INSTR1( 1, l1 ), field1,            &
                           field2, field3, value4, field5, value6, out,         &
                           status, length, KEY, ITABLE, INLIST )
              IF ( status > 0 ) GO TO 800
@@ -1930,10 +2263,78 @@
 ! =====================================================================
 
       IF ( doloop ) THEN
-        NINSTR( level ) = NINSTR( level ) + 1
-        IF ( NINSTR( level ) > maxins ) THEN
-          status = - 11
-          GO TO 700
+        IF ( level == 1 ) THEN
+          ninstr1 = ninstr1 + 1
+          IF ( ninstr1 > len2_instr1 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr1 - 1 ; min_length2 = ninstr1
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR1' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr1 = new_length2
+          END IF
+
+          IF ( ninstr1 > len_rvalue1 ) THEN
+            used_length = ninstr1 - 1 ; min_length = ninstr1
+            new_length = 3 * min_length / 2 + 1 
+            CALL EXTEND_array( RVALUE1, len_rvalue1, used_length, new_length,  &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'RVALUE1' ; status = - 11 ; GO TO 980 ; END IF
+            len_rvalue1 = new_length
+          END IF
+        ELSE IF ( level == 2 ) THEN
+          ninstr2 = ninstr2 + 1
+          IF ( ninstr2 > len2_instr2 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr2 - 1 ; min_length2 = ninstr2
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR2' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr2 = new_length2
+          END IF
+
+          IF ( ninstr2 > len_rvalue2 ) THEN
+            used_length = ninstr2 - 1 ; min_length = ninstr2
+            new_length = 3 * min_length / 2 + 1 
+            CALL EXTEND_array( RVALUE2, len_rvalue2, used_length, new_length,  &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'RVALUE2' ; status = - 11 ; GO TO 980 ; END IF
+            len_rvalue2 = new_length
+          END IF
+        ELSE
+          ninstr3 = ninstr3 + 1
+          IF ( ninstr3 > len2_instr3 ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = ninstr3 - 1 ; min_length2 = ninstr3
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'INSTR3' ; status = - 11 ; GO TO 980 ; END IF
+            len2_instr3 = new_length2
+          END IF
+
+          IF ( ninstr3 > len_rvalue3 ) THEN
+            used_length = ninstr3 - 1 ; min_length = ninstr3
+            new_length = 3 * min_length / 2 + 1 
+            CALL EXTEND_array( RVALUE3, len_rvalue3, used_length, new_length,  &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'RVALUE3' ; status = - 11 ; GO TO 980 ; END IF
+            len_rvalue3 = new_length
+          END IF
         END IF
 
 !  an arithmetic instruction is to be processed
@@ -1950,13 +2351,37 @@
              field1 == 'R=' .OR. field1 == 'R+' .OR.                           &
              field1 == 'R-' .OR. field1 == 'R*' .OR.                           &
              field1 == 'R/' .OR. field1 == 'R(' ) THEN
-          CALL DECODE_scalar_instruction( nindex, nrlndx, length, nusein,      &
-                       nusere, status, out, level, NINSTR( level ),            &
-                       debug, RVALUE( NINSTR( level ), level ),                &
-                       INLIST, ITABLE, NAMIIN, NAMRIN,                         &
-                       INSTR( 1, NINSTR( level ), level ), KEY,                &
-                       field1, field2, field3, field5,                         &
-                       NULINE( 25 : 36 ) )
+          IF ( level == 1 ) THEN
+            CALL DECODE_scalar_instruction( length, niival,                    &
+                         nrival, status, out, 1, ninstr1,                      &
+                         debug, RVALUE1( ninstr1 ),                            &
+                         INLIST, ITABLE,                                       &
+                         len_iival, IIVAL, len_rival, RIVAL,                   &
+                         len_iinames, IINAMES, len_rinames, RINAMES,           &
+                         INSTR1( 1, ninstr1 ), KEY,                            &
+                         field1, field2, field3, field5,                       &
+                         NULINE( 25 : 36 ) )
+          ELSE IF ( level == 2 ) THEN
+            CALL DECODE_scalar_instruction( length, niival,                    &
+                         nrival, status, out, 2, ninstr2,                      &
+                         debug, RVALUE2( ninstr2 ),                            &
+                         INLIST, ITABLE,                                       &
+                         len_iival, IIVAL, len_rival, RIVAL,                   &
+                         len_iinames, IINAMES, len_rinames, RINAMES,           &
+                         INSTR2( 1, ninstr2 ), KEY,                            &
+                         field1, field2, field3, field5,                       &
+                         NULINE( 25 : 36 ) )
+          ELSE
+            CALL DECODE_scalar_instruction( length, niival,                    &
+                         nrival, status, out, 3, ninstr3,                      &
+                         debug, RVALUE3( ninstr3 ),                            &
+                         INLIST, ITABLE,                                       &
+                         len_iival, IIVAL, len_rival, RIVAL,                   &
+                         len_iinames, IINAMES, len_rinames, RINAMES,           &
+                         INSTR3( 1, ninstr3 ), KEY,                            &
+                         field1, field2, field3, field5,                       &
+                         NULINE( 25 : 36 ) )
+          END IF
           IF ( status > 0 ) GO TO 800
           IF ( status < 0 ) GO TO 700
 
@@ -1971,20 +2396,107 @@
              GO TO 800
           END IF
           narray = narray + 1
-          IF ( narray > maxara ) THEN
-             status = - 12
-             GO TO 700
+          IF ( narray > len_farray ) THEN
+            used_length = narray - 1 ; min_length = narray
+            new_length = 3 * min_length / 2 + 1 
+            CALL EXTEND_array( FARRAY, len_farray, used_length, new_length,    &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'FARRAY' ; status = - 12 ; GO TO 980 ; END IF
+            len_farray = new_length
           END IF
-          CALL DECODE_array_instruction( nindex, nrlndx, level,                &
-                       NINSTR( level ), nusere, length, narray, intype,        &
-                       status, out, debug, grp1st,                             &
+
+          IF ( narray > len2_varray ) THEN
+            used_length = 2 ; new_length = 2 ; min_length = 2
+            used_length2 = narray - 1 ; min_length2 = narray
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( VARRAY, 2, len2_varray, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'VARRAY' ; status = - 12 ; GO TO 980 ; END IF
+            len2_varray = new_length2
+          END IF
+
+          IF ( narray > len2_carray ) THEN
+            used_length = 2 ; new_length = 2 ; min_length = 2
+            used_length2 = narray - 1 ; min_length2 = narray
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( CARRAY, 2, len2_carray, used_length,            &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'CARRAY' ; status = - 12 ; GO TO 980 ; END IF
+            len2_carray = new_length2
+          END IF
+
+          IF ( narray > len2_array ) THEN
+            used_length = 3 ; new_length = 3 ; min_length = 3
+            used_length2 = narray - 1 ; min_length2 = narray
+            new_length2 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( ARRAY, 2, len2_array, used_length,              &
+                               used_length2, new_length, new_length2,          &
+                               min_length, min_length2, buffer,                &
+                               status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'ARRAY' ; status = - 12 ; GO TO 980 ; END IF
+            len2_array = new_length2
+          END IF
+
+          IF ( narray > len3_iarray ) THEN
+            used_length = 5 ; new_length = 5 ; min_length = 5
+            used_length2 = 3 ; new_length2 = 3 ; min_length2 = 3
+            used_length3 = narray - 1 ; min_length3 = narray
+            new_length3 = 3 * min_length2 / 2 + 1 
+            CALL EXTEND_array( IARRAY, 5, 3, len3_iarray, used_length,         &
+                               used_length2, used_length3,                     &
+                               new_length, new_length2, new_length3,           &
+                               min_length, min_length2, min_length3,           &
+                               buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'IARRAY' ; status = - 12 ; GO TO 980 ; END IF
+            len3_iarray = new_length3
+          END IF
+
+          IF ( level == 1 ) THEN
+            CALL DECODE_array_instruction( 1,                                  &
+                       ninstr1, niival, nrival, length, narray,                &
+                       intype, status, out, debug, grp1st,                     &
                        field1, field2, field3, field5,                         &
                        NULINE( 25 : 36 ), NULINE( 50 : 61 ),                   &
                        INLIST,                                                 &
-                       INSTR( 1, NINSTR( level ), level ), ITABLE,             &
+                       INSTR1( 1, ninstr1 ), ITABLE,                           &
                        IARRAY( 1, 1, narray ), VARRAY( 1, narray ),            &
-                       FARRAY( narray ), NAMIIN, NAMRIN,                       &
+                       FARRAY( narray ), len_rival, RIVAL,                     &
+                       IINAMES, len_rinames, RINAMES,                          &
                        ARRAY( 1, narray ), CARRAY( 1, narray ), KEY )
+          ELSE IF ( level == 2 ) THEN
+            CALL DECODE_array_instruction( 2,                                  &
+                       ninstr2, niival, nrival, length, narray,                &
+                       intype, status, out, debug, grp1st,                     &
+                       field1, field2, field3, field5,                         &
+                       NULINE( 25 : 36 ), NULINE( 50 : 61 ),                   &
+                       INLIST,                                                 &
+                       INSTR2( 1, ninstr2 ), ITABLE,                           &
+                       IARRAY( 1, 1, narray ), VARRAY( 1, narray ),            &
+                       FARRAY( narray ), len_rival, RIVAL,                     &
+                       IINAMES, len_rinames, RINAMES,                          &
+                       ARRAY( 1, narray ), CARRAY( 1, narray ), KEY )
+          ELSE
+            CALL DECODE_array_instruction( 3,                                  &
+                       ninstr3, niival, nrival, length, narray,                &
+                       intype, status, out, debug, grp1st,                     &
+                       field1, field2, field3, field5,                         &
+                       NULINE( 25 : 36 ), NULINE( 50 : 61 ),                   &
+                       INLIST,                                                 &
+                       INSTR3( 1, ninstr3 ), ITABLE,                           &
+                       IARRAY( 1, 1, narray ), VARRAY( 1, narray ),            &
+                       FARRAY( narray ), len_rival, RIVAL,                     &
+                       IINAMES, len_rinames, RINAMES,                          &
+                       ARRAY( 1, narray ), CARRAY( 1, narray ), KEY )
+          END IF
           IF ( status > 0 ) GO TO 800
           IF ( status < 0 ) GO TO 700
         END IF
@@ -2015,10 +2527,12 @@
 
 !  1) an arithmetic instruction. decode the instruction
 
-          CALL DECODE_scalar_instruction( nindex, nrlndx, length, nusein,      &
-                       nusere, status, out, 0, 1, debug, RVALUE( 1, 1 ),       &
-                       INLIST, ITABLE, NAMIIN, NAMRIN,                         &
-                       INSTR( 1, 1, 1 ), KEY,                                  &
+          CALL DECODE_scalar_instruction( length, niival,                      &
+                       nrival, status, out, 0, 1, debug, RVALUE1( 1 ),         &
+                       INLIST, ITABLE,                                         &
+                       len_iival, IIVAL, len_rival, RIVAL,                     &
+                       len_iinames, IINAMES, len_rinames, RINAMES,             &
+                       INSTR1( 1, 1 ), KEY,                                    &
                        field1, field2, field3, field5, NULINE( 25 : 36 ) )
           IF ( status > 0 ) GO TO 800
           IF ( status < 0 ) GO TO 700
@@ -2026,43 +2540,44 @@
 !  execute the instruction
 
           IF ( field1( 1 : 1 ) == 'I' ) THEN
-            CALL GETIIN( nindex, INDVAL, nrlndx, REALVL, INSTR( 1, 1, 1 ) )
+            CALL GETIIN( niival, nrival, IIVAL, RIVAL, INSTR1( 1, 1 ) )
             IF ( debug .AND. out > 0 ) WRITE( out, 5010 ) 0, 1,                &
-                NAMIIN( INSTR( 2, 1, 1 ) ), INDVAL( INSTR( 2, 1, 1 ) )
+                IINAMES( INSTR1( 2, 1 ) ), IIVAL( INSTR1( 2, 1 ) )
           ELSE
-            CALL GETRIN( nindex, nrlndx, INDVAL, REALVL,                       &
-                         RVALUE( 1, 1 ), INSTR( 1, 1, 1 ), status )
+            CALL GETRIN( niival, nrival, IIVAL, RIVAL,                         &
+                         RVALUE1( 1 ), INSTR1( 1, 1 ), status )
             IF ( status > 0 ) GO TO 800
             IF ( debug .AND. out > 0 )                                         &
-              WRITE( out, 5020 ) 0, 1, NAMRIN( INSTR( 2, 1, 1 ) ),             &
-              REALVL( INSTR( 2, 1, 1 ) )
+              WRITE( out, 5020 ) 0, 1, RINAMES( INSTR1( 2, 1 ) ),              &
+              RIVAL( INSTR1( 2, 1 ) )
           END IF
           GO TO 100
-        ELSE
-          IF ( field1( 1 : 1 ) == 'X' .OR. field1( 1 : 1 ) == 'Z' .OR.         &
-               field1( 1 : 1 ) == 'A' ) THEN
 
 !  2) an array definition. decode the instruction
 
-            CALL DECODE_array_instruction( nindex, nrlndx, 0, 1, nusere,       &
-                         length, 1, intype, status, out,                       &
+        ELSE
+          IF ( field1( 1 : 1 ) == 'X' .OR. field1( 1 : 1 ) == 'Z' .OR.         &
+               field1( 1 : 1 ) == 'A' ) THEN
+            CALL DECODE_array_instruction( 0, 1, &
+                         niival, nrival, length, 1, intype, status, out,       &
                          debug, grp1st,                                        &
                          field1, field2, field3, field5,                       &
                          NULINE( 25 : 36 ), NULINE( 50 : 61 ),                 &
-                         INLIST, INSTR( 1, 1, 1 ), ITABLE,                     &
+                         INLIST, INSTR1( 1, 1 ), ITABLE,                       &
                          IARRAY( 1, 1, 1 ), VARRAY( 1, 1 ),                    &
-                         FARRAY( 1 ), NAMIIN, NAMRIN,                          &
+                         FARRAY( 1 ), len_rival, RIVAL,                        &
+                         IINAMES, len_rinames, RINAMES,                        &
                          ARRAY( 1, 1 ), CARRAY( 1, 1 ), KEY )
             IF ( status > 0 ) GO TO 800
             IF ( status < 0 ) GO TO 700
 
 !  execute the instruction
 
-            CALL GETLIN( nindex, nrlndx, INDVAL,                               &
+            CALL GETLIN( niival, nrival, IIVAL,                                &
                          IARRAY( 1, 1, 1 ), VARRAY( 1, 1 ),                    &
                          ARRAY( 1, 1 ), CARRAY( 1, 1 ),                        &
-                         FARRAY( 1 ), REALVL, NAMIIN, novals,                  &
-                         INSTR( 1, 1, 1 ), field1,                             &
+                         FARRAY( 1 ), RIVAL, IINAMES, novals,                  &
+                         INSTR1( 1, 1 ), field1,                               &
                          field2, field3, value4,                               &
                          field5, value6, out, status,                          &
                          length, KEY, ITABLE, INLIST )
@@ -2143,9 +2658,9 @@
            field1 == 'A+' .OR. field1 == 'A-' .OR.                             &
            field1 == 'A*' .OR. field1 == 'A/' .OR.                             &
            field1 == 'A(' ) THEN
-        CALL EXECUTE_array_instruction( nindex, length, nusere, status, out,   &
-                     nrlndx, INLIST, ITABLE,                                   &
-                     NAMRIN, KEY, INDVAL, REALVL,                              &
+        CALL EXECUTE_array_instruction( length, niival, nrival,                &
+                     status, out, INLIST, ITABLE, KEY,                         &
+                     IIVAL, len_rival, RIVAL, len_rinames, RINAMES,            &
                      field1, field2, field3, field5, value4 )
         IF ( status > 0 ) GO TO 800
         IF ( status < 0 ) GO TO 700
@@ -2172,9 +2687,10 @@
                     field5, value6, len_gnames, GNAMES, len_onames, ONAMES,    &
                     KEY, out, status )
       ELSE
-        CALL SGRP2( ng, la, length, nnza, nobj, novals, INLIST,                &
+        CALL SGRP2( ng, length, nnza, nobj, novals, INLIST,                    &
                     len2_idrows, IDROWS, len_gstate, GSTATE,                   &
-                    len_gtype, GTYPE, ITABLE, ICOORD, A, len2_rdrows, RDROWS,  &
+                    len_gtype, GTYPE, ITABLE, len_a, A_row, A_col, A_val,      &
+                    len2_rdrows, RDROWS,  &
                     len_rscale, RSCALE, field1, field2, field3, value4,        &
                     field5, value6, len_gnames, GNAMES, len_onames, ONAMES,    &
                     KEY, out, status )
@@ -2194,14 +2710,19 @@
       IF ( intype == mconst ) colfie = 'CO'
       IF ( intype == mrange ) colfie = 'RA'
       IF ( grp1st .OR. intype /= mcols ) THEN
-        CALL SVAR2( nmax, la, length, nnza, nvar, novals, nrlndx,              &
-                    intype == mcols, colfie, ICOORD, len_gstate, GSTATE,       &
-                    ITYPEV, INLIST, ITABLE, A, CSCALE, REALVL, DFAULT, field1, &
-                    field2, field3, value4, field5, value6, VNAMES, KEY,       &
+        CALL SVAR2( length, nnza, nvar, novals, nrival,                        &
+                    intype == mcols, colfie, len_gstate, GSTATE,               &
+                    len_typev, TYPEV, INLIST, ITABLE,                          &
+                    len_a, A_row, A_col, A_val,                                &
+                    len_cscale, CSCALE, RIVAL, len_default, DEFAULT,           &
+                    field1, field2, field3, value4, field5, value6,            &
+                    len_vnames, VNAMES, KEY,                                   &
                     out, status )
       ELSE
-        CALL SVAR1( nmax, length, nvar, colfie, ITYPEV, INLIST, ITABLE,        &
-                    CSCALE, field2, field3, value4, VNAMES, KEY, status )
+        CALL SVAR1( length, nvar, colfie, len_typev, TYPEV,                    &
+                    INLIST, ITABLE, len_cscale, CSCALE,                        &
+                    field2, field3, value4,                                    &
+                    len_vnames, VNAMES, KEY, out, status )
       END IF
       IF ( status == 0 ) THEN
          IF ( doloop ) GO TO 600
@@ -2214,9 +2735,11 @@
 !  -------------------------
 
   440 CONTINUE
-      CALL SBOUND( nmax, nbmax, length, nlvars, nbnd, ncol, nrlndx, defaut,    &
-                   INLIST, ITABLE, BND, REALVL, field1, field2, field3,        &
-                   value4, field5, BNAMES, BNDFLT, KEY, out, status )
+      CALL SBOUND( length, nlvars, nbnd, ncol, nrival, defaut,                 &
+                   INLIST, ITABLE, len1_blu, len2_blu, B_l, B_u, RIVAL,        &
+                   field1, field2, field3, value4, field5, len_bnames, BNAMES, &
+                   len_blu_default, B_l_default, B_u_default,                  &
+                   KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -2228,10 +2751,10 @@
 !  ------------------------------
 
   450 CONTINUE
-      CALL SSTART( nmax, length, nlvars, ng, nstart, ncol,       &
-                   nrlndx, defaut, INLIST, ITABLE,                      &
-                   len1_vstart, len2_vstart, VSTART,                     &
-                   len1_cstart, len2_cstart, CSTART, REALVL,                   &
+      CALL SSTART( length, nlvars, ng, nstart, ncol,                           &
+                   nrival, defaut, INLIST, ITABLE,                             &
+                   len1_vstart, len2_vstart, VSTART,                           &
+                   len1_cstart, len2_cstart, CSTART, RIVAL,                    &
                    field1, field2, field3, value4, field5, value6,             &
                    len_snames, SNAMES,     &
                    novals, KEY, out, status )
@@ -2271,12 +2794,12 @@
 !  -------------------------------
 
   460 CONTINUE
-      CALL SETYPE( length, novals, nevnames, nivnames, &
-                   nepnames, neltype, inrep, len_elv,                  &
-                   ELV, len_inv, INV, len_elp, ELP, INLIST, ITABLE,      &
-                   field1, field2, field3, field5,           &
-                   len_evnames, EVNAMES, len_ivnames, IVNAMES, &
-                   len_epnames, EPNAMES,  &
+      CALL SETYPE( length, novals, nevnames, nivnames,                         &
+                   nepnames, neltype, inrep, len_elv,                          &
+                   ELV, len_inv, INV, len_elp, ELP, INLIST, ITABLE,            &
+                   field1, field2, field3, field5,                             &
+                   len_evnames, EVNAMES, len_ivnames, IVNAMES,                 &
+                   len_epnames, EPNAMES,                                       &
                    len_etypes, ETYPES, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
@@ -2289,13 +2812,14 @@
 !  --------------------------------
 
   470 CONTINUE
-      CALL SEUSES( neltype, nevnames, nepnames, nelvar, nlisep, novals,      &
-                   length, nelnum, nelmnt, nmax, n, elmnt,     &
-                   ELV, ELP, len_typee, TYPEE, len_elvar, ELVAR, &
-                   INLIST, ITABLE, len_ev_ptr, EV_ptr, len_ep_ptr, EP_ptr,  &
+      CALL SEUSES( neltype, nevnames, nepnames, nelvar, nlisep, novals,        &
+                   length, nelnum, nelmnt, n, elmnt,                           &
+                   ELV, ELP, len_typee, TYPEE, len_elvar, ELVAR,               &
+                   INLIST, ITABLE, len_ev_ptr, EV_ptr, len_ep_ptr, EP_ptr,     &
                    delset, detype, field1, field2, field3, value4, field5,     &
-                   value6, len_ep_val, EP_val, EVNAMES, EPNAMES, len_lnames, LNAMES,   &
-                   VNAMES, KEY, out, status )
+                   value6, len_ep_val, EP_val, EVNAMES, EPNAMES,               &
+                   len_lnames, LNAMES,                                         &
+                   len_vnames, VNAMES, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -2307,10 +2831,10 @@
 !  -----------------------------
 
   480 CONTINUE
-      CALL SGTYPE( ngpmax, novals, length, ngtype, ngpn, setana,               &
+      CALL SGTYPE( novals, length, ngtype, ngpnames, setana,                   &
                   INLIST, len_gtypesp_ptr, GTYPESP_ptr, ITABLE, field1,        &
                   field2, field3, field5, len_ganames, GANAMES, len_gtypes,    &
-                  GTYPES, GPNAME, KEY, out, status )
+                  GTYPES, len_gpnames, GPNAMES, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -2322,13 +2846,14 @@
 !  -----------------------------
 
   490 CONTINUE
-      CALL SGUSES( ngpmax, length, ng, ngtype, ngrupe, nlisgp,         &
-                   novals, neling, ndtype, start_group_uses_section, grupe,   &
+      CALL SGUSES( length, ng, ngtype, ngpnames, ngrupe, nlisgp,               &
+                   novals, neling, ndtype, start_group_uses_section, grupe,    &
                    len_gtypesp_ptr, GTYPESP_ptr,                               &
-                   GTYPE, len_eling_el, ELING_el, len_eling_g, ELING_g,   &
-                   INLIST, ITABLE, GP_ptr, GSTATE, dgrset,      &
+                   GTYPE, len_eling_el, ELING_el, len_eling_g, ELING_g,        &
+                   INLIST, ITABLE, GP_ptr, GSTATE, dgrset,                     &
                    dgtype, field1, field2, field3, value4, field5, value6,     &
-                   len_gp_val_orig, GP_val_orig, GPNAME, len_weight, WEIGHT, KEY, out, status )
+                   len_gp_val_orig, GP_val_orig, GPNAMES,                      &
+                   len_weight, WEIGHT, KEY, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -2340,9 +2865,10 @@
 !  -------------------------------
 
   500 CONTINUE
-      CALL SOBBND( nobbnd, nobmax, nrlndx, length, INLIST, ITABLE, FBOUND,     &
-                   REALVL, field1, field2, value4, field5, OBNAME, KEY,        &
-                   single, out, status )
+      CALL SOBBND( nobbnd, nrival, length, INLIST, ITABLE,                     &
+                   len_fbound, FBOUND_l, FBOUND_u,                             &
+                   RIVAL, field1, field2, value4, field5,                      &
+                   len_obbname, OBBNAME, KEY, single, out, status )
       IF ( status == 0 ) THEN
         IF ( doloop ) GO TO 600
         GO TO 100
@@ -2400,9 +2926,9 @@
         WRITE( out, 3000 ) ( GNAMES( j ), j = 1, ng )
         WRITE( out, 3010 ) ( VNAMES( j ), j = 1, n )
         WRITE( out, 3020 )                                                     &
-            ( ICOORD( j, 1 ), ICOORD( j, 2 ), A( j ), j = 1, nnza )
+            ( A_row( j ), A_col( j ), A_val( j ), j = 1, nnza )
         WRITE( out, 3030 )                                                     &
-         ( ( i, j, BND( 1, j, i ), BND( 2, j, i ), j = 1, nlvars ), i = 1, nbnd)
+         ( ( i, j, B_l( j, i ), B_u( j, i ), j = 1, nlvars ), i = 1, nbnd)
         WRITE( out, 3100 )                                                     &
          ( ( i, j, VSTART( j, i ), j = 1, nlvars ), i = 1, nstart )
         WRITE( out, 3040 ) ( RSCALE( j ), j = 1, ng )
@@ -2446,11 +2972,11 @@
 
   960 CONTINUE
       IF ( debug .AND. out > 0 ) THEN
-        DO i = 1, nusein
-          WRITE( out, 4000 ) i, NAMIIN( i ), INDVAL( i )
+        DO i = 1, niival
+          WRITE( out, 4000 ) i, IINAMES( i ), IIVAL( i )
         END DO
-        DO i = 1, nusere
-          WRITE( out, 4100 ) i, NAMRIN( i ), REALVL( i )
+        DO i = 1, nrival
+          WRITE( out, 4100 ) i, RINAMES( i ), RIVAL( i )
         END DO
       END IF
       RETURN
@@ -2610,7 +3136,7 @@
             CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,    &
                                min_length, buffer, status, alloc_status )
             IF ( status /= 0 ) THEN
-               bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
+              bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
             len_onames = new_length
           END IF
           ONAMES ( nobj ) = field2
@@ -2625,7 +3151,7 @@
           CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
           len_gstate = new_length
         END IF
 
@@ -2635,7 +3161,7 @@
           CALL EXTEND_array( GTYPE, len_gtype, used_length, new_length,        &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
           len_gtype = new_length
         END IF
 
@@ -2645,7 +3171,7 @@
           CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
           len_gnames = new_length
         END IF
 
@@ -2655,7 +3181,7 @@
           CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
           len_rscale = new_length
         END IF
 
@@ -2668,7 +3194,7 @@
                              min_length, min_length2, buffer,                  &
                              status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'IDROWS' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'IDROWS' ; status = - 6 ; GO TO 980 ; END IF
           len2_idrows = new_length2
         END IF
 
@@ -2681,7 +3207,7 @@
                              min_length, min_length2, buffer,                  &
                              status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'RDROWS' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'RDROWS' ; status = - 6 ; GO TO 980 ; END IF
           len2_rdrows = new_length2
         END IF
 
@@ -2797,27 +3323,25 @@
 
 !-*-*-*-*-*-*- S I F D E C O D E   S G R P 2   S U B R O U T I N E -*-*-*-*-*-*-
 
-      SUBROUTINE SGRP2( ng, la, length,                          &
+      SUBROUTINE SGRP2( ng, length,                          &
                         nnza, nobj, novals, INLIST, len2_idrows, IDROWS,       &
                         len_gstate, GSTATE, len_gtype, GTYPE,                  &
-                        ITABLE, ICOORD, A,                                     &
+                        ITABLE, len_a, A_row, A_col, A_val,                    &
                         len2_rdrows, RDROWS, len_rscale, RSCALE,               &
                         field1, field2, field3, value4, field5, value6,        &
                         len_gnames, GNAMES, len_onames, ONAMES, KEY,           &
                         out, status )
-      INTEGER :: ng, nnza, nobj, novals, la, length, out, status
-      INTEGER :: len2_idrows, len_gstate, len_gtype
+      INTEGER :: ng, nnza, nobj, novals, length, out, status
+      INTEGER :: len2_idrows, len_gstate, len_gtype, len_a
       INTEGER :: len2_rdrows, len_rscale, len_onames, len_gnames
       REAL ( KIND = wp ) :: value4, value6
       CHARACTER ( LEN = 2 ) :: field1
       CHARACTER ( LEN = 10 ) :: field2, field3, field5
-      INTEGER :: INLIST( length )
       INTEGER, ALLOCATABLE, DIMENSION( : , : ) :: IDROWS
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: GSTATE, GTYPE
-      INTEGER :: ITABLE ( length )
-      INTEGER :: ICOORD( la, 2 )
-      REAL ( KIND = wp ) :: A( la )
-      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RSCALE
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: A_row, A_col
+      INTEGER :: ITABLE ( length ), INLIST( length )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: A_val, RSCALE
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : , : ) :: RDROWS
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GNAMES, ONAMES
       CHARACTER ( LEN = 12 ) :: KEY( length )
@@ -2865,7 +3389,7 @@
             CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,    &
                                min_length, buffer, status, alloc_status )
             IF ( status /= 0 ) THEN
-               bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
+              bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
             len_onames = new_length
           END IF
           ONAMES ( nobj ) = field2
@@ -2880,7 +3404,7 @@
           CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
           len_gstate = new_length
         END IF
 
@@ -2900,7 +3424,7 @@
           CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
           len_gnames = new_length
         END IF
 
@@ -2910,7 +3434,7 @@
           CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
           len_rscale = new_length
         END IF
 
@@ -2923,7 +3447,7 @@
                              min_length, min_length2, buffer,                  &
                              status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'IDROWS' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'IDROWS' ; status = - 6 ; GO TO 980 ; END IF
           len2_idrows = new_length2
         END IF
 
@@ -2936,7 +3460,7 @@
                              min_length, min_length2, buffer,                  &
                              status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'RDROWS' ; status = - 6 ; GO TO 980 ; END IF
+            bad_alloc = 'RDROWS' ; status = - 6 ; GO TO 980 ; END IF
           len2_rdrows = new_length2
         END IF
 
@@ -3052,20 +3576,38 @@
 
             IF ( ifield > 0 ) THEN
               nnza = nnza + 1
-              IF ( nnza > la ) THEN
-                status = - 2
-                RETURN
+              IF ( nnza >= len_a ) THEN
+                used_length = nnza - 1 ; min_length = nnza
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( A_row, len_a, used_length, new_length,      &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'A_row' ; status = - 2 ; GO TO 980 ; END IF
+
+                used_length = nnza - 1 ; min_length = nnza
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( A_col, len_a, used_length, new_length,      &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'A_col' ; status = - 2 ; GO TO 980 ; END IF
+
+                used_length = nnza - 1 ; min_length = nnza
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( A_val, len_a, used_length, new_length,      &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'A_val' ; status = - 2 ; GO TO 980 ; END IF
+                len_a = new_length
               END IF
 
-!  the nonzero is for group icoord(,1) and variable icoord(,2); its value 
-!  is given in a( )
+!  the nonzero is for group A_row() and variable A_col() with value A_val()
 
-              ICOORD( nnza, 1 ) = j
-              ICOORD( nnza, 2 ) = INLIST( ifield )
+              A_row( nnza ) = j
+              A_col( nnza ) = INLIST( ifield )
               IF ( i == 1 ) THEN
-                 A( nnza ) = value4
+                A_val( nnza ) = value4
               ELSE
-                 A( nnza ) = value6
+                A_val( nnza ) = value6
               END IF
             ELSE
 
@@ -3107,16 +3649,19 @@
 
 !-*-*-*-*-*-*- S I F D E C O D E   S V A R 1   S U B R O U T I N E -*-*-*-*-*-*-
 
-      SUBROUTINE SVAR1( nmax, length, nvar, colfie, ITYPEV, INLIST, ITABLE,    &
-                        CSCALE, field2, field3, value4, VNAMES, KEY, status )
-      INTEGER :: status, length, nmax, nvar
+      SUBROUTINE SVAR1( length, nvar, colfie, len_typev, TYPEV,          &
+                        INLIST, ITABLE, len_cscale, CSCALE,                    &
+                        field2, field3, value4, len_vnames, VNAMES, KEY,       &
+                        out, status )
+      INTEGER :: out, status, length, nvar
+      INTEGER :: len_typev, len_cscale, len_vnames
       REAL ( KIND = wp ) :: value4
       CHARACTER ( LEN = 2 ) :: colfie
       CHARACTER ( LEN = 10 ) :: field2, field3
       INTEGER :: INLIST( length ),  ITABLE ( length )
-      INTEGER :: ITYPEV( nmax )
-      REAL ( KIND = wp ) :: CSCALE( nmax )
-      CHARACTER ( LEN = 10 ) :: VNAMES( nmax )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: TYPEV
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: CSCALE
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: VNAMES
       CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  -----------------------------------------------------------------
@@ -3128,7 +3673,8 @@
 !  local variables
 
       INTEGER :: ifree, j
-
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 !  ignore 'marker' cards
 
       IF ( field3 == '''MARKER''  ' ) RETURN
@@ -3152,13 +3698,40 @@
 
       ELSE
         nvar = nvar + 1
-        IF ( nvar > nmax ) THEN
-          status = - 7
-          RETURN
+        IF ( nvar > len_vnames ) THEN
+          used_length = nvar - 1 ; min_length = nvar
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
+          len_vnames = new_length
+        END IF
+
+        IF ( nvar > len_cscale ) THEN
+          used_length = nvar - 1 ; min_length = nvar
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( CSCALE, len_cscale, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'CSCALE' ; status = - 7 ; GO TO 980 ; END IF
+          len_cscale = new_length
+        END IF
+
+        IF ( nvar > len_typev ) THEN
+          used_length = nvar - 1 ; min_length = nvar
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,        &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'TYPEV' ; status = - 7 ; GO TO 980 ; END IF
+          len_typev = new_length
         END IF
         j = nvar
         INLIST( ifree ) = nvar
         VNAMES( nvar ) = field2
+        TYPEV( nvar ) = 0
+        CSCALE( nvar ) = one
       END IF
 
 !  include column scale factors if they are allowed
@@ -3168,9 +3741,17 @@
 
 !  mark zero-one and integer variables
 
-      IF ( field3 == '''ZERO-ONE''' ) ITYPEV( j ) = 1
-      IF ( field3 == '''INTEGER'' ' ) ITYPEV( j ) = 2
+      IF ( field3 == '''ZERO-ONE''' ) TYPEV( j ) = 1
+      IF ( field3 == '''INTEGER'' ' ) TYPEV( j ) = 2
       status = 0
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  end of subroutine SVAR1
@@ -3179,23 +3760,26 @@
 
 !-*-*-*-*-*-*- S I F D E C O D E   S V A R 2   S U B R O U T I N E -*-*-*-*-*-*-
 
-      SUBROUTINE SVAR2( nmax, la, length, nnza, nvar, novals, nrlndx,          &
-                        varsec, colfie, ICOORD, len_gstate, GSTATE, ITYPEV,    &
-                        INLIST, ITABLE, A, CSCALE, REALVL, DFAULT,             &
+      SUBROUTINE SVAR2( length, nnza, nvar, novals, nrival,          &
+                        varsec, colfie, len_gstate, GSTATE, len_typev, TYPEV,  &
+                        INLIST, ITABLE, len_a, A_row, A_col, A_val,    &
+                        len_cscale, CSCALE, RIVAL, len_default, DEFAULT,      &
                         field1, field2, field3, value4, field5, value6,        &
-                        VNAMES, KEY, out, status )
-      INTEGER :: out, status, la, length
-      INTEGER :: nmax, len_gstate, nnza, nvar, novals, nrlndx
+                        len_vnames, VNAMES, KEY, out, status )
+      INTEGER :: out, status, length
+      INTEGER :: len_gstate, nnza, nvar, novals, nrival
+      INTEGER :: len_a, len_default, len_typev, len_cscale, len_vnames
       REAL ( KIND = wp ) :: value4, value6
       LOGICAL :: varsec
       CHARACTER ( LEN = 2 ) :: field1, colfie
       CHARACTER ( LEN = 10 ) :: field2, field3, field5
-      INTEGER :: ICOORD( la, 2 ), GSTATE( len_gstate )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: A_row, A_col
+      INTEGER :: GSTATE( len_gstate )
       INTEGER :: INLIST( length ), ITABLE ( length )
-      INTEGER :: ITYPEV( nmax )
-      REAL ( KIND = wp ) :: A( la ), CSCALE( nmax )
-      REAL ( KIND = wp ) :: REALVL( nrlndx ), DFAULT( nmax )
-      CHARACTER ( LEN = 10 ) :: VNAMES( nmax )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: TYPEV
+      REAL ( KIND = wp ) :: RIVAL( nrival )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: A_val, DEFAULT, CSCALE
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: VNAMES
       CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  -----------------------------------------------------------------
@@ -3207,7 +3791,9 @@
 !  local variables
 
       INTEGER :: i, ifree, ifield, j
+      INTEGER :: used_length, new_length, min_length, alloc_status
       CHARACTER ( LEN = 12 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  ignore 'marker' cards
 
@@ -3232,15 +3818,52 @@
 
       ELSE
         nvar = nvar + 1
-        IF ( nvar > nmax ) THEN
-          status = - 7
-          RETURN
+        IF ( nvar > len_vnames ) THEN
+          used_length = nvar - 1 ; min_length = nvar
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
+          len_vnames = new_length
+        END IF
+
+        IF ( nvar > len_cscale ) THEN
+          used_length = nvar - 1 ; min_length = nvar
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( CSCALE, len_cscale, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'CSCALE' ; status = - 7 ; GO TO 980 ; END IF
+          len_cscale = new_length
+        END IF
+
+        IF ( nvar > len_typev ) THEN
+          used_length = nvar - 1 ; min_length = nvar
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,        &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'TYPEV' ; status = - 7 ; GO TO 980 ; END IF
+          len_typev = new_length
+        END IF
+
+        IF ( nvar > len_default ) THEN
+          used_length = nvar - 1 ; min_length = nvar
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( DEFAULT, len_default, used_length, new_length,    &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'DEFAULT' ; status = - 7 ; GO TO 980 ; END IF
+          len_default = new_length
         END IF
         j = nvar
         INLIST( ifree ) = nvar
         VNAMES( nvar ) = field2
-        IF ( colfie == 'CO' ) DFAULT( nvar ) = zero
-        IF ( colfie == 'RA' ) DFAULT( nvar ) = biginf
+        TYPEV( nvar ) = 0
+        CSCALE( nvar ) = one
+        IF ( colfie == 'CO' ) DEFAULT( nvar ) = zero
+        IF ( colfie == 'RA' ) DEFAULT( nvar ) = biginf
       END IF
 
 !  include column scale factors if they are allowed
@@ -3262,7 +3885,7 @@
           status = 7
           IF ( out > 0 ) WRITE( out, 2060 )
         ELSE
-           ITYPEV( j ) = 1
+           TYPEV( j ) = 1
         END IF
         RETURN
       END IF
@@ -3271,7 +3894,7 @@
           status = 7
           IF ( out > 0 ) WRITE( out, 2060 )
         ELSE
-          ITYPEV( j ) = 2
+          TYPEV( j ) = 2
         END IF
         RETURN
       END IF
@@ -3287,9 +3910,9 @@
             IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
             RETURN
           END IF
-          value4 = REALVL( INLIST( ifield ) )
+          value4 = RIVAL( INLIST( ifield ) )
         END IF
-        DFAULT( nvar ) = value4
+        DEFAULT( nvar ) = value4
 
 !  find the group numbers for the input nonzero(s)
 
@@ -3315,20 +3938,38 @@
 !  the nnza-th nonzero has been specified
 
               nnza = nnza + 1
-              IF ( nnza > la ) THEN
-                status = - 2
-                RETURN
+              IF ( nnza >= len_a ) THEN
+                used_length = nnza - 1 ; min_length = nnza
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( A_row, len_a, used_length, new_length,      &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'A_row' ; status = - 2 ; GO TO 980 ; END IF
+
+                used_length = nnza - 1 ; min_length = nnza
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( A_col, len_a, used_length, new_length,      &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'A_col' ; status = - 2 ; GO TO 980 ; END IF
+
+                used_length = nnza - 1 ; min_length = nnza
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( A_val, len_a, used_length, new_length,      &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'A_val' ; status = - 2 ; GO TO 980 ; END IF
+                len_a = new_length
               END IF
 
-!  the nonzero is for group icoord(,1) and variable icoord(,2)
-!  its value is given in a( )
+!  the nonzero is for group A_row() and variable A_col() with value A_val()
 
-              ICOORD( nnza, 1 ) = INLIST( ifield )
-              ICOORD( nnza, 2 ) = j
+              A_row( nnza ) = INLIST( ifield )
+              A_col( nnza ) = j
               IF ( i == 1 ) THEN
-                 A( nnza ) = value4
+                A_val( nnza ) = value4
               ELSE
-                 A( nnza ) = value6
+                A_val( nnza ) = value6
               END IF
             ELSE
 
@@ -3342,6 +3983,14 @@
         END IF
       END IF
       status = 0
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
@@ -3360,20 +4009,26 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S B O U N D    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SBOUND( nmax, nbmax, length, nlvars, nbnd, ncol, nrlndx,      &
-                         defaut, INLIST, ITABLE, BND, REALVL, field1, field2,  &
-                         field3, value4, field5, BNAMES, BNDFLT, KEY, out,     &
-                         status )
-      INTEGER :: out, status, length, nmax, nbmax, nlvars, nbnd, ncol, nrlndx
+      SUBROUTINE SBOUND( length, nlvars, nbnd, ncol, nrival,      &
+                         defaut, INLIST, ITABLE,   &
+                         len1_blu, len2_blu, B_l, B_u, RIVAL,             &
+                         field1, field2, field3, value4, field5, &
+                         len_bnames, BNAMES,       &
+                         len_blu_default, B_l_default, B_u_default,     &
+                         KEY, out, status )
+      INTEGER :: out, status, length, nlvars, nbnd, ncol, nrival
+      INTEGER :: len1_blu, len2_blu, len_blu_default, len_bnames
       LOGICAL :: defaut
       REAL ( KIND = wp ) :: value4
       CHARACTER ( LEN = 2 ) :: field1
       CHARACTER ( LEN = 10 ) :: field2, field3, field5
       INTEGER :: INLIST( length ), ITABLE ( length )
-      REAL ( KIND = wp ) :: BND( 2, nmax, nbmax ), REALVL( nrlndx )
-      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax )
-      CHARACTER ( LEN = 10 ) :: BNAMES( nbmax )
+      REAL ( KIND = wp ) :: RIVAL( nrival )
       CHARACTER ( LEN = 12 ) :: KEY( length )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B_l_default
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B_u_default
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : , : ) :: B_l, B_u
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: BNAMES
 
 !  ------------------------
 !  indicator card is bounds
@@ -3382,22 +4037,21 @@
 !  local variables
 
       INTEGER :: i, ifield
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      INTEGER :: used_length2, new_length2, min_length2
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  the first pair of bound vectors are to be assigned
 
       IF ( nbnd == 0 ) THEN
         nbnd = 1
-        IF ( nbnd > nbmax ) THEN
-          status = - 13
-          RETURN
-        END IF
         BNAMES( nbnd ) = field2
         defaut = .TRUE.
-        BNDFLT( 1, nbnd ) = zero
-        BNDFLT( 2, nbnd ) = biginf
+        B_l_default( nbnd ) = zero
+        B_u_default( nbnd ) = biginf
         DO i = 1, nlvars
-          BND( 1, i, nbnd ) = zero
-          BND( 2, i, nbnd ) = biginf
+          B_l( i, nbnd ) = zero
+          B_u( i, nbnd ) = biginf
         END DO
       END IF
 
@@ -3405,17 +4059,67 @@
 
       IF ( field2 /= BNAMES( nbnd ) ) THEN
         nbnd = nbnd + 1
-        IF ( nbnd > nbmax ) THEN
-           status = - 13
-           RETURN
+        IF ( nbnd > len2_blu ) THEN
+          used_length = nlvars ; min_length = len1_blu
+          new_length = len1_blu
+          used_length2 = nbnd - 1 ; min_length2 = nbnd
+          new_length2 = 3 * min_length2 / 2 + 1 
+          CALL EXTEND_array( B_l, len1_blu, len2_blu, used_length,             &
+                             used_length2, new_length, new_length2,            &
+                             min_length, min_length2, buffer,                  &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'B_l' ; status = - 13 ; GO TO 980 ; END IF
+
+          used_length = nlvars ; min_length = len1_blu
+          new_length = len1_blu
+          used_length2 = nbnd - 1 ; min_length2 = nbnd
+          new_length2 = 3 * min_length2 / 2 + 1 
+          CALL EXTEND_array( B_u, len1_blu, len2_blu, used_length,             &
+                             used_length2, new_length, new_length2,            &
+                             min_length, min_length2, buffer,                  &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'B_u' ; status = - 13 ; GO TO 980 ; END IF
+          len2_blu = new_length2
         END IF
+
+        IF ( nbnd >= len_blu_default ) THEN
+          used_length = nbnd - 1 ; min_length = nbnd
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( B_l_default, len_blu_default, used_length,        &
+                             new_length, min_length, buffer,                   &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'B_l_default' ; status = - 13 ; GO TO 980 ; END IF
+
+          used_length = nbnd - 1 ; min_length = nbnd
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( B_u_default, len_blu_default, used_length,        &
+                             new_length, min_length, buffer,                   &
+                             status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'B_u_default' ; status = - 13 ; GO TO 980 ; END IF
+          len_blu_default = new_length
+        END IF 
+
+        IF ( nbnd >= len_bnames ) THEN
+          used_length = nbnd - 1 ; min_length = nbnd
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( BNAMES, len_bnames, used_length, new_length,      &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'BNAMES' ; status = - 13 ; GO TO 980 ; END IF
+          len_bnames = new_length
+        END IF
+
         BNAMES( nbnd ) = field2
         defaut = .TRUE.
-        BNDFLT( 1, nbnd ) = zero
-        BNDFLT( 2, nbnd ) = biginf
+        B_l_default( nbnd ) = zero
+        B_u_default( nbnd ) = biginf
         DO i = 1, nlvars
-          BND( 1, i, nbnd ) = zero
-          BND( 2, i, nbnd ) = biginf
+          B_l( i, nbnd ) = zero
+          B_u( i, nbnd ) = biginf
         END DO
       END IF
 
@@ -3436,7 +4140,7 @@
             IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
             RETURN
           END IF
-          value4 = REALVL( INLIST( ifield ) )
+          value4 = RIVAL( INLIST( ifield ) )
         END IF
         IF ( field1 == 'LO' .OR. field1 == 'UP' .OR. field1 == 'FX' .OR.       &
              field1 == 'FR' .OR. field1 == 'MI' .OR. field1 == 'PL' .OR.       &
@@ -3455,22 +4159,22 @@
 
             IF ( field1( 2 : 2 ) == 'L' .OR. field1( 2 : 2 ) == 'X' .OR.       &
                  field1 == 'LO' ) THEN
-              BNDFLT( 1, nbnd ) = value4
+              B_l_default( nbnd ) = value4
               DO i = 1, nlvars
-                BND( 1, i, nbnd ) = value4
+                B_l( i, nbnd ) = value4
               END DO
 
 !  an infinite lower bound is specified
 
             ELSE
-              BNDFLT( 1, nbnd ) = - biginf
+              B_l_default( nbnd ) = - biginf
               DO i = 1, nlvars
-                BND( 1, i, nbnd ) = - biginf
+                B_l( i, nbnd ) = - biginf
               END DO
               IF ( field1( 2 : 2 ) == 'M' .OR. field1 == 'MI' ) THEN
-                BNDFLT( 2, nbnd ) = zero
+                B_u_default( nbnd ) = zero
                 DO i = 1, nlvars
-                  BND( 2, i, nbnd ) = zero
+                  B_u( i, nbnd ) = zero
                 END DO
               END IF
             END IF
@@ -3486,24 +4190,24 @@
             IF ( field1( 2 : 2 ) == 'U' .OR. field1( 2 : 2 ) == 'X' .OR.       &
                  field1 == 'UP' ) THEN
               IF ( ( field1( 2 : 2 ) == 'U' .OR. field1 == 'UP' ) .AND.        &
-                   value4 == zero .AND. BNDFLT( 1, nbnd ) == zero .AND.        &
-                   BNDFLT( 2, nbnd ) == biginf ) THEN
-                BNDFLT( 1, nbnd ) = - biginf
+                   value4 == zero .AND. B_l_default( nbnd ) == zero .AND.      &
+                   B_u_default( nbnd ) == biginf ) THEN
+                B_l_default( nbnd ) = - biginf
                 DO i = 1, nlvars
-                  BND( 1, i, nbnd ) = - biginf
+                  B_l( i, nbnd ) = - biginf
                 END DO
               END IF
-              BNDFLT( 2, nbnd ) = value4
+              B_u_default( nbnd ) = value4
               DO i = 1, nlvars
-                BND( 2, i, nbnd ) = value4
+                B_u( i, nbnd ) = value4
               END DO
 
 !  an infinite upper bound is specified
 
             ELSE
-              BNDFLT( 2, nbnd ) = biginf
+              B_u_default( nbnd ) = biginf
               DO i = 1, nlvars
-                BND( 2, i, nbnd ) = biginf
+                B_u( i, nbnd ) = biginf
               END DO
             END IF
           END IF
@@ -3515,10 +4219,10 @@
           IF ( out > 0 ) WRITE( out, 2100 ) field1
           RETURN
         END IF
-      ELSE
 
 !  an individual bound is to be assigned
 
+      ELSE
         defaut = .FALSE.
         IF ( field1 == 'LO' .OR. field1 == 'XL' .OR. field1 == 'UP' .OR.       &
              field1 == 'XU' .OR. field1 == 'FX' .OR. field1 == 'XX' .OR.       &
@@ -3543,16 +4247,16 @@
 
               IF ( field1 == 'LO' .OR. field1 == 'XL' .OR. field1 == 'ZL' .OR. &
                    field1 == 'ZX' .OR. field1 == 'FX' .OR. field1 == 'XX' ) THEN
-                BND( 1, ncol, nbnd ) = value4
+                B_l( ncol, nbnd ) = value4
 
 !  an infinite lower bound is specified
 
               ELSE
                 IF ( ( field1 == 'MI' .OR. field1 == 'XM' ) .AND.              &
-                       BND( 1, ncol, nbnd ) == zero  .AND.                     &
-                       BND( 2, ncol, nbnd ) == biginf )                        &
-                    BND( 2, ncol, nbnd ) = zero
-                BND( 1, ncol, nbnd ) = - biginf
+                       B_l( ncol, nbnd ) == zero  .AND.                     &
+                       B_u( ncol, nbnd ) == biginf )                        &
+                    B_u( ncol, nbnd ) = zero
+                B_l( ncol, nbnd ) = - biginf
               END IF
             END IF
 
@@ -3570,16 +4274,16 @@
                    field1 == 'FX' .OR. field1 == 'XX' ) THEN
                 IF ( ( field1 == 'UP' .OR. field1 == 'XU' .OR.                 &
                        field1 == 'ZU' ) .AND. value4 == zero .AND.             &
-                       BND( 1, ncol, nbnd ) == zero .AND.                      &
-                       BND( 2, ncol, nbnd ) == biginf )                        &
-                    BND( 1, ncol, nbnd ) = - biginf
-                BND( 2, ncol, nbnd ) = value4
+                       B_l( ncol, nbnd ) == zero .AND.                      &
+                       B_u( ncol, nbnd ) == biginf )                        &
+                    B_l( ncol, nbnd ) = - biginf
+                B_u( ncol, nbnd ) = value4
 
 
 !  an infinite upper bound is specified
 
               ELSE
-                BND( 2, ncol, nbnd ) = biginf
+                B_u( ncol, nbnd ) = biginf
               END IF
             END IF
           ELSE
@@ -3599,6 +4303,14 @@
       status = 0
       RETURN
 
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
 !  non-executable statements
 
  2030 FORMAT( ' ** Exit from INTERPRET_gpsmps - index parameter name ', A10,   &
@@ -3615,14 +4327,14 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S S T A R T    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SSTART( nmax, length, nlvars, ng,               &
-                         nstart, ncol, nrlndx, defaut, INLIST, ITABLE,         &
+      SUBROUTINE SSTART( length, nlvars, ng,               &
+                         nstart, ncol, nrival, defaut, INLIST, ITABLE,         &
                          len1_vstart, len2_vstart, VSTART,     &
-                         len1_cstart, len2_cstart, CSTART, REALVL,     &
+                         len1_cstart, len2_cstart, CSTART, RIVAL,     &
                          field1, field2, field3, value4, field5, value6,       &
                          len_snames, SNAMES, novals, KEY, out, status )
-      INTEGER :: length, novals, ng, ncol, nrlndx, out, status
-      INTEGER :: nmax, nlvars, nstart, len1_vstart, len2_vstart
+      INTEGER :: length, novals, ng, ncol, nrival, out, status
+      INTEGER :: nlvars, nstart, len1_vstart, len2_vstart
       INTEGER :: len1_cstart, len2_cstart, len_snames
       LOGICAL :: defaut
       REAL ( KIND = wp ) :: value4, value6
@@ -3630,7 +4342,7 @@
       CHARACTER ( LEN = 10 ) :: field2, field3, field5
       INTEGER :: INLIST( length ), ITABLE ( length )
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : , : ) :: VSTART, CSTART
-      REAL ( KIND = wp ) :: REALVL( nrlndx )
+      REAL ( KIND = wp ) :: RIVAL( nrival )
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: SNAMES
       CHARACTER ( LEN = 12 ) :: KEY( length )
 
@@ -3674,7 +4386,7 @@
                              min_length, min_length2, buffer,                  &
                              status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'VSTART' ; status = - 8 ; GO TO 980 ; END IF
+            bad_alloc = 'VSTART' ; status = - 8 ; GO TO 980 ; END IF
           len2_vstart = new_length2
         END IF
         IF ( nstart > len2_cstart ) THEN
@@ -3686,7 +4398,7 @@
                              min_length, min_length2, buffer,                  &
                              status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'CSTART' ; status = - 8 ; GO TO 980 ; END IF
+            bad_alloc = 'CSTART' ; status = - 8 ; GO TO 980 ; END IF
           len2_cstart = new_length2
         END IF
         IF ( nstart > len_snames ) THEN
@@ -3695,7 +4407,7 @@
           CALL EXTEND_array( SNAMES, len_snames, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'SNAMES' ; status = - 8 ; GO TO 980 ; END IF
+            bad_alloc = 'SNAMES' ; status = - 8 ; GO TO 980 ; END IF
           len_snames = new_length
         END IF
         SNAMES( nstart ) = field2
@@ -3726,7 +4438,7 @@
             IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
             RETURN
           END IF
-          value4 = REALVL( INLIST( ifield ) )
+          value4 = RIVAL( INLIST( ifield ) )
         END IF
 
 !  assign default values to the starting point
@@ -4025,7 +4737,7 @@
                 CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,&
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
+                  bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
                 len_onames = new_length
               END IF
               ONAMES ( nobj ) =  cqgrou
@@ -4040,7 +4752,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
+                  bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
                 len_gstate = new_length
               END IF
               IF ( ng >= len_gtype ) THEN
@@ -4050,7 +4762,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
+                  bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
                 len_gtype = new_length
               END IF
               IF ( ng >= len_gnames ) THEN
@@ -4060,7 +4772,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
+                  bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
                 len_gnames = new_length
               END IF
               IF ( ng >= len_rscale ) THEN
@@ -4070,7 +4782,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
+                  bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
                 len_rscale = new_length
               END IF
 
@@ -4110,7 +4822,7 @@
                   CALL EXTEND_array( ELV, len_elv, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
+                    bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
                   len_elv = new_length
                 END IF
 
@@ -4120,7 +4832,7 @@
                   CALL EXTEND_array( INV, len_inv, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
+                    bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
                   len_inv = new_length
                 END IF
 
@@ -4130,7 +4842,7 @@
                   CALL EXTEND_array( ELP, len_elp, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
+                    bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
                   len_elp = new_length
                 END IF
 
@@ -4141,7 +4853,7 @@
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
+                    bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
                   len_etypes = new_length
                 END IF
 
@@ -4153,7 +4865,7 @@
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
+                    bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
                   len_evnames = new_length
                 END IF
               END IF
@@ -4187,7 +4899,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 ; END IF
+                  bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 ; END IF
                 len_ivnames = new_length
               END IF
               IVNAMES( nivnames ) = EVNAMES( nevnames )
@@ -4204,7 +4916,7 @@
               CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
               len_lnames = new_length
             END IF
 
@@ -4214,7 +4926,7 @@
               CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
               len_typee = new_length
             END IF
 
@@ -4224,7 +4936,7 @@
               CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ep_ptr = new_length
             END IF
 
@@ -4234,7 +4946,7 @@
               CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ev_ptr = new_length
             END IF
 
@@ -4264,7 +4976,7 @@
               CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length,    &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
+                bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
               len_elvar = new_length
             END IF
             ELVAR( nelvar + 1 ) = ncol1
@@ -4280,7 +4992,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
               len_eling_el = new_length
             END IF
 
@@ -4291,7 +5003,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
               len_eling_g = new_length
             END IF
 
@@ -4302,7 +5014,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
               len_weight = new_length
             END IF
 
@@ -4334,7 +5046,7 @@
                   CALL EXTEND_array( ELV, len_elv, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
+                    bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
                   len_elv = new_length
                 END IF
 
@@ -4344,7 +5056,7 @@
                   CALL EXTEND_array( INV, len_inv, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
+                    bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
                   len_inv = new_length
                 END IF
 
@@ -4354,7 +5066,7 @@
                   CALL EXTEND_array( ELP, len_elp, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
+                    bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
                   len_elp = new_length
                 END IF
 
@@ -4365,7 +5077,7 @@
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
+                    bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
                   len_etypes = new_length
                 END IF
 
@@ -4377,7 +5089,7 @@
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
+                    bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
                   len_evnames = new_length
                 END IF
               END IF
@@ -4411,7 +5123,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 ; END IF
+                  bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 ; END IF
                 len_ivnames = new_length
               END IF
               IVNAMES( nivnames ) = EVNAMES( nevnames )
@@ -4423,7 +5135,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
+                  bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
                 len_evnames = new_length
               END IF
               EVNAMES( nevnames ) = 'Y         '
@@ -4442,7 +5154,7 @@
               CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
               len_lnames = new_length
             END IF
 
@@ -4452,7 +5164,7 @@
               CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
               len_typee = new_length
             END IF
 
@@ -4462,7 +5174,7 @@
               CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ep_ptr = new_length
             END IF
 
@@ -4472,7 +5184,7 @@
               CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ev_ptr = new_length
             END IF
 
@@ -4502,7 +5214,7 @@
               CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length, &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
+                bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
               len_elvar = new_length
             END IF
             ELVAR( nelvar + 1 ) = ncol1
@@ -4519,7 +5231,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
               len_eling_el = new_length
             END IF
 
@@ -4530,7 +5242,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
               len_eling_g = new_length
             END IF
 
@@ -4541,7 +5253,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
               len_weight = new_length
             END IF
 
@@ -4650,7 +5362,7 @@
               CALL EXTEND_array( IVNAMES, len_ivnames, used_length, new_length,&
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
+                bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
               END IF
               len_ivnames = new_length
             END IF
@@ -4689,7 +5401,7 @@
           CALL EXTEND_array( ELV, len_elv, used_length, new_length,            &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
+            bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
           len_elv = new_length
         END IF
 
@@ -4699,7 +5411,7 @@
           CALL EXTEND_array( INV, len_inv, used_length, new_length,            &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
+            bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
           len_inv = new_length
         END IF
 
@@ -4709,7 +5421,7 @@
           CALL EXTEND_array( ELP, len_elp, used_length, new_length,            &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
+            bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
           len_elp = new_length
         END IF
 
@@ -4719,7 +5431,7 @@
           CALL EXTEND_array( ETYPES, len_etypes, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
+            bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
           len_etypes = new_length
         END IF
 
@@ -4742,7 +5454,7 @@
             CALL EXTEND_array( IVNAMES, len_ivnames, used_length, new_length,  &
                                min_length, buffer, status, alloc_status )
             IF ( status /= 0 ) THEN
-               bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
+              bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
             END IF
             len_ivnames = new_length
           END IF
@@ -4799,7 +5511,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
+                  bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
                 len_evnames = new_length
               END IF
               IF ( i == 1 ) THEN
@@ -4838,7 +5550,7 @@
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
                   IF ( status /= 0 ) THEN
-                     bad_alloc = 'EPNAMES' ; status = - 19 ; GO TO 980 ; END IF
+                    bad_alloc = 'EPNAMES' ; status = - 19 ; GO TO 980 ; END IF
                   len_epnames = new_length
                 END IF
                 IF ( i == 1 ) THEN
@@ -4888,17 +5600,17 @@
 
       SUBROUTINE SEUSES( neltype, nevnames, nepnames, nelvar, nlisep,  &
                          novals, length, nelnum, nelmnt,       &
-                         nmax, n, elmnt, ELV, ELP, len_typee, TYPEE,     &
+                         n, elmnt, ELV, ELP, len_typee, TYPEE,     &
                          len_elvar, ELVAR, INLIST, ITABLE,    &
                          len_ev_ptr, EV_ptr, len_ep_ptr, EP_ptr, &
                          delset, detype,        &
                          field1, field2, field3, value4, field5, value6,       &
                          len_ep_val, EP_val, EVNAMES, EPNAMES,   &
-                         len_lnames, LNAMES, VNAMES, &
+                         len_lnames, LNAMES, len_vnames, VNAMES, &
                          KEY, out, status )
       INTEGER :: out, status, length
-      INTEGER :: nmax, neltype, nevnames, nepnames, nelvar
-      INTEGER :: nelnum, nlisep, len_elvar, len_ep_val
+      INTEGER :: neltype, nevnames, nepnames, nelvar
+      INTEGER :: nelnum, nlisep, len_elvar, len_ep_val, len_vnames
       INTEGER :: novals, nelmnt, n
       INTEGER :: len_lnames, len_ev_ptr, len_typee, len_ep_ptr
       REAL ( KIND = wp ) :: value4, value6
@@ -4910,9 +5622,9 @@
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELVAR, TYPEE, EV_ptr, EP_ptr
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: EP_val
       CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames )
-      CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), VNAMES( nmax )
+      CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames )
       CHARACTER ( LEN = 12 ) :: KEY( length )
-      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LNAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LNAMES, VNAMES
 
 !  ------------------------------
 !  indicator card is element uses
@@ -4964,7 +5676,7 @@
               CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
               len_lnames = new_length
             END IF
 
@@ -4974,7 +5686,7 @@
               CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
               len_typee = new_length
             END IF
 
@@ -4984,7 +5696,7 @@
               CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ep_ptr = new_length
             END IF
 
@@ -4994,7 +5706,7 @@
               CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
+                bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ev_ptr = new_length
             END IF
 
@@ -5057,7 +5769,7 @@
               CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length,    &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
+                bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
               len_elvar = new_length
             END IF
 
@@ -5067,7 +5779,7 @@
               CALL EXTEND_array( EP_val, len_ep_val, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EP_val' ; status = - 17 ; GO TO 980 ; END IF
+                bad_alloc = 'EP_val' ; status = - 17 ; GO TO 980 ; END IF
               len_ep_val = new_length
             END IF
 
@@ -5124,102 +5836,107 @@
 
 !  the elemental variable name is not recognised
 
-           status = 15
-           IF ( out > 0 ) WRITE( out, 2150 )
-           RETURN
+          status = 15
+          IF ( out > 0 ) WRITE( out, 2150 )
+          RETURN
 
 !  check that the variable has not already been set
 
-  120      CONTINUE
-           IF ( ELVAR( mlisev + i ) /= 0 ) THEN
-             status = 30
-             IF ( out > 0 ) WRITE( out, 2300 )
-             RETURN
-           END IF
+  120     CONTINUE
+          IF ( ELVAR( mlisev + i ) /= 0 ) THEN
+            status = 30
+            IF ( out > 0 ) WRITE( out, 2300 )
+            RETURN
+          END IF
 
 !  search the table for the name of the input variable
 
-           CALL HASH_insert( length, 12, FIELD5//'VA', KEY, ITABLE, ifree )
-           IF ( ifree <= 0 ) THEN
-             IF ( ifree == 0 ) THEN
-               status = - 1
-               RETURN
-             END IF
+          CALL HASH_insert( length, 12, FIELD5//'VA', KEY, ITABLE, ifree )
+          IF ( ifree <= 0 ) THEN
+            IF ( ifree == 0 ) THEN
+              status = - 1
+              RETURN
+            END IF
 
 !  the variable has appeared before. store its number
 
-             ELVAR( mlisev + i ) = INLIST( - ifree )
+            ELVAR( mlisev + i ) = INLIST( - ifree )
 
 !  the variable is completely new (and thus nonlinear)
 !  it will be recorded as variable n
 
-           ELSE
-             n = n + 1
-             IF ( n > nmax ) THEN
-               status = - 7
-               RETURN
-             END IF
+          ELSE
+            n = n + 1
+            IF ( n > len_vnames ) THEN
+              used_length = n - 1 ; min_length = n
+              new_length = 3 * min_length / 2 + 1 
+              CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
+              len_vnames = new_length
+            END IF
 
 !  record the position of the new group in the table, record its
 !  name, initialise its type as trivial and record its status as
 !  an equality group
 
-             INLIST( ifree ) = n
-             VNAMES( n ) = field5
-             ELVAR( mlisev + i ) = n
-           END IF
+            INLIST( ifree ) = n
+            VNAMES( n ) = field5
+            ELVAR( mlisev + i ) = n
+          END IF
 
 !  the card contains names and values of elemental parameters
 
-         ELSE
-           IF ( field1 == 'P ' .OR. field1 == 'XP' .OR. field1 == 'ZP' ) THEN
-             IF ( novals > 0 ) THEN
-               DO j = 1, novals
+        ELSE
+          IF ( field1 == 'P ' .OR. field1 == 'XP' .OR. field1 == 'ZP' ) THEN
+            IF ( novals > 0 ) THEN
+              DO j = 1, novals
 
 !  check the name has not already been used in the current element
 !  the parameter name occurs in field3 or field5
 
-                 DO i = 1, nepars
-                   IF ( ( j == 1 .AND. field3 == EPNAMES( ip + i ) ) .OR.       &
-                        ( j == 2 .AND. field5 == EPNAMES( ip + i ) ) ) GO TO 220
-                 END DO
+                DO i = 1, nepars
+                  IF ( ( j == 1 .AND. field3 == EPNAMES( ip + i ) ) .OR.       &
+                       ( j == 2 .AND. field5 == EPNAMES( ip + i ) ) ) GO TO 220
+                END DO
 
 !  the elemental parameter name is not recognised
 
-                 status = 28
-                 IF ( out > 0 )                                                &
-                   WRITE( out, 2280 ) LNAMES( nelnum ), EPNAMES( ip + i )
-                 RETURN
+                status = 28
+                IF ( out > 0 )                                                 &
+                  WRITE( out, 2280 ) LNAMES( nelnum ), EPNAMES( ip + i )
+                RETURN
 
 !  the elemental parameter name is the i-th parameter in the list
 
-  220            CONTINUE
+  220           CONTINUE
 
 !  check that the value has not already been set
 
-                 IF ( EP_val( mlisep + i ) < biginf ) THEN
-                   status = 29
-                   IF ( out > 0 ) WRITE( out, 2290 )
-                   RETURN
-                 END IF
+                IF ( EP_val( mlisep + i ) < biginf ) THEN
+                  status = 29
+                  IF ( out > 0 ) WRITE( out, 2290 )
+                  RETURN
+                END IF
 
 !  read the associated value from field4 or field 6
 
-                 IF ( j == 1 ) THEN
-                    EP_val( mlisep + i ) = value4
-                 ELSE
-                    EP_val( mlisep + i ) = value6
-                 END IF
-               END DO
-             END IF
+                IF ( j == 1 ) THEN
+                  EP_val( mlisep + i ) = value4
+                ELSE
+                  EP_val( mlisep + i ) = value6
+                END IF
+              END DO
+            END IF
 
 !  field1 not recognised
 
-           ELSE
-             status = 10
-             IF ( out > 0 ) WRITE( out, 2100 ) field1
-             RETURN
-           END IF
+          ELSE
+            status = 10
+            IF ( out > 0 ) WRITE( out, 2100 ) field1
+            RETURN
+          END IF
         END IF
       END IF
       status = 0
@@ -5254,14 +5971,14 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S G T Y P E    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SGTYPE( ngpmax, novals, length, ngtype, ngpn,                 &
+      SUBROUTINE SGTYPE( novals, length, ngtype, ngpnames,                 &
                          setana, INLIST, len_gtypesp_ptr, GTYPESP_ptr, ITABLE, &
                          field1, field2, field3,                               &
                          field5, len_ganames, GANAMES, len_gtypes, GTYPES,     &
-                         GPNAME, KEY, out, status )
+                         len_gpnames, GPNAMES, KEY, out, status )
       INTEGER :: out, status, novals, length
-      INTEGER :: ngpmax,ngpn
-      INTEGER :: ngtype, len_gtypesp_ptr, len_ganames, len_gtypes
+      INTEGER :: ngpnames
+      INTEGER :: ngtype, len_gtypesp_ptr, len_ganames, len_gtypes, len_gpnames
       LOGICAL :: setana
       CHARACTER ( LEN = 2 ) :: field1
       CHARACTER ( LEN = 10 ) :: field2, field3, field5
@@ -5269,7 +5986,7 @@
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: GTYPESP_ptr
       INTEGER :: INLIST( length )
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GANAMES, GTYPES
-      CHARACTER ( LEN = 10 ) :: GPNAME( NGPMAX )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: GPNAMES
       CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  ----------------------------
@@ -5296,10 +6013,10 @@
           RETURN
         END IF
         ngtype = 1
-        ngpn = 0
+        ngpnames = 0
         setana = .FALSE.
         INLIST( ifree ) = ngtype
-        GTYPESP_ptr( ngtype ) = ngpn + 1
+        GTYPESP_ptr( ngtype ) = ngpnames + 1
         GTYPES( ngtype ) = field2
       END IF
 
@@ -5330,35 +6047,35 @@
         ngtype = ngtype + 1
         setana = .FALSE.
         IF ( ngtype > len_gtypesp_ptr ) THEN
-          used_length = ngtype ; min_length = ngtype
+          used_length = ngtype - 1 ; min_length = ngtype + 1
           new_length = 3 * min_length / 2 + 1 
           CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr, used_length,        &
                              new_length, min_length, buffer, status,           &
                              alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
+            bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
           len_gtypesp_ptr = new_length
         END IF
         IF ( ngtype > len_gtypes ) THEN
-          used_length = ngtype ; min_length = ngtype
+          used_length = ngtype - 1 ; min_length = ngtype
           new_length = 3 * min_length / 2 + 1 
           CALL EXTEND_array( GTYPES, len_gtypes, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'GTYPES' ; status = - 4 ; GO TO 980 ; END IF
+            bad_alloc = 'GTYPES' ; status = - 4 ; GO TO 980 ; END IF
           len_gtypes = new_length
         END IF
         IF ( ngtype > len_ganames ) THEN
-          used_length = ngtype ; min_length = ngtype
+          used_length = ngtype - 1 ; min_length = ngtype
           new_length = 3 * min_length / 2 + 1 
           CALL EXTEND_array( GANAMES, len_ganames, used_length, new_length,    &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
-             bad_alloc = 'GANAMES' ; status = - 4 ; GO TO 980 ; END IF
+            bad_alloc = 'GANAMES' ; status = - 4 ; GO TO 980 ; END IF
           len_ganames = new_length
         END IF
         INLIST( ifree ) = ngtype
-        GTYPESP_ptr( ngtype ) = ngpn + 1
+        GTYPESP_ptr( ngtype ) = ngpnames + 1
         GTYPES( ngtype ) = field2
       END IF
 
@@ -5377,26 +6094,32 @@
 
 !  check the name has not already been used in the current group
 
-              DO k = GTYPESP_ptr( ngtype ), ngpn
-                IF ( ( i == 1 .AND. field3 == GPNAME( k ) ) .OR.               &
-                     ( i == 2 .AND. field5 == GPNAME( k ) ) ) THEN
+              DO k = GTYPESP_ptr( ngtype ), ngpnames
+                IF ( ( i == 1 .AND. field3 == GPNAMES( k ) ) .OR.              &
+                     ( i == 2 .AND. field5 == GPNAMES( k ) ) ) THEN
                   status = 24
                   IF ( out > 0 ) WRITE( out, 2240 )
                   RETURN
                 END IF
               END DO
 
-!  the name is new. record it in the array gpname
+!  the name is new. record it in the array GPNAMES
 
-              ngpn = ngpn + 1
-              IF ( ngpn > ngpmax ) THEN
-                status = - 20
-                RETURN
+              ngpnames = ngpnames + 1
+              IF ( ngpnames > len_gpnames ) THEN
+                used_length = ngpnames - 1 ; min_length = ngpnames
+                new_length = 3 * min_length / 2 + 1 
+                CALL EXTEND_array( GPNAMES, len_ganames, used_length,          &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'GPNAMES' ; status = - 20 ; GO TO 980 ; END IF
+                len_gpnames = new_length
               END IF
               IF ( i == 1 ) THEN
-                GPNAME( ngpn ) = field3
+                GPNAMES( ngpnames ) = field3
               ELSE
-                GPNAME( ngpn ) = field5
+                GPNAMES( ngpnames ) = field5
               END IF
             END DO
           END IF
@@ -5433,19 +6156,18 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S G U S E S    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SGUSES( ngpmax,                       &
-                         length, ng, ngtype, ngrupe, nlisgp, novals, neling,   &
-                         ndtype, start_group_uses_section, grupe,              &
+      SUBROUTINE SGUSES( length, ng, ngtype, ngpnames, ngrupe, nlisgp, novals, &
+                         neling, ndtype, start_group_uses_section, grupe,      &
                          len_gtypesp_ptr, GTYPESP_ptr,                         &
                          GTYPE, len_eling_el, ELING_el, len_eling_g, ELING_g,  &
                          INLIST, ITABLE, GP_ptr, GSTATE, dgrset, dgtype,       &
                          field1, field2, field3, value4, field5, value6,       &
-                         len_gp_val_orig, GP_val_orig, GPNAME, &
+                         len_gp_val_orig, GP_val_orig, GPNAMES, &
                          len_weight, WEIGHT,         &
                          KEY, out, status )
-      INTEGER :: ngpmax, length, out, status
+      INTEGER :: length, out, status
       INTEGER :: ng, nlisgp, neling, novals, ngrupe, ndtype
-      INTEGER :: ngtype, len_gtypesp_ptr, len_gp_val_orig
+      INTEGER :: ngtype, ngpnames, len_gtypesp_ptr, len_gp_val_orig
       INTEGER :: len_weight, len_eling_el, len_eling_g
       REAL ( KIND = wp ) :: value4, value6
       LOGICAL :: dgrset, start_group_uses_section
@@ -5454,12 +6176,11 @@
       INTEGER :: INLIST( length ), ITABLE ( length )
       INTEGER :: GTYPESP_ptr( ngtype + 1 )
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELING_el, ELING_g
-      INTEGER :: GTYPE( ng )
-      INTEGER :: GP_ptr( ng + 1 ), GSTATE( ng )
-      CHARACTER ( LEN = 10 ) :: GPNAME( ngpmax )
-      CHARACTER ( LEN = 12 ) :: KEY( length )
+      INTEGER :: GTYPE( ng ), GP_ptr( ng + 1 ), GSTATE( ng )
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: GP_val_orig
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: WEIGHT
+      CHARACTER ( LEN = 10 ) :: GPNAMES( ngpnames )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  ----------------------------
 !  indicator card is group uses
@@ -5559,7 +6280,7 @@
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-               bad_alloc = 'GTYPES' ; status = - 18 ; GO TO 980 ; END IF
+              bad_alloc = 'GTYPES' ; status = - 18 ; GO TO 980 ; END IF
             len_gp_val_orig = new_length
           END IF
 
@@ -5594,7 +6315,7 @@
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-               bad_alloc = 'GTYPES' ; status = - 18 ; GO TO 980 ; END IF
+              bad_alloc = 'GTYPES' ; status = - 18 ; GO TO 980 ; END IF
             len_gp_val_orig = new_length
           END IF
 
@@ -5646,7 +6367,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
+                  bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
                 len_eling_el = new_length
               END IF
 
@@ -5657,7 +6378,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
+                  bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
                 len_eling_g = new_length
               END IF
 
@@ -5668,7 +6389,7 @@
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
+                  bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
                 len_weight = new_length
               END IF
 
@@ -5717,8 +6438,8 @@
 
             DO j = 1, novals
               DO i = 1, ngpars
-                IF ( ( j == 1 .AND. field3 == GPNAME( ip + i ) ) .OR.          &
-                     ( j == 2 .AND. field5 == GPNAME( ip + i ) ) ) GO TO 220
+                IF ( ( j == 1 .AND. field3 == GPNAMES( ip + i ) ) .OR.         &
+                     ( j == 2 .AND. field5 == GPNAMES( ip + i ) ) ) GO TO 220
               END DO
 
 !  the group parameter name is not recognised
@@ -5788,18 +6509,21 @@
 
 !-*-*-*-*-*- S I F D E C O D E   S O B B N D    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE SOBBND( nobbnd, nobmax, nrlndx, length, INLIST, ITABLE,       &
-                         FBOUND, REALVL, field1, field2, value4, field5,       &
-                         OBNAME, KEY, single, out, status )
-      INTEGER :: out, status, length, nobbnd, nobmax, nrlndx
+      SUBROUTINE SOBBND( nobbnd, nrival, length, INLIST, ITABLE,               &
+                         len_fbound, FBOUND_l, FBOUND_u, RIVAL,               &
+                         field1, field2, value4, field5,                       &
+                         len_obbname, OBBNAME, KEY, single, out, status )
+      INTEGER :: out, status, length, nobbnd, nrival
+      INTEGER :: len_fbound, len_obbname
       REAL ( KIND = wp ) :: value4
       LOGICAL :: single
       CHARACTER ( LEN = 2 ) :: field1
       CHARACTER ( LEN = 10 ) :: field2, field5
-      INTEGER :: INLIST( length ), ITABLE ( length )
-      REAL ( KIND = wp ) :: FBOUND( 2, nobmax ), REALVL( nrlndx )
-      CHARACTER ( LEN = 10 ) :: OBNAME( nobmax )
+      INTEGER :: INLIST( length ), ITABLE( length )
+      REAL ( KIND = wp ) :: RIVAL( nrival )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: FBOUND_l, FBOUND_u
       CHARACTER ( LEN = 12 ) :: KEY( length )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: OBBNAME
 
 !  ------------------------------
 !  indicator card is object bound
@@ -5808,12 +6532,14 @@
 !  local variables
 
       INTEGER :: ifree, ifield, j
+      INTEGER :: used_length, new_length, min_length, alloc_status
       REAL ( KIND = wp ) :: big
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
       IF ( single ) THEN
-         big = 9.0D-1 * HUGE( 1.0_sp )
+        big = 9.0D-1 * HUGE( 1.0_sp )
       ELSE
-         big = 9.0D-1 * HUGE( one )
+        big = 9.0D-1 * HUGE( one )
       END IF
 
 !  find a place to insert the objective bound name in the hash-table
@@ -5828,26 +6554,47 @@
           RETURN
         END IF
         j = INLIST( - ifree )
-      ELSE
 
 !  the objective function bound is the nobbnd-th specified
 
-        nobbnd = nobbnd + 1
-        IF( nobbnd > nobmax ) THEN
-          status = - 23
-          RETURN
+      ELSE
+        nobbnd = nobbnd + 1 ; j = nobbnd
+        IF ( nobbnd > len_obbname ) THEN
+          used_length = nobbnd - 1 ; min_length = nobbnd
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( OBBNAME, len_obbname, used_length, new_length,    &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'OBBNAME' ; status = - 23 ; GO TO 980 ; END IF
+          len_obbname = new_length
         END IF
-        j = nobbnd
 
-!  record the default bounds
+        IF ( nobbnd > len_fbound ) THEN
+          used_length = nobbnd - 1 ; min_length = nobbnd
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( FBOUND_l, len_fbound, used_length, new_length,    &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'FBOUND_l' ; status = - 23 ; GO TO 980 ; END IF
 
-        FBOUND( 1, nobbnd ) = - big
-        FBOUND( 2, nobbnd ) = big
+          used_length = nobbnd - 1 ; min_length = nobbnd
+          new_length = 3 * min_length / 2 + 1 
+          CALL EXTEND_array( FBOUND_u, len_fbound, used_length, new_length,    &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'FBOUND_u' ; status = - 23 ; GO TO 980 ; END IF
+          len_fbound = new_length
+        END IF
 
-!  record the position of the new bound in the table and record its
+!  record the default lower and upper bounds
+
+        FBOUND_l( nobbnd ) = - big
+        FBOUND_u( nobbnd ) = big
+
+!  record the position of the new bound in the table and record its name
 
         INLIST( ifree ) = nobbnd
-        OBNAME( nobbnd ) = field2
+        OBBNAME( nobbnd ) = field2
       END IF
 
 !  record the bound given
@@ -5860,13 +6607,21 @@
           IF ( out > 0 ) WRITE( out, 2030 ) FIELD5( 1 : 10 )
           RETURN
         END IF
-        value4 = REALVL( INLIST( ifield ) )
+        value4 = RIVAL( INLIST( ifield ) )
       END IF
       IF ( field1 == 'XL' .OR. field1 == 'ZL' .OR. field1 == 'LO' )            &
-        FBOUND( 1, j ) = value4
+        FBOUND_l( j ) = value4
       IF ( field1 == 'XU' .OR. field1 == 'ZU' .OR. field1 == 'UP' )            &
-        FBOUND( 1, j ) = value4
+        FBOUND_u( j ) = value4
       status = 0
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
@@ -5880,20 +6635,24 @@
 
 !-   D E C O D E _ s c a l a r _ i n s t r u c t i o n    S U B R O U T I N E  -
 
-      SUBROUTINE DECODE_scalar_instruction(                                    &
-                         nindex, nrlndx, length, nusein, nusere, status,       &
+      SUBROUTINE DECODE_scalar_instruction( length, niival, nrival, status,    &
                          out, level, ninstr, debug, rvalue, INLIST, ITABLE,    &
-                         NAMIIN, NAMRIN, INSTR, KEY,                           &
+                         len_iival, IIVAL, len_rival, RIVAL,                   &
+                         len_iinames, IINAMES, len_rinames, RINAMES,           &
+                         INSTR, KEY,                                           &
                          field1, field2, field3, field5, field4 )
-      INTEGER :: nindex, nrlndx, length, nusein, nusere
-      INTEGER :: status, out, level, ninstr
+      INTEGER :: length, niival, nrival, level, ninstr
+      INTEGER :: len_iival, len_rival, len_iinames, len_rinames
+      INTEGER :: status, out
       LOGICAL :: debug
       REAL ( KIND = wp ) :: rvalue
       CHARACTER ( LEN =  2 ) :: field1
       CHARACTER ( LEN = 10 ) :: field2, field3, field5
       CHARACTER ( LEN = 12 ) :: field4
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: IIVAL
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RIVAL
       INTEGER :: INSTR( 5 ), INLIST( length ), ITABLE ( length )
-      CHARACTER ( LEN = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: IINAMES, RINAMES
       CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  ------------------------------------------------------
@@ -5903,7 +6662,9 @@
 !  local variables
 
       INTEGER :: i, ifield, ifree
+      INTEGER :: used_length, new_length, min_length, alloc_status
       CHARACTER ( LEN = 12 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  decide what sort of instruction is to be performed: integer instructions
 
@@ -5983,13 +6744,28 @@
           END IF
           ifree = - ifree
         ELSE
-          nusein = nusein + 1
-          IF ( nusein > nindex ) THEN
-            status = - 21
-            RETURN
+          niival = niival + 1
+          IF ( niival > len_iival ) THEN
+            used_length = niival - 1 ; min_length = niival
+            new_length = 3 * min_length / 2 + 1
+            CALL EXTEND_array( IIVAL, len_iival, used_length, new_length,      &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'IIVAL' ; status = - 21 ; GO TO 980 ; END IF
+            len_iival = new_length
           END IF
-          INLIST( ifree ) = nusein
-          NAMIIN( nusein ) = FIELD( 1 : 10 )
+
+          IF ( niival > len_iinames ) THEN
+            used_length = niival - 1 ; min_length = niival
+            new_length = 3 * min_length / 2 + 1
+            CALL EXTEND_array( IINAMES, len_iinames, used_length, new_length,  &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'IINAMES' ; status = - 21 ; GO TO 980 ; END IF
+            len_iinames = new_length
+          END IF
+          INLIST( ifree ) = niival
+          IINAMES( niival ) = FIELD( 1 : 10 )
         END IF
         INSTR( 2 ) = INLIST( ifree )
 
@@ -5998,37 +6774,37 @@
         IF ( debug .AND. out > 0 ) THEN
           IF ( INSTR( 1 ) == 21 )                                              &
              WRITE( out, 4030 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), INSTR( 4 )
+             IINAMES( INSTR( 2 ) ), INSTR( 4 )
           IF ( INSTR( 1 ) == 22 )                                              &
              WRITE( out, 4040 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), INSTR( 4 )
+             IINAMES( INSTR( 2 ) ), IINAMES( INSTR( 3 ) ), INSTR( 4 )
           IF ( INSTR( 1 ) == 23 )                                              &
              WRITE( out, 4041 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), INSTR( 4 )
+             IINAMES( INSTR( 2 ) ), IINAMES( INSTR( 3 ) ), INSTR( 4 )
           IF ( INSTR( 1 ) == 24 )                                              &
              WRITE( out, 4050 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), INSTR( 4 )
+             IINAMES( INSTR( 2 ) ), IINAMES( INSTR( 3 ) ), INSTR( 4 )
           IF ( INSTR( 1 ) == 25 )                                              &
              WRITE( out, 4051 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), INSTR( 4 ), NAMIIN( INSTR( 3 ) )
+             IINAMES( INSTR( 2 ) ), INSTR( 4 ), IINAMES( INSTR( 3 ) )
           IF ( INSTR( 1 ) == 26 )                                              &
              WRITE( out, 4055 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) )
+             IINAMES( INSTR( 2 ) ), RINAMES( INSTR( 3 ) )
           IF ( INSTR( 1 ) == 31 )                                              &
              WRITE( out, 4059 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) )
+             IINAMES( INSTR( 2 ) ), IINAMES( INSTR( 3 ) )
           IF ( INSTR( 1 ) == 32 )                                              &
              WRITE( out, 4060 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), NAMIIN( INSTR( 4 ) )
+             IINAMES( INSTR( 2 ) ), IINAMES( INSTR( 3 ) ), IINAMES( INSTR( 4 ) )
           IF ( INSTR( 1 ) == 33 )                                              &
              WRITE( out, 4061 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 4 ) ), NAMIIN( INSTR( 3 ) )
+             IINAMES( INSTR( 2 ) ), IINAMES( INSTR( 4 ) ), IINAMES( INSTR( 3 ) )
           IF ( INSTR( 1 ) == 34 )                                              &
              WRITE( out, 4070 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), NAMIIN( INSTR( 4 ) )
+             IINAMES( INSTR( 2 ) ), IINAMES( INSTR( 3 ) ), IINAMES( INSTR( 4 ) )
           IF ( INSTR( 1 ) == 35 )                                              &
              WRITE( out, 4071 ) level, ninstr,                                 &
-             NAMIIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) ), NAMIIN( INSTR( 4 ) )
+             IINAMES( INSTR( 2 ) ), IINAMES( INSTR( 3 ) ), IINAMES( INSTR( 4 ) )
         END IF
 
 !  real instructions
@@ -6121,13 +6897,28 @@
           END IF
           ifree = - ifree
         ELSE
-          nusere = nusere + 1
-          IF ( nusere > nrlndx ) THEN
-            status = - 22
-            RETURN
+          nrival = nrival + 1
+          IF ( nrival > len_rival ) THEN
+            used_length = nrival - 1 ; min_length = nrival
+            new_length = 3 * min_length / 2 + 1
+            CALL EXTEND_array( RIVAL, len_rival, used_length, new_length,      &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'RIVAL' ; status = - 22 ; GO TO 980 ; END IF
+            len_rival = new_length
           END IF
-          INLIST( ifree ) = nusere
-          NAMRIN( nusere ) = FIELD( 1 : 10 )
+
+          IF ( nrival > len_rinames ) THEN
+            used_length = nrival - 1 ; min_length = nrival
+            new_length = 3 * min_length / 2 + 1
+            CALL EXTEND_array( RINAMES, len_rinames, used_length, new_length,  &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'RINAMES' ; status = - 22 ; GO TO 980 ; END IF
+            len_rinames = new_length
+          END IF
+          INLIST( ifree ) = nrival
+          RINAMES( nrival ) = FIELD( 1 : 10 )
         END IF
         INSTR( 2 ) = INLIST( ifree )
 
@@ -6136,45 +6927,53 @@
         IF ( debug .AND. out > 0 ) THEN
           IF ( INSTR( 1 ) == 51 )                                              &
              WRITE( out, 4130 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), rvalue
+             RINAMES( INSTR( 2 ) ), rvalue
           IF ( INSTR( 1 ) == 52 )                                              &
              WRITE( out, 4140 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), rvalue
+             RINAMES( INSTR( 2 ) ), RINAMES( INSTR( 3 ) ), rvalue
           IF ( INSTR( 1 ) == 53 )                                              &
              WRITE( out, 4141 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), rvalue
+             RINAMES( INSTR( 2 ) ), RINAMES( INSTR( 3 ) ), rvalue
           IF ( INSTR( 1 ) == 54 )                                              &
              WRITE( out, 4150 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), rvalue
+             RINAMES( INSTR( 2 ) ), RINAMES( INSTR( 3 ) ), rvalue
           IF ( INSTR( 1 ) == 55 )                                              &
              WRITE( out, 4151 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), rvalue, NAMRIN( INSTR( 3 ) )
+             RINAMES( INSTR( 2 ) ), rvalue, RINAMES( INSTR( 3 ) )
           IF ( INSTR( 1 ) == 56 )                                              &
              WRITE( out, 4180 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), NAMIIN( INSTR( 3 ) )
+             RINAMES( INSTR( 2 ) ), IINAMES( INSTR( 3 ) )
           IF ( INSTR( 1 ) == 57 )                                              &
              WRITE( out, 4110 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), FUNCTN( INSTR( 3 ) ), rvalue
+             RINAMES( INSTR( 2 ) ), FUNCTN( INSTR( 3 ) ), rvalue
           IF ( INSTR( 1 ) == 61 )                                              &
              WRITE( out, 4159 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) )
+             RINAMES( INSTR( 2 ) ), RINAMES( INSTR( 3 ) )
           IF ( INSTR( 1 ) == 62 )                                              &
              WRITE( out, 4160 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), NAMRIN( INSTR( 4 ) )
+             RINAMES( INSTR( 2 ) ), RINAMES( INSTR( 3 ) ), RINAMES( INSTR( 4 ) )
           IF ( INSTR( 1 ) == 63 )                                              &
              WRITE( out, 4161 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 4 ) ), NAMRIN( INSTR( 3 ) )
+             RINAMES( INSTR( 2 ) ), RINAMES( INSTR( 4 ) ), RINAMES( INSTR( 3 ) )
           IF ( INSTR( 1 ) == 64 )                                              &
              WRITE( out, 4170 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), NAMRIN( INSTR( 4 ) )
+             RINAMES( INSTR( 2 ) ), RINAMES( INSTR( 3 ) ), RINAMES( INSTR( 4 ) )
           IF ( INSTR( 1 ) == 65 )                                              &
              WRITE( out, 4171 ) level, ninstr,                                 &
-             NAMRIN( INSTR( 2 ) ), NAMRIN( INSTR( 3 ) ), NAMRIN( INSTR( 4 ) )
+             RINAMES( INSTR( 2 ) ), RINAMES( INSTR( 3 ) ), RINAMES( INSTR( 4 ) )
           IF ( INSTR( 1 ) == 67 )                                              &
-             WRITE( out, 4120 ) level, ninstr, NAMRIN( INSTR( 2 ) ),           &
-             FUNCTN( INSTR( 3 ) ), NAMRIN( INSTR( 4 ) )
+             WRITE( out, 4120 ) level, ninstr, RINAMES( INSTR( 2 ) ),          &
+             FUNCTN( INSTR( 3 ) ), RINAMES( INSTR( 4 ) )
         END IF
       END IF
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
@@ -6239,22 +7038,27 @@
 !-   D E C O D E _ a r r a y _ i n s t r u c t i o n    S U B R O U T I N E   -
 
       SUBROUTINE DECODE_array_instruction(                                     &
-                         nindex, nrlndx, level, ninstr, nusere, length,        &
-                         narray, intype, status, out, debug, grp1st,           &
+                         level, ninstr, niival, nrival,      &
+                         length, narray, intype, status, out, debug, grp1st,   &
                          field1, field2, field3, field5, field4, field6,       &
                          INLIST, INSTR, ITABLE, IARRAY, VARRAY, farray,        &
-                         NAMIIN, NAMRIN, ARRAY, CARRAY, KEY )
-      INTEGER :: nindex, nrlndx, level, length, status, out
-      INTEGER :: ninstr, nusere, intype, narray
+                         len_rival, RIVAL,                   &
+                         IINAMES, len_rinames, RINAMES,           &
+                         ARRAY, CARRAY, KEY )
+      INTEGER :: level, length, status, out
+      INTEGER :: len_rival, len_rinames
+      INTEGER :: ninstr, niival, nrival, intype, narray
       LOGICAL :: debug, grp1st
       CHARACTER ( LEN =  2 ) :: field1
       CHARACTER ( LEN = 10 ) :: field2, field3, field5
       CHARACTER ( LEN = 12 ) :: field4, field6
       INTEGER :: INSTR( 5 ), IARRAY( 5, 3 )
       INTEGER :: INLIST( length ), ITABLE ( length )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RIVAL
       REAL ( KIND = wp ) :: VARRAY( 2 )
       CHARACTER ( LEN =  2 ) :: farray
-      CHARACTER ( LEN = 10 ) :: NAMIIN( nindex ), NAMRIN( nrlndx )
+      CHARACTER ( LEN = 10 ), DIMENSION( niival ) :: IINAMES
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RINAMES
       CHARACTER ( LEN = 10 ) :: ARRAY( 3 ), CARRAY( 2 )
       CHARACTER ( LEN = 12 ) :: KEY( length )
 
@@ -6275,6 +7079,8 @@
 !  local variables
 
       INTEGER :: i, kindar, ifree
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
 !  determine how much information must be saved by determining
 !  the kind of array definition being made
@@ -6490,7 +7296,7 @@
                 kindar = 101
               ELSE
                 kindar = 102
-                IF ( FIELD6( 1 : 12 ) == '            ' )                     &
+                IF ( FIELD6( 1 : 12 ) == '            ' )                      &
                        FIELD6( 1 : 3 ) = '1.0'
               END IF
               IF ( FIELD4( 1 : 12 ) == '            ' ) FIELD4( 1 : 3 ) = '1.0'
@@ -6545,7 +7351,7 @@
                      IARRAY( 1, 1 ), out, status )
         IF ( status /= 0 ) RETURN
         IF ( debug .AND. out > 0 ) WRITE( out, 4080 ) level, ninstr,           &
-           ARRAY( 1 ), ( NAMIIN( IARRAY( 2 + i, 1 ) ), i = 1, IARRAY( 2, 1 ) )
+           ARRAY( 1 ), ( IINAMES( IARRAY( 2 + i, 1 ) ), i = 1, IARRAY( 2, 1 ) )
 
 !  if the array name is just a scalar name, record its name
 
@@ -6563,13 +7369,29 @@
                 RETURN
               END IF
             ELSE
-              nusere = nusere + 1
-              IF ( nusere > nrlndx ) THEN
-                status = - 22
-                RETURN
+              nrival = nrival + 1
+              IF ( nrival > len_rival ) THEN
+                used_length = nrival - 1 ; min_length = nrival
+                new_length = 3 * min_length / 2 + 1
+                CALL EXTEND_array( RIVAL, len_rival, used_length, new_length,  &
+                                   min_length, buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'RIVAL' ; status = - 22 ; GO TO 980 ; END IF
+                len_rival = new_length
               END IF
-              INLIST( ifree ) = nusere
-              NAMRIN( nusere ) = ARRAY( 1 )
+
+              IF ( nrival > len_rinames ) THEN
+                used_length = nrival - 1 ; min_length = nrival
+                new_length = 3 * min_length / 2 + 1
+                CALL EXTEND_array( RINAMES, len_rinames, used_length,          &
+                                   new_length, min_length, buffer,             &
+                                   status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'RINAMES' ; status = - 22 ; GO TO 980 ; END IF
+                len_rinames = new_length
+              END IF
+              INLIST( ifree ) = nrival
+              RINAMES( nrival ) = ARRAY( 1 )
             END IF
           END IF
         END IF
@@ -6584,7 +7406,7 @@
                      IARRAY( 1, 2 ), out, status )
         IF ( status /= 0 ) RETURN
         IF ( debug .AND. out > 0 ) WRITE( out, 4090 ) level, ninstr,           &
-          ARRAY( 2 ), ( NAMIIN( IARRAY( 2 + i, 2 ) ), i = 1, IARRAY( 2, 2 ) )
+          ARRAY( 2 ), ( IINAMES( IARRAY( 2 + i, 2 ) ), i = 1, IARRAY( 2, 2 ) )
       END IF
 
 !  an array name occurs in field 5. interpret the contents of this field
@@ -6596,7 +7418,7 @@
                       IARRAY( 1, 3 ), out, status )
         IF ( status /= 0 ) RETURN
         IF ( debug .AND. out > 0 ) WRITE( out, 4100 ) level, ninstr,           &
-          ARRAY( 3 ), ( NAMIIN( IARRAY( 2 + i, 3 ) ), i = 1, IARRAY( 2, 3 ) )
+          ARRAY( 3 ), ( IINAMES( IARRAY( 2 + i, 3 ) ), i = 1, IARRAY( 2, 3 ) )
       END IF
 
 !  an name occurs in field 2
@@ -6638,6 +7460,14 @@
       END IF
       RETURN
 
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
+
 !  non-executable statements
 
  2140 FORMAT( ' ** Exit from INTERPRET_gpsmps - type of array definition',     &
@@ -6663,18 +7493,19 @@
 !-   E X E C U T E _ a r r a y _ i n s t r u c t i o n    S U B R O U T I N E  -
 
       SUBROUTINE EXECUTE_array_instruction(                                    &
-                         nindex, length, nusere, status, out, nrlndx, INLIST,  &
-                         ITABLE, NAMRIN, KEY, INDVAL, REALVL, field1, field2,  &
-                         field3, field5, rvalue )
-      INTEGER :: nindex, length, nusere, status, out
-      INTEGER :: nrlndx
+                         length, niival, nrival, status, out,                  &
+                         INLIST, ITABLE, KEY,                                  &
+                         IIVAL, len_rival, RIVAL, len_rinames, RINAMES,        &
+                         field1, field2, field3, field5, rvalue )
+      INTEGER :: length, niival, nrival, status, out
+      INTEGER :: len_rival, len_rinames
       REAL ( KIND = wp ) :: rvalue
       CHARACTER ( LEN =  2 ) :: field1
       CHARACTER ( LEN = 10 ) :: field2, field3, field5
       INTEGER :: INLIST( length ), ITABLE ( length )
-      INTEGER :: INDVAL( nindex )
-      REAL ( KIND = wp ) :: REALVL( nrlndx )
-      CHARACTER ( LEN = 10 ) :: NAMRIN( nrlndx )
+      INTEGER, DIMENSION( niival ) :: IIVAL
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: RIVAL
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RINAMES
       CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  --------------------------------------------------------------------------
@@ -6684,7 +7515,9 @@
 !  local variables
 
       INTEGER :: i, ifield, ifree, instr2, instr3, instr4
+      INTEGER :: used_length, new_length, min_length, alloc_status
       CHARACTER ( LEN = 12 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
 
       IF ( field1 == 'A+' .OR. field1 == 'A-' .OR. field1 == 'A*' .OR.         &
            field1 == 'A/' .OR. field1 == 'A(' ) THEN
@@ -6725,8 +7558,7 @@
           END IF
           instr3 = INLIST( ifield )
 
-!  the value is to be obtained using a special function. determine
-!  which one
+!  the value is to be obtained using a special function. determine which one
 
         ELSE
           IF ( field1 /= 'AE' ) THEN
@@ -6753,39 +7585,62 @@
         END IF
         ifree = - ifree
       ELSE
-        nusere = nusere + 1
-        IF ( nusere > nrlndx ) THEN
-          status = - 22
-          RETURN
+        nrival = nrival + 1
+        IF ( nrival > len_rival ) THEN
+          used_length = nrival - 1 ; min_length = nrival
+          new_length = 3 * min_length / 2 + 1
+          CALL EXTEND_array( RIVAL, len_rival, used_length, new_length,        &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'RIVAL' ; status = - 22 ; GO TO 980 ; END IF
+          len_rival = new_length
         END IF
-        INLIST( ifree ) = nusere
-        NAMRIN( nusere ) = FIELD( 1 : 10 )
+
+        IF ( nrival > len_rinames ) THEN
+          used_length = nrival - 1 ; min_length = nrival
+          new_length = 3 * min_length / 2 + 1
+          CALL EXTEND_array( RINAMES, len_rinames, used_length, new_length,    &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'RINAMES' ; status = - 22 ; GO TO 980 ; END IF
+          len_rinames = new_length
+        END IF
+        INLIST( ifree ) = nrival
+        RINAMES( nrival ) = FIELD( 1 : 10 )
       END IF
       instr2 = INLIST( ifree )
-      IF ( field1 == 'AE' ) REALVL( instr2 ) = rvalue
-      IF ( field1 == 'AA' ) REALVL( instr2 ) =                                 &
-                              rvalue + REALVL( instr3 )
-      IF ( field1 == 'AS' ) REALVL( instr2 ) =                                 &
-                              rvalue - REALVL( instr3 )
-      IF ( field1 == 'AM' ) REALVL( instr2 ) =                                 &
-                              rvalue * REALVL( instr3 )
-      IF ( field1 == 'AD' ) REALVL( instr2 ) =                                 &
-                              rvalue / REALVL( instr3 )
-      IF ( field1 == 'AI' ) REALVL( instr2 ) =                                 &
-                              FLOAT( INDVAL( instr3 ) )
-      IF ( field1 == 'AF' ) CALL RINTRN( REALVL( instr2 ),                     &
+      IF ( field1 == 'AE' ) RIVAL( instr2 ) = rvalue
+      IF ( field1 == 'AA' ) RIVAL( instr2 ) =                                 &
+                              rvalue + RIVAL( instr3 )
+      IF ( field1 == 'AS' ) RIVAL( instr2 ) =                                 &
+                              rvalue - RIVAL( instr3 )
+      IF ( field1 == 'AM' ) RIVAL( instr2 ) =                                 &
+                              rvalue * RIVAL( instr3 )
+      IF ( field1 == 'AD' ) RIVAL( instr2 ) =                                 &
+                              rvalue / RIVAL( instr3 )
+      IF ( field1 == 'AI' ) RIVAL( instr2 ) =                                 &
+                              FLOAT( IIVAL( instr3 ) )
+      IF ( field1 == 'AF' ) CALL RINTRN( RIVAL( instr2 ),                     &
                                          rvalue, instr3, status )
-      IF ( field1 == 'A=' ) REALVL( instr2 ) = REALVL( instr3 )
-      IF ( field1 == 'A+' ) REALVL( instr2 ) =                                 &
-                              REALVL( instr3 ) + REALVL( instr4 )
-      IF ( field1 == 'A-' ) REALVL( instr2 ) =                                 &
-                              REALVL( instr3 ) - REALVL( instr4 )
-      IF ( field1 == 'A*' ) REALVL( instr2 ) =                                 &
-                              REALVL( instr3 ) * REALVL( instr4 )
-      IF ( field1 == 'A/' ) REALVL( instr2 ) =                                 &
-                              REALVL( instr3 ) / REALVL( instr4 )
-      IF ( field1 == 'A(' ) CALL RINTRN( REALVL( instr2 ),                     &
-                                         REALVL( instr4 ), instr3, status )
+      IF ( field1 == 'A=' ) RIVAL( instr2 ) = RIVAL( instr3 )
+      IF ( field1 == 'A+' ) RIVAL( instr2 ) =                                 &
+                              RIVAL( instr3 ) + RIVAL( instr4 )
+      IF ( field1 == 'A-' ) RIVAL( instr2 ) =                                 &
+                              RIVAL( instr3 ) - RIVAL( instr4 )
+      IF ( field1 == 'A*' ) RIVAL( instr2 ) =                                 &
+                              RIVAL( instr3 ) * RIVAL( instr4 )
+      IF ( field1 == 'A/' ) RIVAL( instr2 ) =                                 &
+                              RIVAL( instr3 ) / RIVAL( instr4 )
+      IF ( field1 == 'A(' ) CALL RINTRN( RIVAL( instr2 ),                     &
+                                         RIVAL( instr4 ), instr3, status )
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from INTERPRET_gpsmps-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
@@ -6799,91 +7654,38 @@
 
       END SUBROUTINE EXECUTE_array_instruction
 
-!-*-*-*-*-*- S I F D E C O D E   G E T F I E    S U B R O U T I N E -*-*-*-*-*-
-
-      SUBROUTINE GETFIE( nindex, INDVAL, IARRAY, array, field, status )
-      INTEGER ::NINDEX, status
-      INTEGER ::INDVAL( nindex )
-      INTEGER ::IARRAY( 5 )
-      CHARACTER ( LEN = 10 ) :: array, field
-
-!  -----------------------------------------------------------
-!  construct an expanded array name from its constituent parts
-!  -----------------------------------------------------------
-
-!  local variables
-
-      INTEGER ::I, indces, ivalue, j, ndigit
-      CHARACTER ( LEN = 9 ) :: field9
-
-      j = IARRAY( 1 )
-      field = ARRAY( 1 : j )
-      j = j + 1
-      indces = IARRAY( 2 )
-      DO i = 1, indces
-        ivalue = INDVAL( IARRAY( 2 + i ) )
-        IF ( ivalue == 0 ) THEN
-          ndigit = 1
-        ELSE
-          ndigit = INT( LOG10( ABS( FLOAT( ivalue ) ) ) ) + 1
-          IF ( ivalue < 0 ) ndigit = ndigit + 1
-        END IF
-        IF ( ( i < indces .AND. j + ndigit > 10 ) .OR.                         &
-             ( i == indces .AND. j + ndigit > 11 ) ) THEN
-          status = 35
-          RETURN
-        END IF
-        WRITE( UNIT = field9, FMT = 2000 ) ivalue
-        FIELD( J: j + ndigit - 1 ) = FIELD9( 10 - NDIGIT: 9 )
-        j = j + ndigit
-        IF ( i < indces ) THEN
-          FIELD( J: j ) = ','
-          j = j + 1
-        END IF
-      END DO
-      status = 0
-      RETURN
-
-!  non-executable statements
-
- 2000 FORMAT( I9 )
-
-!  end of subroutine GETFIE
-
-      END SUBROUTINE GETFIE
-
 !-*-*-*-*-*- S I F D E C O D E   G E T I I N    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE GETIIN( nindex, INDVAL, nrlndx, REALVL, INSTR )
-      INTEGER :: nindex, nrlndx
-      INTEGER :: INDVAL( nindex ), INSTR( 4 )
-      REAL ( KIND = wp ) :: REALVL( nrlndx )
+      SUBROUTINE GETIIN( niival, nrival, IIVAL, RIVAL, INSTR )
+      INTEGER :: niival, nrival
+      INTEGER :: IIVAL( niival ), INSTR( 4 )
+      REAL ( KIND = wp ) :: RIVAL( nrival )
 
 !  ----------------------------------
 !  execute integer index instructions
 !  ----------------------------------
 
-      IF ( INSTR( 1 ) == 21 ) INDVAL( INSTR( 2 ) ) = INSTR( 4 )
-      IF ( INSTR( 1 ) == 22 ) INDVAL( INSTR( 2 ) ) =                           &
-         INSTR( 4 ) + INDVAL( INSTR( 3 ) )
-      IF ( INSTR( 1 ) == 23 ) INDVAL( INSTR( 2 ) ) =                           &
-         INSTR( 4 ) - INDVAL( INSTR( 3 ) )
-      IF ( INSTR( 1 ) == 24 ) INDVAL( INSTR( 2 ) ) =                           &
-         INSTR( 4 ) * INDVAL( INSTR( 3 ) )
-      IF ( INSTR( 1 ) == 25 ) INDVAL( INSTR( 2 ) ) =                           &
-         INSTR( 4 ) / INDVAL( INSTR( 3 ) )
-      IF ( INSTR( 1 ) == 26 ) INDVAL( INSTR( 2 ) ) =                           &
-         INT( REALVL( INSTR( 3 ) ) )
-      IF ( INSTR( 1 ) == 31 ) INDVAL( INSTR( 2 ) ) =                           &
-         INDVAL( INSTR( 3 ) )
-      IF ( INSTR( 1 ) == 32 ) INDVAL( INSTR( 2 ) ) =                           &
-         INDVAL( INSTR( 3 ) ) + INDVAL( INSTR( 4 ) )
-      IF ( INSTR( 1 ) == 33 ) INDVAL( INSTR( 2 ) ) =                           &
-         INDVAL( INSTR( 3 ) ) - INDVAL( INSTR( 4 ) )
-      IF ( INSTR( 1 ) == 34 ) INDVAL( INSTR( 2 ) ) =                           &
-         INDVAL( INSTR( 3 ) ) * INDVAL( INSTR( 4 ) )
-      IF ( INSTR( 1 ) == 35 ) INDVAL( INSTR( 2 ) ) =                           &
-         INDVAL( INSTR( 3 ) ) / INDVAL( INSTR( 4 ) )
+      IF ( INSTR( 1 ) == 21 ) IIVAL( INSTR( 2 ) ) = INSTR( 4 )
+      IF ( INSTR( 1 ) == 22 ) IIVAL( INSTR( 2 ) ) =                           &
+         INSTR( 4 ) + IIVAL( INSTR( 3 ) )
+      IF ( INSTR( 1 ) == 23 ) IIVAL( INSTR( 2 ) ) =                           &
+         INSTR( 4 ) - IIVAL( INSTR( 3 ) )
+      IF ( INSTR( 1 ) == 24 ) IIVAL( INSTR( 2 ) ) =                           &
+         INSTR( 4 ) * IIVAL( INSTR( 3 ) )
+      IF ( INSTR( 1 ) == 25 ) IIVAL( INSTR( 2 ) ) =                           &
+         INSTR( 4 ) / IIVAL( INSTR( 3 ) )
+      IF ( INSTR( 1 ) == 26 ) IIVAL( INSTR( 2 ) ) =                           &
+         INT( RIVAL( INSTR( 3 ) ) )
+      IF ( INSTR( 1 ) == 31 ) IIVAL( INSTR( 2 ) ) =                           &
+         IIVAL( INSTR( 3 ) )
+      IF ( INSTR( 1 ) == 32 ) IIVAL( INSTR( 2 ) ) =                           &
+         IIVAL( INSTR( 3 ) ) + IIVAL( INSTR( 4 ) )
+      IF ( INSTR( 1 ) == 33 ) IIVAL( INSTR( 2 ) ) =                           &
+         IIVAL( INSTR( 3 ) ) - IIVAL( INSTR( 4 ) )
+      IF ( INSTR( 1 ) == 34 ) IIVAL( INSTR( 2 ) ) =                           &
+         IIVAL( INSTR( 3 ) ) * IIVAL( INSTR( 4 ) )
+      IF ( INSTR( 1 ) == 35 ) IIVAL( INSTR( 2 ) ) =                           &
+         IIVAL( INSTR( 3 ) ) / IIVAL( INSTR( 4 ) )
       RETURN
 
 !  end of subroutine GETIIN
@@ -6892,12 +7694,11 @@
 
 !-*-*-*-*-*- S I F D E C O D E   G E T R I N    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE GETRIN( nindex, nrlndx, INDVAL, REALVL,                       &
-                         rvalue, INSTR, status )
-      INTEGER :: nindex, nrlndx, status
-      REAL ( KIND = wp ) ::    rvalue
-      INTEGER :: INSTR( 4 ), INDVAL( nindex )
-      REAL ( KIND = wp ) ::    REALVL( nrlndx )
+      SUBROUTINE GETRIN( niival, nrival, IIVAL, RIVAL, rvalue, INSTR, status )
+      INTEGER :: niival, nrival, status
+      REAL ( KIND = wp ) ::  rvalue
+      INTEGER :: INSTR( 4 ), IIVAL( niival )
+      REAL ( KIND = wp ) ::  RIVAL( nrival )
 
 !  -------------------------------
 !  execute real index instructions
@@ -6912,44 +7713,44 @@
       GO TO ( 110, 120, 130, 140, 150, 160, 170, 300, 300, 300,                &
               210, 220, 230, 240, 250, 300, 270, 300, 300 ), i
   110 CONTINUE
-      REALVL( INSTR( 2 ) ) = rvalue
+      RIVAL( INSTR( 2 ) ) = rvalue
       RETURN
   120 CONTINUE
-      REALVL( INSTR( 2 ) ) = rvalue + REALVL( INSTR( 3 ) )
+      RIVAL( INSTR( 2 ) ) = rvalue + RIVAL( INSTR( 3 ) )
       RETURN
   130 CONTINUE
-      REALVL( INSTR( 2 ) ) = rvalue - REALVL( INSTR( 3 ) )
+      RIVAL( INSTR( 2 ) ) = rvalue - RIVAL( INSTR( 3 ) )
       RETURN
   140 CONTINUE
-      REALVL( INSTR( 2 ) ) = rvalue * REALVL( INSTR( 3 ) )
+      RIVAL( INSTR( 2 ) ) = rvalue * RIVAL( INSTR( 3 ) )
       RETURN
   150 CONTINUE
-      REALVL( INSTR( 2 ) ) = rvalue / REALVL( INSTR( 3 ) )
+      RIVAL( INSTR( 2 ) ) = rvalue / RIVAL( INSTR( 3 ) )
       RETURN
   160 CONTINUE
-      REALVL( INSTR( 2 ) ) = FLOAT( INDVAL( INSTR( 3 ) ) )
+      RIVAL( INSTR( 2 ) ) = FLOAT( IIVAL( INSTR( 3 ) ) )
       RETURN
   170 CONTINUE
-      CALL RINTRN( REALVL( INSTR( 2 ) ), rvalue, INSTR( 3 ), status )
+      CALL RINTRN( RIVAL( INSTR( 2 ) ), rvalue, INSTR( 3 ), status )
       RETURN
   210 CONTINUE
-      REALVL( INSTR( 2 ) ) = REALVL( INSTR( 3 ) )
+      RIVAL( INSTR( 2 ) ) = RIVAL( INSTR( 3 ) )
       RETURN
   220 CONTINUE
-      REALVL( INSTR( 2 ) ) = REALVL( INSTR( 3 ) ) + REALVL( INSTR( 4 ) )
+      RIVAL( INSTR( 2 ) ) = RIVAL( INSTR( 3 ) ) + RIVAL( INSTR( 4 ) )
       RETURN
   230 CONTINUE
-      REALVL( INSTR( 2 ) ) = REALVL( INSTR( 3 ) ) - REALVL( INSTR( 4 ) )
+      RIVAL( INSTR( 2 ) ) = RIVAL( INSTR( 3 ) ) - RIVAL( INSTR( 4 ) )
       RETURN
   240 CONTINUE
-      REALVL( INSTR( 2 ) ) = REALVL( INSTR( 3 ) ) * REALVL( INSTR( 4 ) )
+      RIVAL( INSTR( 2 ) ) = RIVAL( INSTR( 3 ) ) * RIVAL( INSTR( 4 ) )
       RETURN
   250 CONTINUE
-      REALVL( INSTR( 2 ) ) = REALVL( INSTR( 3 ) ) / REALVL( INSTR( 4 ) )
+      RIVAL( INSTR( 2 ) ) = RIVAL( INSTR( 3 ) ) / RIVAL( INSTR( 4 ) )
       RETURN
   270 CONTINUE
-      CALL RINTRN( REALVL( INSTR( 2 ) ),                                       &
-                   REALVL( INSTR( 4 ) ), INSTR( 3 ), status )
+      CALL RINTRN( RIVAL( INSTR( 2 ) ),                                       &
+                   RIVAL( INSTR( 4 ) ), INSTR( 3 ), status )
       RETURN
   300 CONTINUE
       RETURN
@@ -7082,22 +7883,22 @@
 
 !-*-*-*-*-*- S I F D E C O D E   G E T L I N    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE GETLIN( nindex, nrlndx, INDVAL, IARRAY, VARRAY,               &
-                         array, CARRAY, farray, REALVL, NAMIIN, novals,        &
+      SUBROUTINE GETLIN( niival, nrival, IIVAL, IARRAY, VARRAY,              &
+                         array, CARRAY, farray, RIVAL, IINAMES, novals,        &
                          kindar, field1, field2, field3, value4,               &
                          field5, value6, out, status,                          &
                          length, KEY, ITABLE, INLIST )
-      INTEGER :: nindex, nrlndx, kindar, novals, out, status
+      INTEGER :: niival, nrival, kindar, novals, out, status
       INTEGER :: length
       REAL ( KIND = wp ) :: value4, value6
       CHARACTER ( LEN =  2 ) :: field1, farray
       CHARACTER ( LEN = 10 ) :: field2, field3, field5
-      INTEGER :: INDVAL( nindex ), IARRAY( 5, 3 )
+      INTEGER :: IIVAL( niival ), IARRAY( 5, 3 )
       INTEGER :: INLIST ( length ), ITABLE ( length )
-      REAL ( KIND = wp ) :: VARRAY( 2 ), REALVL( nrlndx )
-      CHARACTER ( LEN =  7 ) :: NAMIIN( nindex )
+      REAL ( KIND = wp ) :: VARRAY( 2 ), RIVAL( nrival )
+      CHARACTER ( LEN =  7 ) :: IINAMES( niival )
       CHARACTER ( LEN = 10 ) :: ARRAY( 3 ), CARRAY( 2 )
-      CHARACTER ( LEN = 12 ) :: KEY   ( length )
+      CHARACTER ( LEN = 12 ) :: KEY( length )
 
 !  -----------------------------------------------------------------
 !  translate the contents of an array card to its scalar values
@@ -7139,12 +7940,12 @@
 
       IF ( ( kindar >= 100 .AND. kindar <= 109 ) .OR.                          &
            ( kindar >= 113 .AND. kindar <= 115 ) ) THEN
-        CALL GETFIE( nindex, INDVAL, IARRAY( 1, 1 ),                           &
+        CALL GETFIE( niival, IIVAL, IARRAY( 1, 1 ),                           &
                      ARRAY( 1 ), field2, status )
         IF ( status /= 0 ) THEN
           IF ( out > 0 ) WRITE( out, 2350 )                                    &
-            ARRAY( 1 )( 1 : IARRAY( 1, 1 ) ), ( NAMIIN( IARRAY( 2 + i, 1 ) ),  &
-              INDVAL( IARRAY( 2 + i, 1 ) ), i = 1, IARRAY( 2, 1 ) )
+            ARRAY( 1 )( 1 : IARRAY( 1, 1 ) ), ( IINAMES( IARRAY( 2 + i, 1 ) ),  &
+              IIVAL( IARRAY( 2 + i, 1 ) ), i = 1, IARRAY( 2, 1 ) )
           status = 35
           RETURN
         END IF
@@ -7158,12 +7959,12 @@
       IF ( ( kindar >= 101 .AND. kindar <= 104 ) .OR.                          &
            ( kindar >= 110 .AND. kindar <= 112 ) .OR.                          &
              kindar == 113 .OR.  kindar == 116 ) THEN
-        CALL GETFIE( nindex, INDVAL, IARRAY( 1, 2 ),                           &
+        CALL GETFIE( niival, IIVAL, IARRAY( 1, 2 ),                           &
                      ARRAY( 2 ), field3, status )
         IF ( status /= 0 ) THEN
           IF ( out > 0 ) WRITE( out, 2350 )                                    &
-            ARRAY( 2 )( 1 : IARRAY( 1, 2 ) ), ( NAMIIN( IARRAY( 2 + i, 2 ) ),  &
-              INDVAL( IARRAY( 2 + i, 2 ) ), i = 1, IARRAY( 2, 2 ) )
+            ARRAY( 2 )( 1 : IARRAY( 1, 2 ) ), ( IINAMES( IARRAY( 2 + i, 2 ) ),  &
+              IIVAL( IARRAY( 2 + i, 2 ) ), i = 1, IARRAY( 2, 2 ) )
           status = 35
           RETURN
         END IF
@@ -7178,12 +7979,12 @@
       IF ( kindar == 102 .OR.  kindar == 104 .OR.                              &
            kindar == 105 .OR.  kindar == 112 .OR.                              &
          ( kindar >= 113 .AND. kindar <= 116 ) ) THEN
-        CALL GETFIE( nindex, INDVAL, IARRAY( 1, 3 ),                           &
+        CALL GETFIE( niival, IIVAL, IARRAY( 1, 3 ),                           &
                      ARRAY( 3 ), field5, status )
         IF ( status /= 0 ) THEN
           IF ( out > 0 ) WRITE( out, 2350 )                                    &
-            ARRAY( 3 )( 1 : IARRAY( 1, 3 ) ), ( NAMIIN( IARRAY( 2 + i, 3 ) ),  &
-              INDVAL( IARRAY( 2 + i, 3 ) ), i = 1, IARRAY( 2, 3 ) )
+            ARRAY( 3 )( 1 : IARRAY( 1, 3 ) ), ( IINAMES( IARRAY( 2 + i, 3 ) ),  &
+              IIVAL( IARRAY( 2 + i, 3 ) ), i = 1, IARRAY( 2, 3 ) )
           status = 35
           RETURN
         END IF
@@ -7226,7 +8027,7 @@
             IF ( out > 0 ) WRITE( out, 2030 ) FIELD( 1 : 10 )
             RETURN
           END IF
-          value4 = REALVL( INLIST( ifield ) )
+          value4 = RIVAL( INLIST( ifield ) )
           novals = 1
         ELSE
           value4 = 0.0D+0
@@ -7255,6 +8056,59 @@
 !  end of subroutine GETLIN
 
       END SUBROUTINE GETLIN
+
+!-*-*-*-*-*- S I F D E C O D E   G E T F I E    S U B R O U T I N E -*-*-*-*-*-
+
+      SUBROUTINE GETFIE( niival, IIVAL, IARRAY, array, field, status )
+      INTEGER :: niival, status
+      INTEGER :: IIVAL( niival )
+      INTEGER :: IARRAY( 5 )
+      CHARACTER ( LEN = 10 ) :: array, field
+
+!  -----------------------------------------------------------
+!  construct an expanded array name from its constituent parts
+!  -----------------------------------------------------------
+
+!  local variables
+
+      INTEGER ::I, indces, ivalue, j, ndigit
+      CHARACTER ( LEN = 9 ) :: field9
+
+      j = IARRAY( 1 )
+      field = ARRAY( 1 : j )
+      j = j + 1
+      indces = IARRAY( 2 )
+      DO i = 1, indces
+        ivalue = IIVAL( IARRAY( 2 + i ) )
+        IF ( ivalue == 0 ) THEN
+          ndigit = 1
+        ELSE
+          ndigit = INT( LOG10( ABS( FLOAT( ivalue ) ) ) ) + 1
+          IF ( ivalue < 0 ) ndigit = ndigit + 1
+        END IF
+        IF ( ( i < indces .AND. j + ndigit > 10 ) .OR.                         &
+             ( i == indces .AND. j + ndigit > 11 ) ) THEN
+          status = 35
+          RETURN
+        END IF
+        WRITE( UNIT = field9, FMT = 2000 ) ivalue
+        FIELD( J: j + ndigit - 1 ) = FIELD9( 10 - NDIGIT: 9 )
+        j = j + ndigit
+        IF ( i < indces ) THEN
+          FIELD( J: j ) = ','
+          j = j + 1
+        END IF
+      END DO
+      status = 0
+      RETURN
+
+!  non-executable statements
+
+ 2000 FORMAT( I9 )
+
+!  end of subroutine GETFIE
+
+      END SUBROUTINE GETFIE
 
 !-*-*-*-*-*- S I F D E C O D E   G E T V A L    S U B R O U T I N E -*-*-*-*-*-
 
@@ -7387,61 +8241,62 @@
 !-*-*- S I F D E C O D E   M A K E _ o u t s d i f    S U B R O U T I N E -*-*-
 
       SUBROUTINE MAKE_outsdif( n, nlvars, ng, nelnum, neling, nobj, length,    &
-                         nelvar, licna, la, nmax,                          &
-                         nbmax,                               &
-                         nobmax, nlisgp, nlisep,                      &
+                         nelvar, nlisgp, nlisep,                      &
                          nbnd, nnza, nconst, nstart, nrange, nobjgr, nobbnd,   &
                          neltype, ngtype, pname, nameob, namerh, namera,       &
                          namebn, namest, nameof, ELING_ptr, ELVAR, EV_ptr,     &
-                         ICNA, A_ptr, ICOORD, INLIST, ITABLE,          &
+                         ABYROW_col, ABYROW_ptr, A_row, A_col, INLIST, ITABLE, &
                          GSTATE, IDROWS, ELV, INV, GTYPESP_ptr, ELING_el,    &
-                         EP_ptr, GP_ptr, TYPEE, GTYPE, ITYPEV, IWK,            &
-                         A, BND, len1_vstart, VSTART, len1_cstart, CSTART,     &
+                         EP_ptr, GP_ptr, TYPEE, GTYPE, TYPEV, IWK, A_val,     &
+                         len1_blu, B_l, B_u, len1_vstart, VSTART,   &
+                         len1_cstart, CSTART, &
                          RSCALE, CSCALE,  &
-                         RDROWS, DFAULT, WEIGHT, BNDFLT,                   &
-                         GP_val, EP_val, FBOUND, ABYROW, B, BL, BU, X,         &
+                         RDROWS, DEFAULT, WEIGHT, B_l_default, B_u_default,    &
+                         GP_val, EP_val, FBOUND_l, FBOUND_u, &
+                         ABYROW_val, B, BL, BU, X,     &
                          ESCALE, GSCALE, VSCALE,                       &
                          KEY, GNAMES, VNAMES, BNAMES, SNAMES, ONAMES,          &
-                         ETYPES, GTYPES, OBNAME, ialgor, iauto,                &
+                         ETYPES, GTYPES, OBBNAME, ialgor, iauto,               &
                          out, outda, single, status, debug  )
 
-      INTEGER :: n, ng, length, nelvar, neling, la
-      INTEGER :: nmax, nbmax, nlvars
+      INTEGER :: n, ng, length, nelvar, neling
+      INTEGER :: nlvars
       INTEGER :: nlisgp, nlisep
       INTEGER :: nbnd, nnza, nconst, nstart, nrange, nobjgr
       INTEGER :: ialgor, out, outda, status, nobbnd
-      INTEGER :: neltype, ngtype, licna, nobmax, nobj, nelnum
-      INTEGER :: len1_vstart, len1_cstart
+      INTEGER :: neltype, ngtype, nobj, nelnum
+      INTEGER :: len1_blu, len1_vstart, len1_cstart
       INTEGER :: iauto
       LOGICAL :: single, debug
       CHARACTER ( LEN = 8 ) :: pname
       CHARACTER ( LEN = 10 ) :: nameob, namerh, namera, namebn, namest, nameof
-      INTEGER, ALLOCATABLE, DIMENSION( : ) :: A_ptr
-      INTEGER :: ELING_ptr( ng + 1 ), ELVAR( nelvar ), ICNA( licna )
+      INTEGER :: ELING_ptr( ng + 1 ), ELVAR( nelvar )
       INTEGER :: EV_ptr( nelnum + 1 )
-      INTEGER :: ITABLE( length )
-      INTEGER :: ICOORD( la, 2  ), INLIST( length )
       INTEGER :: GSTATE( ng  ), IDROWS( 2, ng )
+      INTEGER :: ITABLE( length ), INLIST( length )
+      INTEGER :: A_row( nnza ), A_col( nnza )
       INTEGER :: ELV( neltype + 1 ), INV( neltype + 1 )
       INTEGER :: EP_ptr ( nelnum + 1 ), GP_ptr( ng + 1 )
       INTEGER :: ELING_el( neling ), GTYPESP_ptr( ngtype + 1 ) 
-      INTEGER :: TYPEE( nelnum ), GTYPE( ng ), IWK( ng )
-      INTEGER :: ITYPEV( nmax )
-      REAL ( KIND = wp ) :: A( la ),  RDROWS( 2, ng ), WEIGHT( neling )
-      REAL ( KIND = wp ) :: BND( 2, nmax, nbmax ), VSTART( len1_vstart, nstart )
-      REAL ( KIND = wp ) :: BNDFLT( 2, nbmax ), CSTART( len1_cstart, nstart )
-      REAL ( KIND = wp ) :: RSCALE( ng ), CSCALE( nmax )
+      INTEGER :: TYPEV( n ), TYPEE( nelnum ), GTYPE( ng ), IWK( ng )
+      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ABYROW_ptr, ABYROW_col
+      REAL ( KIND = wp ) :: A_val( nnza )
+      REAL ( KIND = wp ) :: RDROWS( 2, ng ), WEIGHT( neling )
+      REAL ( KIND = wp ) :: B_l( len1_blu, nbnd ), B_u( len1_blu, nbnd )
+      REAL ( KIND = wp ) :: B_l_default( nbnd ), B_u_default( nbnd )
+      REAL ( KIND = wp ) :: VSTART( len1_vstart, nstart )
+      REAL ( KIND = wp ) :: CSTART( len1_cstart, nstart )
+      REAL ( KIND = wp ) :: RSCALE( ng ), CSCALE( n )
       REAL ( KIND = wp ) :: GP_val( nlisgp ), EP_val( nlisep )
-      REAL ( KIND = wp ) :: DFAULT( nmax ), FBOUND( 2, nobmax )
-      REAL ( KIND = wp ) :: ABYROW( la )
-      REAL ( KIND = wp ) :: X( nmax )
-      REAL ( KIND = wp ) :: VSCALE( nmax )
-      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: ESCALE, GSCALE
-      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B, BL, BU
+      REAL ( KIND = wp ) :: DEFAULT( nlvars + nconst + 1 )
+      REAL ( KIND = wp ) :: FBOUND_l( nobbnd ), FBOUND_u( nobbnd )
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: X
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: ESCALE, GSCALE, VSCALE
+      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B, BL, BU, ABYROW_val
       CHARACTER ( LEN = 12 ) :: KEY( length  )
-      CHARACTER ( LEN = 10 ) :: GNAMES( ng ), BNAMES( nbmax )
-      CHARACTER ( LEN = 10 ) :: ONAMES( nobj ), OBNAME( nobmax )
-      CHARACTER ( LEN = 10 ) :: VNAMES( nmax  ), SNAMES( nstart )
+      CHARACTER ( LEN = 10 ) :: GNAMES( ng ), BNAMES( nbnd )
+      CHARACTER ( LEN = 10 ) :: ONAMES( nobj ), OBBNAME( nobbnd )
+      CHARACTER ( LEN = 10 ) :: VNAMES( n ), SNAMES( nstart )
       CHARACTER ( LEN = 10 ) :: ETYPES( neltype ), GTYPES( ngtype )
 
 !  ---------------------------------------------------------------------
@@ -7455,7 +8310,7 @@
 !  local variables
 
       INTEGER :: nnz, nslack, jobbnd, jstart, nel1, jcol, jconst, jrange
-      INTEGER :: i, ic, ifield, ig, irow, is, itype, j, jbnd, k
+      INTEGER :: i, ic, ifield, ig, irow, is, itype, j, jbnd, k, len_abyrow
       INTEGER :: k1, k2, nelv, ninv, ng1, nel, ngpv, ngr, alloc_status
       REAL ( KIND = wp ) :: avalue, rrow
       REAL ( KIND = wp ) :: OBFBND( 2 )
@@ -7499,6 +8354,15 @@
   120   CONTINUE
       END IF
 
+      nnz = n
+      CALL ALLOCATE_array( X, nnz, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'X' ; GO TO 980 ; END IF
+
+      CALL ALLOCATE_array( VSCALE, nnz, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'VSCALE' ; GO TO 980 ; END IF
+
       nnz = n + ng
       CALL ALLOCATE_array( BL, nnz, alloc_status )
       IF ( alloc_status /= 0 ) THEN
@@ -7509,25 +8373,25 @@
         bad_alloc = 'BU' ; GO TO 980 ; END IF
 
 !  the required vector of bounds is column jbnd of bnd. copy this
-!  vector into bl( ) and bu( ). record the scale factors
+!  vector into bl( ) and bu( ). Record the scale factors
 
       DO j = 1, nlvars
-        BL( j ) = BND( 1, j, jbnd )
-        BU( j ) = BND( 2, j, jbnd )
+        BL( j ) = B_l( j, jbnd )
+        BU( j ) = B_u( j, jbnd )
         VSCALE( j ) = CSCALE( j )
       END DO
 
 !  the bounds on the nonlinear variables are set to default values
 
       DO j = nlvars + 1, n
-        BL( j ) = BNDFLT( 1, jbnd )
-        BU( j ) = BNDFLT( 2, jbnd )
+        BL( j ) = B_l_default( jbnd )
+        BU( j ) = B_u_default( jbnd )
       END DO
 
 !  select the constant/rhs and ranges
 !  -----------------------------------
 
-!  find the named constant (r.h.s.) vector in the list
+!  find the named constant (R.H.S.) vector in the list
 
       IF ( nconst == 1 ) THEN
         jconst = nlvars + 1
@@ -7584,16 +8448,16 @@
           BU( n + i ) = biginf
           GSCALE( i ) = one
         ELSE
-          B( i ) = DFAULT( jconst )
+          B( i ) = DEFAULT( jconst )
 
-!  initialize lower and upper bounds on slack variables as zero
-!  and the default respectively
+!  initialize lower and upper bounds on slack variables as zero and the 
+!  default respectively
 
           BL( n + i ) = zero
           IF ( nrange == 0 ) THEN
             BU( n + i ) = biginf
           ELSE
-            BU( n + i ) = DFAULT( jrange )
+            BU( n + i ) = DEFAULT( jrange )
           END IF
 
 !  record the group scale factors
@@ -7602,16 +8466,15 @@
         END IF
       END DO
 
-!  sweep through the entries of a. look for entries in columns
-!  jconst and jrange. subsequently remove all constant/rhs and
-!  range columns to leave only entries corresponding to linear
-!  elements
+!  sweep through the entries of A. Look for entries in columns jconst and 
+!  jrange. Subsequently remove all constant/rhs and range columns to leave 
+!  only entries corresponding to linear elements
 
       nnz = 0
       DO k = 1, nnza
-        i = ICOORD( k, 1 )
-        j = ICOORD( k, 2 )
-        avalue = A( k )
+        i = A_row( k )
+        j = A_col( k )
+        avalue = A_val( k )
 
 !  see if the entry belongs to the selected constant/rhs vector
 
@@ -7626,28 +8489,39 @@
         IF ( j <= nlvars ) THEN
           nnz = nnz + 1
 
-!  record the coordinates and value of the entry from the linear
-!  element
+!  record the coordinates and value of the entry from the linear element
 
-          ICOORD( nnz, 1 ) = i
-          ICOORD( nnz, 2 ) = j
-          A( nnz ) = avalue
+          A_row( nnz ) = i
+          A_col( nnz ) = j
+          A_val( nnz ) = avalue
         END IF
       END DO
       nnza = nnz
 
-!  the matrix is stored in coordinate form. resort it so that
-!  it is stored by rows
+!  the matrix is stored in coordinate form. Resort it so that it is stored 
+!  by rows
 
       ng1 = ng + 1
-      CALL ALLOCATE_array( A_ptr, ng1, alloc_status )
+
+!  allocate space for the row storage
+
+      CALL ALLOCATE_array( ABYROW_ptr, ng1, alloc_status )
       IF ( alloc_status /= 0 ) THEN
-        bad_alloc = 'A_ptr' ; GO TO 980 ; END IF
+        bad_alloc = 'ABYROW_ptr' ; GO TO 980 ; END IF
 
-      IF ( nnza > 0 ) CALL REORDER( ng, nnza, ICOORD( 1, 2 ),                  &
-                                    ICOORD( 1, 1 ), A, A_ptr, IWK )
+      len_abyrow = nnza
+      CALL ALLOCATE_array( ABYROW_val, len_abyrow, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ABYROW_val' ; GO TO 980 ; END IF
 
-!  decode the 'd'-groups/rows. set the workspace array wk to zero
+      CALL ALLOCATE_array( ABYROW_col, len_abyrow, alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ABYROW_col' ; GO TO 980 ; END IF
+
+      IF ( nnza > 0 ) CALL REORDER( ng, nnza, A_col, A_row, A_val, ABYROW_ptr, &
+                                    IWK )
+
+!  decode the 'd'-groups/rows. set the workspace array WK to zero
 
       nnz = 0
       nslack = 0
@@ -7665,57 +8539,57 @@
 !  consider the groups in order
 
       DO ig = 1, ng
-         k1 = A_ptr( ig )
-         A_ptr( ig ) = nnz + 1
-         IF ( GSTATE( ig ) <= 4 ) THEN
+         k1 = ABYROW_ptr( ig )
+         ABYROW_ptr( ig ) = nnz + 1
 
 !  first pass: determine the nonzeros in the row
 
-           DO k = k1, A_ptr( ig + 1 ) - 1
-             j = ICOORD( k, 2 )
+         IF ( GSTATE( ig ) <= 4 ) THEN
+           DO k = k1, ABYROW_ptr( ig + 1 ) - 1
+             j = A_col( k )
              IF ( WK( j ) /= zero ) THEN
-               WK( j ) = WK( j ) + A( k )
+               WK( j ) = WK( j ) + A_val( k )
              ELSE
-               WK( j ) = A( k )
+               WK( j ) = A_val( k )
              END IF
            END DO
 
 !  second pass: only record nonzeros
 
-           DO k = k1, A_ptr( ig + 1 ) - 1
-             j = ICOORD( k, 2 )
+           DO k = k1, ABYROW_ptr( ig + 1 ) - 1
+             j = A_col( k )
              IF ( WK( j ) /= zero ) THEN
                nnz = nnz + 1
-               ICNA( nnz ) = j
-               ABYROW( nnz ) = WK( j )
+               ABYROW_col( nnz ) = j
+               ABYROW_val( nnz ) = WK( j )
                WK( j ) = zero
              END IF
            END DO
-         ELSE
 
 !  the ig-th group is a 'd'-group. construct the new group from its
-!  two donors. consider each donor row in turn. form the new row in wk
+!  two donors. consider each donor row in turn. form the new row in WK
 
+         ELSE
            DO i = 1, 2
              irow = IDROWS( i, ig )
              rrow = RDROWS( i, ig )
-             DO k = A_ptr( irow ), A_ptr( irow + 1 ) - 1
-               ic = ICNA( k )
-               IF ( ic <= nlvars ) WK( ic ) = WK( ic ) + ABYROW( k ) * rrow
+             DO k = ABYROW_ptr( irow ), ABYROW_ptr( irow + 1 ) - 1
+               ic = ABYROW_col( k )
+               IF ( ic <= nlvars ) WK( ic ) = WK( ic ) + ABYROW_val( k ) * rrow
              END DO
            END DO
 
-!  move the new row into abyrow, resetting wk to zero as we proceed
+!  move the new row into ABYROW_val, resetting WK to zero as we proceed
 
            DO i = 1, 2
              irow = IDROWS( i, ig )
-             DO k = A_ptr( irow ), A_ptr( irow + 1 ) - 1
-               ic = ICNA( k )
+             DO k = ABYROW_ptr( irow ), ABYROW_ptr( irow + 1 ) - 1
+               ic = ABYROW_col( k )
                IF ( ic <= nlvars ) THEN
                  IF ( WK( ic ) /= zero ) THEN
                    nnz = nnz + 1
-                   ICNA( nnz ) = ic
-                   ABYROW( nnz ) = WK( ic )
+                   ABYROW_col( nnz ) = ic
+                   ABYROW_val( nnz ) = WK( ic )
                    WK( ic ) = zero
                  END IF
                END IF
@@ -7723,8 +8597,8 @@
            END DO
          END IF
 
-!  if the group is of type 'l' or 'g', insert a slack variable in
-!  the linear element
+!  if the group is of type 'l' or 'g', insert a slack variable in the 
+!  linear element
 
          is = GSTATE( ig )
          IF ( is > 4 ) is = is - 4
@@ -7738,11 +8612,11 @@
              nnz = nnz + 1
              nslack = nslack  + 1
              jcol = n + nslack
-             ICNA( nnz ) = jcol
+             ABYROW_col( nnz ) = jcol
              IF ( is == 3 ) THEN
-                ABYROW( nnz ) =   one
+                ABYROW_val( nnz ) =   one
              ELSE
-                ABYROW( nnz ) = - one
+                ABYROW_val( nnz ) = - one
              END IF
 
 !  give the slack variable the same name as its corresponding group
@@ -7766,19 +8640,20 @@
       n = n + nslack
       nnza = nnz + 1
       ng1 = ng + 1
-      A_ptr( ng1 ) = nnza
-      IF ( debug .AND. out > 0 ) WRITE( out, 3020 ) ( ( i, ICNA( k ),          &
-         ABYROW( k ), k = A_ptr( i ), A_ptr( i + 1 ) - 1 ), i = 1, ng )
+      ABYROW_ptr( ng1 ) = nnza
+      IF ( debug .AND. out > 0 ) WRITE( out, 3020 ) ( ( i, ABYROW_col( k ),    &
+            ABYROW_val( k ), k = ABYROW_ptr( i ), ABYROW_ptr( i + 1 ) - 1 ),   &
+              i = 1, ng )
 
 !  select the starting point for the minimization
 !  ----------------------------------------------
 
       IF ( nstart == 1 ) THEN
         jstart = 1
-      ELSE
 
 !  find the key word in the list of starting points
 
+      ELSE
         DO jstart = 1, nstart
           IF ( namest == SNAMES( jstart ) ) GO TO 420
         END DO
@@ -7851,8 +8726,8 @@
 !  select the objective function group
 !  ------------------------------------
 
-!  find the named objective function group in the list
-!  mark the remaining objective function groups for removal
+!  find the named objective function group in the list. Mark the remaining 
+!  objective function groups for removal
 
         IF ( oneobj ) THEN
           nobjgr = 0
@@ -7881,8 +8756,8 @@
                 ngr = ngr + 1
                 IF ( i == nobjgr ) nobjgr = ngr
 
-!  shift the group status, name, type, constant,
-!  triviality indicator, lagrange multiplier and weight
+!  shift the group status, name, type, constant, triviality indicator, 
+!  Lagrange multiplier and weight
 
                 IF ( ialgor >= 2 ) GSTATE( ngr ) = GSTATE( i )
                 GNAMES( ngr ) = GNAMES( i )
@@ -7911,14 +8786,14 @@
                   ngpv = ngpv + 1
                 END DO
 
-!  shift the list of coefficients and positions of the nonzeros
-!  for the linear element in the i-th group
+!  shift the list of coefficients and positions of the nonzeros for the 
+!  linear element in the i-th group
 
-                k1 = A_ptr( i )
-                A_ptr( ngr ) = nnz
-                DO k = k1, A_ptr( i + 1 ) - 1
-                   A( nnz ) = A( k )
-                   ICNA( nnz ) = ICNA( k )
+                k1 = ABYROW_ptr( i )
+                ABYROW_ptr( ngr ) = nnz
+                DO k = k1, ABYROW_ptr( i + 1 ) - 1
+                   ABYROW_val( nnz ) = ABYROW_val( k )
+                   ABYROW_col( nnz ) = ABYROW_col( k )
                    nnz = nnz + 1
                 END DO
               END IF
@@ -7926,7 +8801,7 @@
             ng = ngr
             ELING_ptr( ng + 1 ) = nel
             GP_ptr ( ng + 1 ) = ngpv
-            A_ptr( ng + 1 ) = nnz
+            ABYROW_ptr( ng + 1 ) = nnz
           END IF
         END IF
       END IF
@@ -7941,14 +8816,14 @@
 
       ELSE
         DO jobbnd = 1, nobbnd
-          IF ( nameob == OBNAME( jobbnd ) ) GO TO 670
+          IF ( nameob == OBBNAME( jobbnd ) ) GO TO 670
         END DO
         status = 50
         IF ( out > 0 ) WRITE( out, 2500 ) nameob
         GO TO 800
   670   CONTINUE
-        OBFBND( 1 ) = FBOUND( 1, jobbnd )
-        OBFBND( 2 ) = FBOUND( 2, jobbnd )
+        OBFBND( 1 ) = FBOUND_l( jobbnd )
+        OBFBND( 2 ) = FBOUND_u( jobbnd )
       END IF
 
 !  if no output is required, exit
@@ -7956,8 +8831,8 @@
       IF ( outda <= 0 ) GO TO 900
       nel1 = nelnum + 1
       WRITE( outda, 3180 ) n, ng, nelnum, ELING_ptr( ng1  ) - 1,               &
-                           EV_ptr( nel1 ) - 1, A_ptr( ng1  ) - 1,             &
-                           GP_ptr( ng1  ) - 1, EP_ptr( nel1 ) - 1,            &
+                           EV_ptr( nel1 ) - 1, ABYROW_ptr( ng1  ) - 1,         &
+                           GP_ptr( ng1  ) - 1, EP_ptr( nel1 ) - 1,             &
                            neltype, ngtype 
 
 !  print out problem data. output the number of variables, groups and
@@ -7972,7 +8847,7 @@
 
       WRITE( outda, 3110 ) ( ELING_ptr( i ), i = 1, ng1 )
       WRITE( outda, 3110 ) ( GP_ptr ( i ), i = 1, ng1 )
-      WRITE( outda, 3110 ) ( A_ptr( i ), i = 1, ng1 )
+      WRITE( outda, 3110 ) ( ABYROW_ptr( i ), i = 1, ng1 )
 
 !  output the starting addresses of the variables and parameters
 !  in each element
@@ -8004,8 +8879,8 @@
 
 !  output the column addresses of the nonzeros in each linear element
 
-      nnza = A_ptr( ng1 ) - 1
-      WRITE( outda, 3110 ) ( ICNA( i ), i = 1, nnza )
+      nnza = ABYROW_ptr( ng1 ) - 1
+      WRITE( outda, 3110 ) ( ABYROW_col( i ), i = 1, nnza )
 
 !  write single precision format
 
@@ -8015,7 +8890,7 @@
 !  constant term in each group, the lower and upper bounds on
 !  the variables and the starting point for the minimization
 
-        WRITE( outda, 3121 ) ( ABYROW( i ), i = 1, nnza )
+        WRITE( outda, 3121 ) ( ABYROW_val( i ), i = 1, nnza )
         WRITE( outda, 3121 ) ( B( i ), i = 1, ng )
         IF ( ialgor <= 2 ) THEN
            WRITE( outda, 3121 ) ( BL( i ), i = 1, n )
@@ -8059,7 +8934,7 @@
 !  constant term in each group, the lower and upper bounds on
 !  the variables and the starting point for the minimization
 
-        WRITE( outda, 3120 ) ( ABYROW( i ), i = 1, nnza )
+        WRITE( outda, 3120 ) ( ABYROW_val( i ), i = 1, nnza )
         WRITE( outda, 3120 ) ( B( i ), i = 1, ng )
         IF ( ialgor <= 2 ) THEN
            WRITE( outda, 3120 ) ( BL( i ), i = 1, n )
@@ -8117,7 +8992,7 @@
 
 !  output the type of each variable
 
-      WRITE( outda, 3110 ) ( ITYPEV( i ), i = 1, n )
+      WRITE( outda, 3110 ) ( TYPEV( i ), i = 1, n )
       GO TO 900
 
 !  incorrect data specified
@@ -8177,39 +9052,38 @@
 
 !-*-*-*-*-*- S I F D E C O D E   P R I N T P    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE PRINT_details( nmax, nelvar, &
-                                neltype, nevnames, nepnames, ngtype, &
-                                ngpmax, licna, &
-                                n, ng, nlvars, nelnum, neling, nlisgp, nlisep, &
+      SUBROUTINE PRINT_details( nelvar, &
+                                neltype, nevnames, nepnames, ngpnames, ngtype, &
+                                n, ng, nlvars, nelnum, neling, &
+                                nlisgp, nlisep, nnza, &
                                 GSTATE, ELING_ptr, ELVAR, GTYPE, TYPEE,       &
-                                ELV, INV, ELP, GTYPESP_ptr, A_ptr, ICNA,    &
-                                GP_ptr, EP_ptr, EV_ptr, ELING_el, ITYPEV, IWK, &
-                                ABYROW, B, BL, BU, X, EP_val, GP_val,          &
+                                ELV, INV, ELP, GTYPESP_ptr,       &
+                                GP_ptr, EP_ptr, EV_ptr, ELING_el, TYPEV, IWK, &
+                                ABYROW_ptr, ABYROW_col, ABYROW_val,      &
+                                B, BL, BU, X, EP_val, GP_val,      &
                                 GSCALE, ESCALE, VSCALE, pname, VNAMES, GNAMES, &
                                 LNAMES, ETYPES, EVNAMES, GANAMES, EPNAMES,     &
-                                GPNAME, GTYPES, out, print_level )
+                                GPNAMES, GTYPES, out, print_level )
       INTEGER :: out, print_level, nlisgp, nlisep
-      INTEGER :: nmax
-      INTEGER :: nelvar, neltype, ngtype, nevnames, nepnames
-      INTEGER :: n, ng, nlvars, nelnum, neling, licna
-      INTEGER :: ngpmax
+      INTEGER :: nelvar, neltype, ngtype, nevnames, nepnames, ngpnames
+      INTEGER :: n, ng, nlvars, nelnum, neling, nnza
       REAL ( KIND = wp ) :: EP_val( nlisep ), GP_val( nlisgp )
       INTEGER :: ELING_el( neling )
-      INTEGER :: GSTATE( ng ), A_ptr( ng + 1 ), ICNA( licna )
+      INTEGER :: GSTATE( ng ), ABYROW_ptr( ng + 1 ), ABYROW_col( nnza )
       INTEGER :: ELV( neltype + 1 ), INV( neltype + 1 )
-      INTEGER :: ELVAR( nelvar ), ITYPEV( nmax )
+      INTEGER :: ELVAR( nelvar ), TYPEV( n )
       INTEGER :: ELING_ptr( ng + 1 ), GTYPE( ng ), TYPEE( nelnum )
-      INTEGER :: ELP( neltype ), GTYPESP_ptr( ngtype + 1 ), IWK( nelnum )
+      INTEGER :: ELP( neltype + 1 ), GTYPESP_ptr( ngtype + 1 ), IWK( nelnum )
       INTEGER :: EP_ptr( nelnum + 1 ), EV_ptr( nelnum + 1 ), GP_ptr( ng + 1 )
       CHARACTER ( LEN = 8 ) :: pname
-      CHARACTER ( LEN = 10 ) :: GNAMES( ng ), VNAMES( nmax )
+      CHARACTER ( LEN = 10 ) :: GNAMES( ng ), VNAMES( n )
       CHARACTER ( LEN = 10 ) :: ETYPES( neltype ), LNAMES( neling )
       CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames )
-      CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), GPNAME( ngpmax )
+      CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), GPNAMES( ngpnames )
       CHARACTER ( LEN = 10 ) :: GANAMES( ngtype ), GTYPES( ngtype )
-      REAL ( KIND = wp ) :: B( ng ), BL( n + ng ), BU( n + ng ), X( nmax )
-      REAL ( KIND = wp ) :: GSCALE( ng ), ESCALE( neling ), VSCALE( nmax )
-      REAL ( KIND = wp ) :: ABYROW( licna )
+      REAL ( KIND = wp ) :: B( ng ), BL( n + ng ), BU( n + ng ), X( n )
+      REAL ( KIND = wp ) :: GSCALE( ng ), ESCALE( neling ), VSCALE( n )
+      REAL ( KIND = wp ) :: ABYROW_val( nnza )
 
 !  --------------------------------------------------------------------
 !  print details of the problem previously specified in an SIF file
@@ -8315,7 +9189,7 @@
                       WRITE( out, 2090 ) GANAMES( is ), 'are', l, 's.'
                     END IF
                   END IF
-                  IF ( l > 0 ) WRITE( out, 2100 ) ( GPNAME( k3 + i ),          &
+                  IF ( l > 0 ) WRITE( out, 2100 ) ( GPNAMES( k3 + i ),         &
                                                     GP_val( k4 + i ), i = 1, l )
                 END IF
               END IF
@@ -8345,7 +9219,7 @@
                       k4 = EV_ptr( iel ) - 1
                       l = EV_ptr( iel + 1 ) - k4 - 1
                       WRITE( out, 2130 )                                       &
-                       ( EVNAMES( k3 + i ), VNAMES( ELVAR( k4 + i ) ), i = 1, l )
+                      ( EVNAMES( k3 + i ), VNAMES( ELVAR( k4 + i ) ), i = 1, l )
                       k3 = ELP( ieltyp )  - 1
                       k4 = EP_ptr( iel ) - 1
                       l = EP_ptr( iel + 1 ) - k4 - 1
@@ -8358,18 +9232,18 @@
 
 !  linear element details
 
-              k5 = A_ptr( ig )
-              k6 = A_ptr( ig + 1 ) - 1
+              k5 = ABYROW_ptr( ig )
+              k6 = ABYROW_ptr( ig + 1 ) - 1
               IF ( print_level == 6 ) THEN
                 IF ( k5 <= k6 ) THEN
                   IF ( k5 == k6 ) THEN
                     WRITE( out, 2040 ) k6 - k5 + 1, '. '
                     IF ( print_level >= 6 ) WRITE( out, 2140 ) ' ',            &
-                      ( VNAMES( ICNA( k ) ), k = k5, k6 )
+                      ( VNAMES( ABYROW_col( k ) ), k = k5, k6 )
                   ELSE
                     WRITE( out, 2040 ) k6 - k5 + 1, 's.'
                     IF ( print_level >= 6 ) WRITE( out, 2140 ) 's',            &
-                      ( VNAMES( ICNA( k ) ), k = k5, k6 )
+                      ( VNAMES( ABYROW_col( k ) ), k = k5, k6 )
                   END IF
                 ELSE
                   IF ( ABS( B( ig ) ) < 1.0D-12 ) THEN
@@ -8386,11 +9260,11 @@
                   IF ( k5 == k6 ) THEN
                     WRITE( out, 2040 ) k6 - k5 + 1, '. '
                     IF ( print_level >= 6 ) WRITE( out, 2200 ) ' ', ') ',      &
-                          ( VNAMES( ICNA( k ) ), ABYROW( k ), k = k5, k6 )
+                      ( VNAMES( ABYROW_col( k ) ), ABYROW_val( k ), k = k5, k6 )
                   ELSE
                     WRITE( out, 2040 ) k6 - k5 + 1, 's.'
                     IF ( print_level >= 6 ) WRITE( out, 2200 ) 's', 's)',      &
-                          ( VNAMES( ICNA( k ) ), ABYROW( k ), k = k5, k6 )
+                      ( VNAMES( ABYROW_col( k ) ), ABYROW_val( k ), k = k5, k6 )
                   END IF
                   IF ( ABS( B( ig ) ) < 1.0D-12 ) THEN
                     WRITE( out, 2230 )
@@ -8413,7 +9287,7 @@
         WRITE( out, 2170 )
         DO i = 1, n
           WRITE( out, 2180 ) i, VNAMES( i ), BL( i ), X( i ), BU( i ),         &
-                               VSCALE( i ), VARTYP( ITYPEV( i ) + 1 )
+                                VSCALE( i ), VARTYP( TYPEV( i ) + 1 )
         END DO
       END IF
       RETURN
@@ -8649,7 +9523,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
               END IF
               len_renames = new_length
             END IF
@@ -8677,7 +9551,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
               END IF
               len_renames = new_length
             END IF
@@ -8706,7 +9580,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
               END IF
               len_renames = new_length
             END IF
@@ -9138,7 +10012,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
+                bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_exnames = new_length
             END IF
             EXNAMES( nexnames ) = field2
@@ -9164,7 +10038,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_renames = new_length
                END IF
                RENAMES( nrenames ) = field2
@@ -9177,7 +10051,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_minames = new_length
                END IF
                MINAMES( nminames ) = field2
@@ -9190,7 +10064,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_lonames = new_length
                END IF
                LONAMES( nlonames ) = field2
@@ -9203,7 +10077,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_innames = new_length
                END IF
                INNAMES( ninnames ) = field2
@@ -10584,7 +11458,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
               END IF
               len_renames = new_length
             END IF
@@ -10612,7 +11486,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
               END IF
               len_renames = new_length
             END IF
@@ -10642,7 +11516,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
               END IF
               len_renames = new_length
             END IF
@@ -11248,7 +12122,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
+                bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_exnames = new_length
             END IF
             EXNAMES( nexnames ) = field2
@@ -11274,7 +12148,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_renames = new_length
                END IF
                RENAMES( nrenames ) = field2
@@ -11287,7 +12161,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_minames = new_length
                END IF
                MINAMES( nminames ) = field2
@@ -11300,7 +12174,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_lonames = new_length
                END IF
                LONAMES( nlonames ) = field2
@@ -11313,7 +12187,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_innames = new_length
                END IF
                INNAMES( ninnames ) = field2
@@ -12761,17 +13635,17 @@
 
 !-*-*-*-  S I F D E C O D E   M A K E _ g r o u p   S U B R O U T I N E  -*-*-*-
 
-      SUBROUTINE MAKE_group( input, out, outgr, status, ngtype,                &
+      SUBROUTINE MAKE_group( input, out, outgr, status, ngtype, ngpnames,      &
                              pname, GANAMES,                     &
                              len_renames, RENAMES, len_innames, INNAMES,       &
                              len_lonames, LONAMES, len_minames, MINAMES,       &
                              len_exnames, EXNAMES,       &
-                             GPNAME, DEFINED, &
-                             GTYPES, GTYPESP_ptr, ngpmax, debug, length,    &
+                             GPNAMES, DEFINED, &
+                             GTYPES, GTYPESP_ptr, debug, length,    &
                              ITABLE, KEY, INLIST, single, nuline, gotlin,      &
                              print_level )
       INTEGER :: input, out, outgr, status, length, print_level
-      INTEGER :: ngpmax, ngtype
+      INTEGER :: ngtype, ngpnames
       INTEGER :: len_renames, len_innames, len_lonames, len_minames, len_exnames
       LOGICAL :: gotlin, debug, single
       CHARACTER ( LEN = 8 ) :: pname
@@ -12781,7 +13655,7 @@
       LOGICAL, DIMENSION( ngtype ) :: DEFINED
       CHARACTER ( LEN = 12 ) :: KEY   ( length )
       CHARACTER ( LEN = 10 ) :: GTYPES( ngtype )
-      CHARACTER ( LEN = 10 ) :: GANAMES( ngtype ), GPNAME( ngpmax )
+      CHARACTER ( LEN = 10 ) :: GANAMES( ngtype ), GPNAMES( ngpnames )
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LONAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: MINAMES, EXNAMES
@@ -12893,7 +13767,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
               END IF
               len_renames = new_length
             END IF
@@ -12907,7 +13781,7 @@
       IF ( ngtype > 0 ) THEN
          npname = GTYPESP_ptr( ngtype + 1 ) - 1
          DO 40 i = 1, npname
-            field = GPNAME( i ) // 'PG'
+            field = GPNAMES( i ) // 'PG'
             CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
             IF ( ifree <= 0 ) THEN
                IF ( ifree == 0 ) THEN
@@ -12922,12 +13796,12 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                   bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
                  END IF
                  len_renames = new_length
                END IF
                nrenames = nrenames + 1
-               RENAMES( nrenames ) = GPNAME( i )
+               RENAMES( nrenames ) = GPNAMES( i )
             END IF
    40    CONTINUE
       END IF
@@ -13262,7 +14136,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
+                bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_exnames = new_length
             END IF
             EXNAMES( nexnames ) = field2
@@ -13301,7 +14175,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_minames = new_length
                END IF
                MINAMES( nminames ) = field2
@@ -13314,7 +14188,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_lonames = new_length
                END IF
                LONAMES( nlonames ) = field2
@@ -13469,7 +14343,7 @@
          k2 = GTYPESP_ptr( itype + 1 ) - 1
          DO 435 k = k1, k2
             ivar = k - k1 + 1
-            WRITE( outgr, 3063 ) GPNAME( k ), FIELDI( 11 )( 1 : 6 ),           &
+            WRITE( outgr, 3063 ) GPNAMES( k ), FIELDI( 11 )( 1 : 6 ),          &
                 FIELDI( 13 )( 1 : 6 ), ivar
   435    CONTINUE
          IF ( DEFINED( itype ) ) THEN
@@ -13936,15 +14810,15 @@
 !-*-  S I F D E C O D E   M A K E _ g r o u p _ a d    S U B R O U T I N E  -*-
 
       SUBROUTINE MAKE_group_ad( input, out, outgf, outgd, outem, status,       &
-                                 ngtype, pname, GANAMES, &
+                                 ngtype, ngpnames, pname, GANAMES, &
                                  len_renames, RENAMES, len_innames, INNAMES,   &
                                  len_lonames, LONAMES, len_minames, MINAMES,   &
-                                 len_exnames, EXNAMES,       &
-                                 GPNAME, DEFINED, GTYPES, GTYPESP_ptr, ngpmax, &
+                                 len_exnames, EXNAMES, GPNAMES,                &
+                                 DEFINED, GTYPES, GTYPESP_ptr,                 &
                                  debug, length, ITABLE, KEY, INLIST, single,   &
                                  nuline, gotlin, iauto, iad0, print_level )
       INTEGER :: input, out, outgf, status, length
-      INTEGER :: ngpmax, ngtype
+      INTEGER :: ngtype, ngpnames
       INTEGER :: print_level, outgd, outem, iauto, iad0
       INTEGER :: len_renames, len_innames, len_lonames, len_minames, len_exnames
       LOGICAL :: gotlin, debug, single
@@ -13954,7 +14828,7 @@
       INTEGER :: INLIST( length )
       LOGICAL, DIMENSION( ngtype ) :: DEFINED
       CHARACTER ( LEN = 12 ) :: KEY( length )
-      CHARACTER ( LEN = 10 ) :: GPNAME( ngpmax ), GTYPES( ngtype )
+      CHARACTER ( LEN = 10 ) :: GPNAMES( ngpnames ), GTYPES( ngtype )
       CHARACTER ( LEN = 10 ) :: GANAMES( ngtype )
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: LONAMES
@@ -14072,7 +14946,7 @@
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
             END IF
             len_renames = new_length
           END IF
@@ -14087,7 +14961,7 @@
       IF ( ngtype > 0 ) THEN
          npname = GTYPESP_ptr( ngtype + 1 ) - 1
          DO 40 i = 1, npname
-            field = GPNAME( i ) // 'PG'
+            field = GPNAMES( i ) // 'PG'
             CALL HASH_insert( length, 12, field, KEY, ITABLE, ifree )
             IF ( ifree <= 0 ) THEN
                IF ( ifree == 0 ) THEN
@@ -14103,11 +14977,11 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                   bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
                  END IF
                  len_renames = new_length
                END IF
-               RENAMES( nrenames ) = GPNAME( i )
+               RENAMES( nrenames ) = GPNAMES( i )
             END IF
    40    CONTINUE
       END IF
@@ -14564,7 +15438,7 @@
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                 bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
+                bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_exnames = new_length
             END IF
             EXNAMES( nexnames ) = field2
@@ -14590,7 +15464,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_renames = new_length
                END IF
                RENAMES( nrenames ) = field2
@@ -14603,7 +15477,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_minames = new_length
                END IF
                MINAMES( nminames ) = field2
@@ -14616,7 +15490,7 @@
                                     new_length, min_length, buffer,            &
                                     status, alloc_status )
                  IF ( status /= 0 ) THEN
-                    bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
+                   bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
                  len_lonames = new_length
                END IF
                LONAMES( nlonames ) = field2
@@ -14796,10 +15670,10 @@
          DO 435 k = k1, k2
             ivar = k - k1 + 1
             IF ( loutgf )                                                      &
-            WRITE( outgf, 3063 ) GPNAME( k ), FIELDI( 11 )( 1 : 6 ),           &
+            WRITE( outgf, 3063 ) GPNAMES( k ), FIELDI( 11 )( 1 : 6 ),          &
                 FIELDI( 13 )( 1 : 6 ), ivar
-!           if ( iad0 == 2 ) write( ioutgd, 3015 ) ad0, gpname( k )
-            WRITE( outgd, 3063 ) GPNAME( k ), FIELDI( 11 )( 1 : 6 ),           &
+!           if ( iad0 == 2 ) write( ioutgd, 3015 ) ad0, GPNAMES( k )
+            WRITE( outgd, 3063 ) GPNAMES( k ), FIELDI( 11 )( 1 : 6 ),          &
                 FIELDI( 13 )( 1 : 6 ), ivar
   435    CONTINUE
          IF ( DEFINED( itype ) ) THEN
@@ -16244,10 +17118,12 @@
 
 !-*-*-*-*-*- S I F D E C O D E   T R A N S    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE TRANSLATE_for_ad( out, input, output, tempry, single, iauto,  &
-                                   iad0, RNAMES, lnames, ADUMMY, ldummy )
-      INTEGER :: out, input, output, tempry, iauto, iad0, lnames, ldummy
-      CHARACTER ( LEN = 10 ) :: RNAMES( lnames ), ADUMMY( ldummy )
+      SUBROUTINE TRANSLATE_for_ad( out, status, input, output, tempry, single, &
+                                   iauto, iad0, len_rinames, RINAMES, lnames,  &
+                                   len_dummy, DUMMY )
+      INTEGER :: out, status, input, output, tempry, iauto, iad0, lnames
+      INTEGER :: len_rinames, len_dummy
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RINAMES, DUMMY
       LOGICAL :: single
 
 !  -------------------------------------------------------
@@ -16262,6 +17138,8 @@
       INTEGER :: i, i1, i2, ii, j, jj, nreal, nre, lre, mre, ndummy
       LOGICAL :: intri, sub, fun, nofiel, ebrack
       LOGICAL :: freal, endlin, startr
+      INTEGER :: used_length, new_length, min_length, alloc_status
+      CHARACTER ( LEN = 24 ) :: bad_alloc
       CHARACTER ( LEN = 1 ) :: card
       CHARACTER ( LEN = 4 ) :: ad0
       CHARACTER ( LEN = 10 ) :: blank, field
@@ -16331,7 +17209,7 @@
 
 !  ignore comments
 
-        IF ( NULINE( 1 : 1 ) == 'C' .OR.                                        &
+        IF ( NULINE( 1 : 1 ) == 'C' .OR.                                       &
              NULINE( 1 : 1 ) == 'c' ) GO TO 400
 
 !  is the line a continuation?
@@ -16339,8 +17217,10 @@
         IF ( NULINE( 6: 6 ) /= ' ' ) THEN
           IF ( card == 'I' ) GO TO 10
           ii = 7
-          IF ( card == 'B' .OR. card == 'E' )                                 &
-            CALL GETDUM( nuline, ii, ADUMMY, ldummy, ndummy, blank )
+          IF ( card == 'B' .OR. card == 'E' )                                  &
+            CALL GETDUM( nuline, ii, ndummy, len_dummy, DUMMY, blank,          &
+                         out, status )
+            IF ( status /= 0 ) RETURN
 
 !  find what kind of line this is. find its first nonzero character
 !  find the start of the name
@@ -16361,7 +17241,9 @@
           IF ( NULINE( i : i + 10 ) == 'EQUIVALENCE' ) GO TO 400
           IF ( NULINE( i : i + 7 ) == 'EXTERNAL' ) THEN
             card = 'E'
-            CALL GETDUM( nuline, i + 8, ADUMMY, ldummy, ndummy, blank )
+            CALL GETDUM( nuline, i + 8, ndummy, len_dummy, DUMMY, blank,       &
+                         out, status )
+            IF ( status /= 0 ) RETURN
             GO TO 400
           END IF
           IF ( single ) THEN
@@ -16487,9 +17369,9 @@
 
           j = ii - i1
           DO i = 1, nreal
-            IF ( field == RNAMES( i ) ) THEN
+            IF ( field == RINAMES( i ) ) THEN
               DO j = 1, ndummy
-                IF ( field == ADUMMY( j ) ) THEN
+                IF ( field == DUMMY( j ) ) THEN
                   WRITE( output, 2060 ) ad0,                                   &
                     ( OLDLIN( jj : jj ), jj = i1, ii - 1 )
                   GO TO 130
@@ -16562,9 +17444,9 @@
           ELSE
             fun = .FALSE.
             IF ( freal .AND. iad0 == 1 )                                       &
-              WRITE( output, 2030 ) RNAMES( 1 )( 1 : 6 )
+              WRITE( output, 2030 ) RINAMES( 1 )( 1 : 6 )
             IF ( freal .AND. iad0 == 2 )                                       &
-              WRITE( output, 2040 ) ad0, RNAMES( 1 )( 1 : 6 )
+              WRITE( output, 2040 ) ad0, RINAMES( 1 )( 1 : 6 )
           END IF
           REWIND( tempry )
           GO TO 410
@@ -16582,10 +17464,20 @@
                          field, nofiel, ebrack, .FALSE. )
             IF ( nofiel ) GO TO 400
             DO i = 1, nreal
-              IF ( field == RNAMES( i ) ) GO TO 230
+              IF ( field == RINAMES( i ) ) GO TO 230
             END DO
             nreal = nreal + 1
-            RNAMES( nreal ) = field
+            IF ( nreal > len_rinames ) THEN
+              used_length = nreal - 1 ; min_length = nreal
+              new_length = 3 * min_length / 2 + 1
+              CALL EXTEND_array( RINAMES, len_rinames, used_length,            &
+                                 new_length, min_length, buffer,               &
+                                 status, alloc_status )
+              IF ( status /= 0 ) THEN
+                bad_alloc = 'RINAMES' ; status = - 22 ; GO TO 980 ; END IF
+              len_rinames = new_length
+            END IF
+            RINAMES( nreal ) = field
   230       CONTINUE   
             IF ( endlin ) GO TO 400
           GO TO 210
@@ -16600,8 +17492,8 @@
                        field, nofiel, ebrack, .FALSE. )
           IF ( nofiel ) GO TO 400
           DO i = 1, nreal
-            IF ( field == RNAMES( i ) ) THEN
-              RNAMES( i ) = RNAMES( nreal )
+            IF ( field == RINAMES( i ) ) THEN
+              RINAMES( i ) = RINAMES( nreal )
               nreal = nreal - 1
               EXIT
             END IF
@@ -16656,7 +17548,9 @@
             card = 'B'
             nreal = 0
             ndummy = 0
-            CALL GETDUM( nuline, ii, ADUMMY, ldummy, ndummy, blank )
+            CALL GETDUM( nuline, ii, ndummy, len_dummy, DUMMY, blank,          &
+                         out, status )
+            IF ( status /= 0 ) RETURN
             WRITE( tempry, 2000 ) nuline
             GO TO 10
           END IF         
@@ -16708,7 +17602,9 @@
             END IF
             WRITE( tempry, 2000 ) nuline
             ndummy = 0
-            CALL GETDUM( nuline, ii, ADUMMY, ldummy, ndummy, blank )
+            CALL GETDUM( nuline, ii, ndummy, len_dummy, DUMMY, blank,          &
+                         out, status )
+            IF ( status /= 0 ) RETURN
             GO TO 10
 
 !  the function will be of type ad01_real or ad02_real. find its name
@@ -16738,10 +17634,12 @@
             jj = MIN( 72, j + 6 )
   437       CONTINUE
             nreal = 1
-            RNAMES( nreal ) = blank
-            RNAMES( nreal )( 1 : jj - j ) = NULINE( j : jj - 1 )
+            RINAMES( nreal ) = blank
+            RINAMES( nreal )( 1 : jj - j ) = NULINE( j : jj - 1 )
             ndummy = 0
-            CALL GETDUM( nuline, jj, ADUMMY, ldummy, ndummy, blank )
+            CALL GETDUM( nuline, jj, ndummy, len_dummy, DUMMY, blank,          &
+                         out, status )
+            IF ( status /= 0 ) RETURN
             GO TO 10
           END IF         
         END DO
@@ -16753,6 +17651,14 @@
         GO TO 10
       END IF
   600 CONTINUE
+      RETURN
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from TRANSLATE_for_ad-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
       RETURN
 
 !  non-executable statements
@@ -16968,35 +17874,55 @@
 
 !-*-*-*-*-*- S I F D E C O D E   G E T D U M    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE GETDUM( nuline, ii, ADUMMY, ldummy, ndummy, blank )
-      INTEGER :: ii, ndummy, ldummy
+      SUBROUTINE GETDUM( nuline, i, ndummy, len_dummy, DUMMY, blank,           &
+                         out, status )
+      INTEGER :: i, ndummy, len_dummy, out, status
       CHARACTER ( LEN = 10 ) :: blank
       CHARACTER ( LEN = 72 ) :: nuline
-      CHARACTER ( LEN = 10 ) :: ADUMMY( ldummy )
+      CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: DUMMY
 
-!  -------------------------------------------------------------------
-!  determine the list of variables beyond column ii on the line nuline
-!  -------------------------------------------------------------------
+!  ------------------------------------------------------------------
+!  determine the list of variables beyond column i on the line nuline
+!  ------------------------------------------------------------------
 
 !  local variables
 
-      INTEGER :: i, jj, j1, j2
+      INTEGER :: idummy, j, j1, j2
+      INTEGER :: used_length, new_length, min_length, alloc_status
       CHARACTER ( LEN = 10 ) :: field
+      CHARACTER ( LEN = 24 ) :: bad_alloc
       LOGICAL nofiel, ebrack, endlin
 
-      jj = ii
+      j = i
    10 CONTINUE
-      CALL GETFLD( jj, j1, j2, endlin, nuline, blank,                          &
-                   field, nofiel, ebrack, .TRUE. )
-      IF ( nofiel ) RETURN
-      DO i = 1, ndummy
-        IF ( field == ADUMMY( i ) ) GO TO 30
-      END DO
-      ndummy = ndummy + 1
-      ADUMMY( ndummy ) = field
-   30 CONTINUE   
-      IF ( endlin ) RETURN
-      GO TO 10
+        CALL GETFLD( j, j1, j2, endlin, nuline, blank,                         &
+                     field, nofiel, ebrack, .TRUE. )
+        IF ( nofiel ) RETURN
+        DO idummy = 1, ndummy
+          IF ( field == DUMMY( idummy ) ) GO TO 30
+        END DO
+        ndummy = ndummy + 1
+        IF ( ndummy > len_dummy ) THEN
+          used_length = ndummy - 1 ; min_length = ndummy
+          new_length = 3 * min_length / 2 + 1
+          CALL EXTEND_array( DUMMY, len_dummy, used_length, new_length,        &
+                             min_length, buffer, status, alloc_status )
+          IF ( status /= 0 ) THEN
+            bad_alloc = 'DUMMY' ; status = - 22 ; GO TO 980 ; END IF
+          len_dummy = new_length
+        END IF
+        DUMMY( ndummy ) = field
+   30   CONTINUE   
+        IF ( endlin ) RETURN
+        GO TO 10
+
+!  allocation errors
+
+  980 CONTINUE
+      WRITE( out, "( ' ** Message from TRANSLATE_for_ad-',                     &
+     &    /, ' Allocation error (status = ', I0, ') for ', A )" )              &
+        alloc_status, bad_alloc
+      RETURN
 
 !  end of subroutine GETDUM
 
@@ -17029,11 +17955,11 @@
 
 !-*-*-*-*- S I F D E C O D E   R E O R D E R    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE REORDER( nc, nnz, IRN, JCN, A, ip, IW )
+      SUBROUTINE REORDER( nc, nnz, A_row, A_col, A_val, ip, IW )
       INTEGER :: nc, nnz
-      INTEGER :: IRN( nnz ), JCN( nnz )
+      INTEGER :: A_row( nnz ), A_col( nnz )
       INTEGER :: IW( * ), IP( * )
-      REAL ( KIND = wp ) ::   A( nnz  )
+      REAL ( KIND = wp ) ::   A_val( nnz  )
 
 !  ---------------------------------------------------------
 !  sort a sparse matrix from arbitrary order to column order
@@ -17053,7 +17979,7 @@
 !  pass 1. count the number of elements in each column
 
       DO k = 1, nnz
-        j = JCN( k )
+        j = A_col( k )
         IW( j ) = IW( j ) + 1
       END DO
 
@@ -17076,9 +18002,9 @@
 
 !  the entry should be placed in column j
 
-          i = IRN( k )
-          j = JCN( k )
-          anext = A( k )
+          i = A_row( k )
+          j = A_col( k )
+          anext = A_val( k )
           DO l = 1, nnz
 
 !  see if the entry is already in place
@@ -17092,11 +18018,12 @@
 
 !  record details of the entry which currently occupies location locat
 
-            itemp = IRN( locat ) ; jtemp = JCN( locat ) ; atemp = A( locat )
+            itemp = A_row( locat ) ; jtemp = A_col( locat )
+            atemp = A_val( locat )
 
 !  move the new entry to it correct place. 
 
-            IRN( locat ) = i ; JCN( locat ) = j ; A( locat ) = anext
+            A_row( locat ) = i ; A_col( locat ) = j ; A_val( locat ) = anext
 
 !  make the displaced entry the new entry
 
@@ -17105,7 +18032,7 @@
 
 !  move the new entry to it correct place. 
 
-          JCN( k ) = j ; IRN( k ) = i ; A( k ) = anext
+          A_col( k ) = j ; A_row( k ) = i ; A_val( k ) = anext
         END DO
       END DO
       RETURN
@@ -17540,9 +18467,9 @@
 
      END SUBROUTINE ALLOCATE_array_logical
 
-! -  A L L O C A T E _ a r r a y _ c h a r a c t e r 1 0  S U B R O U T I N E  -
+! -  A L L O C A T E _ a r r a y _ c h a r a c t e r    S U B R O U T I N E  -
 
-     SUBROUTINE ALLOCATE_array_character10( ARRAY, new_length, alloc_status )
+     SUBROUTINE ALLOCATE_array_character( ARRAY, new_length, alloc_status )
 
 !  -----------------------------------------------------------------------
 !  reallocate a real array so that its length is at least new_length.
@@ -17559,7 +18486,7 @@
 
      INTEGER, INTENT( OUT ) :: alloc_status
      INTEGER, INTENT( INOUT ) :: new_length
-     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
+     CHARACTER ( LEN = * ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
 
      IF ( ALLOCATED( ARRAY ) ) THEN
        IF ( SIZE( ARRAY ) < new_length ) THEN
@@ -17575,9 +18502,9 @@
 
      RETURN
 
-!  end of subroutine ALLOCATE_array_character10
+!  end of subroutine ALLOCATE_array_character
 
-     END SUBROUTINE ALLOCATE_array_character10
+     END SUBROUTINE ALLOCATE_array_character
 
 ! -*-*- a l l o c a t e _ a r r a y 2 _ i n t e g e r  S U B R O U T I N E -*-*-
 
@@ -17661,10 +18588,10 @@
 
      END SUBROUTINE ALLOCATE_array2_real
 
-! - A L L O C A T E _ a r r a y 2 _ c h a r a c t e r 1 0  S U B R O U T I N E -
+! - A L L O C A T E _ a r r a y 2 _ c h a r a c t e r     S U B R O U T I N E -
 
-     SUBROUTINE ALLOCATE_array2_character10( ARRAY, new_length1, new_length2,  &
-                                             alloc_status )
+     SUBROUTINE ALLOCATE_array2_character( ARRAY, new_length1, new_length2,    &
+                                           alloc_status )
 
 !  -----------------------------------------------------------------------
 !  reallocate a real array so that its length is at least new_length.
@@ -17681,7 +18608,7 @@
 
      INTEGER, INTENT( OUT ) :: alloc_status
      INTEGER, INTENT( INOUT ) :: new_length1, new_length2
-     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( :, : ) :: ARRAY
+     CHARACTER ( LEN = * ), ALLOCATABLE, DIMENSION( :, : ) :: ARRAY
 
      IF ( ALLOCATED( ARRAY ) ) THEN
        IF ( SIZE( ARRAY, 1 ) /= new_length1 .OR.                               &
@@ -17698,9 +18625,53 @@
 
      RETURN
 
-!  end of subroutine ALLOCATE_array2_character10
+!  end of subroutine ALLOCATE_array2_character
 
-     END SUBROUTINE ALLOCATE_array2_character10
+     END SUBROUTINE ALLOCATE_array2_character
+
+! -*-*- a l l o c a t e _ a r r a y 2 _ i n t e g e r  S U B R O U T I N E -*-*-
+
+     SUBROUTINE ALLOCATE_array3_integer( ARRAY, new_length1, new_length2,      &
+                                         new_length3, alloc_status )
+
+!  -----------------------------------------------------------------------
+!  reallocate an integer array so that its length is at least new_length.
+!  If the array is lready allocated and of length at least new_length, the
+!  allocation will be skipped and new_length replaced by SIZE(ARRAY)
+!  -----------------------------------------------------------------------
+
+!  History -
+!   fortran 2003 version first released in SIFDECODE/CUTEst, 26th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( OUT ) :: alloc_status
+     INTEGER, INTENT( INOUT ) :: new_length1, new_length2, new_length3
+     INTEGER, ALLOCATABLE, DIMENSION( : , : , : ) :: ARRAY
+
+     IF ( ALLOCATED( ARRAY ) ) THEN
+       IF ( SIZE( ARRAY, 1 ) /= new_length1 .OR.                               &
+            SIZE( ARRAY, 2 ) /= new_length2 .OR.                               &
+            SIZE( ARRAY, 3 ) < new_length3 ) THEN
+         DEALLOCATE( ARRAY, STAT = alloc_status )
+         IF ( alloc_status /= 0 ) RETURN
+       ELSE
+         new_length1 = SIZE( ARRAY, 1 ) ; new_length2 = SIZE( ARRAY, 2 )
+         new_length3 = SIZE( ARRAY, 3 )
+         alloc_status = 0
+         RETURN
+       END IF
+     END IF
+     ALLOCATE( ARRAY( new_length1, new_length2, new_length3 ),                 &
+               STAT = alloc_status )
+
+     RETURN
+
+!  end of subroutine ALLOCATE_array3_integer
+
+     END SUBROUTINE ALLOCATE_array3_integer
 
 ! -*-*-  E X T E N D _ a r r a y _ i n t e g e r  S U B R O U T I N E - -*-*-
 
@@ -17994,14 +18965,14 @@ write(6,*) old_length, new_length
 
      END SUBROUTINE EXTEND_array_real
 
-!-*-  E X T E N D _ a r r a y _ c h a r a c t e r 1 0  S U B R O U T I N E  -*-
+!-*-  E X T E N D _ a r r a y _ c h a r a c t e r     S U B R O U T I N E  -*-
 
-     SUBROUTINE EXTEND_array_character10( ARRAY, old_length, used_length,      &
-                                          new_length, min_length, buffer,      &
-                                          status, alloc_status )
+     SUBROUTINE EXTEND_array_character( ARRAY, old_length, used_length,        &
+                                        new_length, min_length, buffer,        &
+                                        status, alloc_status )
 
 !  ----------------------------------------------------------------------------
-!  extend a character * 10 array so that its length is increaed from old_length
+!  extend a character array so that its length is increaed from old_length
 !  to as close to new_length as possible while keeping existing data intact
 !  ----------------------------------------------------------------------------
 
@@ -18017,13 +18988,13 @@ write(6,*) old_length, new_length
      INTEGER, INTENT( IN ) :: old_length, buffer
      INTEGER, INTENT( OUT ) :: status, alloc_status
      INTEGER, INTENT( INOUT ) :: used_length, min_length, new_length
-     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
+     CHARACTER ( LEN = * ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
 
 !  local variables
 
      INTEGER :: length
      LOGICAL :: file_open
-     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: DUMMY
+     CHARACTER ( LEN = LEN( ARRAY) ), ALLOCATABLE, DIMENSION( : ) :: DUMMY
 
 !  make sure that the new length is larger than the old
 
@@ -18136,9 +19107,9 @@ write(6,*) old_length, new_length
 write(6,*) old_length, new_length
      RETURN
 
-!  end of subroutine EXTEND_array_character10
+!  end of subroutine EXTEND_array_character
 
-     END SUBROUTINE EXTEND_array_character10
+     END SUBROUTINE EXTEND_array_character
 
 ! -*-*-  E X T E N D _ a r r a y 2 _ i n t e g e r  S U B R O U T I N E - -*-*-
 
@@ -18448,14 +19419,14 @@ write(6,*) old_length1, new_length1, old_length2, new_length2
 
 !-*-  E X T E N D _ a r r a y 2 _ c h a r a c t e r 1 0  S U B R O U T I N E -*-
 
-     SUBROUTINE EXTEND_array2_character10( ARRAY, old_length1, old_length2,    &
-                                           used_length1, used_length2,         &
-                                           new_length1, new_length2,           &
-                                           min_length1, min_length2, buffer,   &
-                                           status, alloc_status )
+     SUBROUTINE EXTEND_array2_character( ARRAY, old_length1, old_length2,      &
+                                         used_length1, used_length2,           &
+                                         new_length1, new_length2,             &
+                                         min_length1, min_length2, buffer,     &
+                                         status, alloc_status )
 
 !  ----------------------------------------------------------------------------
-!  extend a character * 10 array so that its length is increaed from old_length
+!  extend a character array so that its length is increaed from old_length
 !  to as close to new_length as possible while keeping existing data intact
 !  ----------------------------------------------------------------------------
 
@@ -18473,13 +19444,13 @@ write(6,*) old_length1, new_length1, old_length2, new_length2
      INTEGER, INTENT( INOUT ) :: used_length1, used_length2
      INTEGER, INTENT( INOUT ) :: new_length1, new_length2
      INTEGER, INTENT( INOUT ) :: min_length1, min_length2
-     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : , : ) :: ARRAY
+     CHARACTER ( LEN = * ), ALLOCATABLE, DIMENSION( : , : ) :: ARRAY
 
 !  local variables
 
      INTEGER :: length1, length2
      LOGICAL :: file_open
-     CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : , :) :: DUMMY
+     CHARACTER ( LEN = LEN( ARRAY ) ), ALLOCATABLE, DIMENSION( : , :) :: DUMMY
 
 !  ensure that the input data is consistent
 
@@ -18595,8 +19566,173 @@ write(6,*) old_length1, new_length1, old_length2, new_length2
      status = 0
      RETURN
 
-!  end of subroutine EXTEND_array2_character10
+!  end of subroutine EXTEND_array2_character
 
-     END SUBROUTINE EXTEND_array2_character10
+     END SUBROUTINE EXTEND_array2_character
+
+! -*-*-  E X T E N D _ a r r a y 3 _ i n t e g e r  S U B R O U T I N E - -*-*-
+
+     SUBROUTINE EXTEND_array3_integer( ARRAY, old_length1, old_length2,        &
+                                       old_length3, used_length1,              &
+                                       used_length2, used_length3,             &
+                                       new_length1, new_length2, new_length3,  &
+                                       min_length1, min_length2,               &
+                                       min_length3, buffer,                    &
+                                       status, alloc_status )
+
+!  -------------------------------------------------------------------------
+!  extend an integer array so that its length is increaed from old_length to 
+!  as close to new_length as possible while keeping existing data intact
+!  -------------------------------------------------------------------------
+
+!  History -
+!   fortran 90 version released pre GALAHAD Version 1.0. February 7th 1995 as
+!     EXTEND_array_integer as part of the GALAHAD module EXTEND
+!   fortran 2003 version released in SIFDECODE/CUTEst, 5th November 2012
+
+!-----------------------------------------------
+!   D u m m y   A r g u m e n t s
+!-----------------------------------------------
+
+     INTEGER, INTENT( IN ) :: old_length1, old_length2, old_length3, buffer
+     INTEGER, INTENT( OUT ) :: status, alloc_status
+     INTEGER, INTENT( INOUT ) :: used_length1, used_length2, used_length3
+     INTEGER, INTENT( INOUT ) :: new_length1, new_length2, new_length3
+     INTEGER, INTENT( INOUT ) :: min_length1, min_length2, min_length3
+     INTEGER, ALLOCATABLE, DIMENSION( : , : , : ) :: ARRAY
+
+!  local variables
+
+     INTEGER :: length1, length2, length3
+     LOGICAL :: file_open
+     INTEGER, ALLOCATABLE, DIMENSION( : , : , : ) :: DUMMY
+
+!  ensure that the input data is consistent
+
+     used_length1 = MIN( used_length1, old_length1 )
+     used_length2 = MIN( used_length2, old_length2 )
+     used_length3 = MIN( used_length3, old_length3 )
+     min_length1 = MAX( old_length1, MIN( min_length1, new_length1 ) )
+     min_length2 = MAX( old_length2, MIN( min_length2, new_length2 ) )
+     min_length3 = MAX( old_length3, MIN( min_length3, new_length3 ) )
+
+!  if possible, allocate DUMMY to hold the old values of ARRAY
+
+     ALLOCATE( DUMMY( used_length1, used_length2, used_length3 ),              &
+               STAT = alloc_status )
+
+!  if the allocation failed, resort to using an external unit
+
+     IF ( alloc_status /= 0 ) GO TO 100
+
+     DUMMY( : used_length1, : used_length2, : used_length3 )                   &
+       = ARRAY( : used_length1, : used_length2, : used_length3 )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+     length1 = new_length1 ; length2 = new_length2 ; length3 = new_length3
+
+  10 CONTINUE
+     ALLOCATE( ARRAY( length1, length2, length3 ), STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       length1 = length1 + ( length1 - min_length1 ) / 2
+       length2 = length2 + ( length2 - min_length2 ) / 2
+       length3 = length3 + ( length3 - min_length3 ) / 2
+
+!  if there is insufficient room for both ARRAY and DUMMY, use an external unit
+
+       IF ( length1 < min_length1 .OR. length2 < min_length2 .OR.              &
+            length3 < min_length3 ) THEN
+
+!  rewind the buffer i/o unit
+
+         INQUIRE( UNIT = buffer, OPENED = file_open )
+         IF ( file_open ) THEN
+           REWIND( UNIT = buffer )
+         ELSE
+           OPEN( UNIT = buffer )
+         END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+         WRITE( UNIT = buffer, FMT = * )                                       &
+           DUMMY( : used_length1 , : used_length2, : used_length3 )
+
+!  extend the length of ARRAY
+
+         DEALLOCATE( DUMMY )
+         GO TO 110
+       END IF
+       GO TO 10
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     ARRAY( : used_length1, : used_length2, : used_length3 )                   &
+       = DUMMY( : used_length1, : used_length2, : used_length3 ) 
+     DEALLOCATE( DUMMY )
+     new_length1 = length1 ; new_length2 = length2 ; new_length3 = length3
+     GO TO 200
+
+!  use an external unit for writing
+
+ 100 CONTINUE
+
+!  rewind the buffer i/o unit
+
+     INQUIRE( UNIT = buffer, OPENED = file_open )
+     IF ( file_open ) THEN
+       REWIND( UNIT = buffer )
+     ELSE
+       OPEN( UNIT = buffer )
+     END IF
+
+!  copy the contents of ARRAY into the buffer i/o area
+
+     WRITE( UNIT = buffer, FMT = * )                                           &
+       ARRAY( : used_length1, : used_length2, : used_length3 )
+
+!  extend the length of ARRAY
+
+     DEALLOCATE( ARRAY )
+
+ 110 CONTINUE
+     ALLOCATE( ARRAY( new_length1, new_length2, new_length3 ),                 &
+               STAT = alloc_status )
+
+!  if the allocation failed, reduce the new length and retry
+
+     IF ( alloc_status /= 0 ) THEN
+       new_length1 = min_length1 + ( new_length1 - min_length1 ) / 2
+       new_length2 = min_length2 + ( new_length2 - min_length2 ) / 2
+       new_length3 = min_length3 + ( new_length3 - min_length3 ) / 2
+       IF ( new_length1 < min_length1 .OR. new_length2 < min_length2 .OR.      &
+            new_length3 < min_length3 ) THEN
+         status = 12
+         RETURN
+       END IF
+       GO TO 110
+     END IF
+
+!  copy the contents of ARRAY back from the buffer i/o area
+
+     REWIND( UNIT = buffer )
+     READ( UNIT = buffer, FMT = * )                                            &
+       ARRAY( : used_length1, : used_length2, : used_length3 )
+
+!  successful exit
+
+ 200 CONTINUE
+write(6,*) old_length1, new_length1, old_length2, new_length2, old_length3, new_length3
+     status = 0
+     RETURN
+
+!  end of subroutine EXTEND_array3_integer
+
+     END SUBROUTINE EXTEND_array3_integer
 
     END MODULE SIFDECODE
