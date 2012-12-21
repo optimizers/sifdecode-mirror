@@ -105,18 +105,6 @@
 !     INTEGER, PARAMETER :: nnza_guess = 1
       INTEGER, PARAMETER :: nnza_guess = 8000000
 
-!  maximum number of vectors of bounds
-
-      INTEGER, PARAMETER :: nbnd_guess  = 2     
-
-!  maximum number of vectors of solutions
-
-      INTEGER, PARAMETER :: nstart_guess = 3     
-
-!  maximum number of vectors of bounds on the objective function
-
-      INTEGER, PARAMETER :: nobjbound_guess = 2
-
 !  maximum number of integer parameters
 
 !     INTEGER, PARAMETER :: niindex_guess = 1
@@ -129,13 +117,25 @@
 
 !  maximum number of statements in any level of a do-loop
 
-!     INTEGER, PARAMETER :: maxins_guess = 1
-      INTEGER, PARAMETER :: maxins_guess = 200
+      INTEGER, PARAMETER :: maxins_guess = 1
+!     INTEGER, PARAMETER :: maxins_guess = 200
 
 !  maximum number of array instructions
 
-!     INTEGER, PARAMETER :: maxarray_guess = 1
-      INTEGER, PARAMETER :: maxarray_guess = 150
+      INTEGER, PARAMETER :: maxarray_guess = 1
+!     INTEGER, PARAMETER :: maxarray_guess = 150
+
+!  maximum number of vectors of bounds
+
+      INTEGER, PARAMETER :: nbnd_guess  = 2     
+
+!  maximum number of vectors of solutions
+
+      INTEGER, PARAMETER :: nstart_guess = 3     
+
+!  maximum number of vectors of bounds on the objective function
+
+      INTEGER, PARAMETER :: nobjbound_guess = 2
 
 !  dependencies on the maximum number of nontrivial group types
 !  ngrp_guess is the total number of group parameters
@@ -173,7 +173,7 @@
       REAL ( KIND = wp ), PARAMETER :: biginf = ten ** 20
       REAL ( KIND = wp ), PARAMETER :: epsmch = EPSILON( one )
       LOGICAL, PARAMETER :: oneobj = .FALSE.
-
+      LOGICAL, PARAMETER :: debug_extend = .FALSE.
       CHARACTER ( LEN = 10 ), PARAMETER :: cqsqr = '123456789S'
       CHARACTER ( LEN = 10 ), PARAMETER :: cqprod = '123456789P'
       CHARACTER ( LEN = 10 ), PARAMETER :: cqgrou = '123456789G'
@@ -352,6 +352,24 @@
         RETURN
       END IF
 
+!  deallocate workspace
+
+      DEALLOCATE( RIVAL, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RIVAL' ; GO TO 990 ; END IF
+
+      DEALLOCATE( IIVAL, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IIVAL' ; GO TO 990 ; END IF
+
+      DEALLOCATE( ELING_g, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELING_g' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GP_val_orig, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GP_val_orig' ; GO TO 990 ; END IF
+
 !  assign the groups to constraint types and objectives
 
       nlinob = 0
@@ -418,6 +436,58 @@
       DEALLOCATE( B_l, B_u, B_l_default, B_u_default, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'B_l/u' ; GO TO 990 ; END IF
+
+      DEALLOCATE( IDROWS, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IDROWS' ; GO TO 990 ; END IF
+
+      DEALLOCATE( RDROWS, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RDROWS' ; GO TO 990 ; END IF
+
+      DEALLOCATE( FBOUND_l, FBOUND_u, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'FBOUND' ; GO TO 990 ; END IF
+
+      DEALLOCATE( DEFAULT, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'DEFAULT' ; GO TO 990 ; END IF
+
+      DEALLOCATE( RSCALE, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RSCALE' ; GO TO 990 ; END IF
+
+      DEALLOCATE( CSCALE, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'CSCALE' ; GO TO 990 ; END IF
+
+      DEALLOCATE( WEIGHT, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'WEIGHT' ; GO TO 990 ; END IF
+
+      DEALLOCATE( VSTART, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'VSTART' ; GO TO 990 ; END IF
+
+      DEALLOCATE( CSTART, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'CSTART' ; GO TO 990 ; END IF
+
+      DEALLOCATE( BNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'BNAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( ONAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ONAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( SNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'SNAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( OBBNAME, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'OBBNAME' ; GO TO 990 ; END IF
 
 !  assign the variables to bound types
 
@@ -491,6 +561,95 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'ABYROW' ; GO TO 990 ; END IF
 
+      DEALLOCATE( BL, BU, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'BL/BU' ; GO TO 990 ; END IF
+
+      DEALLOCATE( B, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'B' ; GO TO 990 ; END IF
+
+      DEALLOCATE( X, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'X' ; GO TO 990 ; END IF
+
+      DEALLOCATE( VSCALE, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'VSCALE' ; GO TO 990 ; END IF
+
+      DEALLOCATE( ELVAR, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELVAR' ; GO TO 990 ; END IF
+
+      DEALLOCATE( IWK, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IWK' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GSTATE, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GSTATE' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GTYPE, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GTYPE' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GP_ptr, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GP_ptr' ; GO TO 990 ; END IF
+
+      DEALLOCATE( TYPEV, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'TYPEV' ; GO TO 990 ; END IF
+
+      DEALLOCATE( TYPEE, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'TYPEE' ; GO TO 990 ; END IF
+
+      DEALLOCATE( EP_ptr, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EP_ptr' ; GO TO 990 ; END IF
+
+      DEALLOCATE( EV_ptr, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EV_ptr' ; GO TO 990 ; END IF
+
+      DEALLOCATE( ELING_el, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELING_el' ; GO TO 990 ; END IF
+
+      DEALLOCATE( ELING_ptr, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELING_ptr' ; GO TO 990 ; END IF
+
+      DEALLOCATE( EP_val, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EP_val' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GP_val, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GP_val' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GSCALE, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GSCALE' ; GO TO 990 ; END IF
+
+      DEALLOCATE( ESCALE, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ESCALE' ; GO TO 990 ; END IF
+
+      DEALLOCATE( VNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'VNAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GNAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( LNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'LNAMES' ; GO TO 990 ; END IF
+
+
 !  allocate workspace
 
       len_defined = MAX( neltype, ngtype )
@@ -553,6 +712,36 @@
         END IF
       END IF
 
+!  deallocate workspace
+
+      DEALLOCATE( ELV, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELV' ; GO TO 990 ; END IF
+
+      DEALLOCATE( INV, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELV' ; GO TO 990 ; END IF
+
+      DEALLOCATE( ELP, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ELP' ; GO TO 990 ; END IF
+
+      DEALLOCATE( ETYPES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'ETYPES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( EPNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EPNAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( EVNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EVNAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( IVNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IVNAMES' ; GO TO 990 ; END IF
+
 !  make subroutine group and obtain group information
 
       IF ( iauto == 0 ) THEN
@@ -573,13 +762,11 @@
 
       ELSE
         CALL MAKE_group_ad( iingr, out, outgf, outgd, outem, status,           &
-                            ngtype, ngpnames,                                  &
-                            pname, GANAMES,                                    &
+                            ngtype, ngpnames, pname, GANAMES,                  &
                             len_renames, RENAMES, len_innames, INNAMES,        &
                             len_lonames, LONAMES, len_minames, MINAMES,        &
                             len_exnames, EXNAMES,                              &
-                            GPNAMES, DEFINED,                                  &
-                            GTYPES, GTYPESP_ptr,                               &
+                            GPNAMES, DEFINED, GTYPES, GTYPESP_ptr,             &
                             debug, length, TABLE, KEY, INLIST,                 &
                             single, nuline, gotlin, iauto, iad0, print_level )
         IF ( status /= 0 ) THEN
@@ -587,6 +774,60 @@
            RETURN
         END IF
       END IF
+
+!  deallocate workspace
+
+      DEALLOCATE( GTYPESP_ptr, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GTYPESP_ptr' ; GO TO 990 ; END IF
+
+      DEALLOCATE( TABLE, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'TABLE' ; GO TO 990 ; END IF
+
+      DEALLOCATE( INLIST, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'INLIST' ; GO TO 990 ; END IF
+
+      DEALLOCATE( KEY, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'KEY' ; GO TO 990 ; END IF
+
+      DEALLOCATE( DEFINED, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'DEFINED' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GTYPES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GTYPES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GANAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GANAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( GPNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'GPNAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( RENAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RENAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( INNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'INNAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( LONAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'LONAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( MINAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'MINAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( EXNAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'EXNAMES' ; GO TO 990 ; END IF
 
 !  finally, read any additional programs
 
@@ -612,11 +853,23 @@
 !  if required, translate any external file to accept automatic differentiation
 !   constructs
 
-      IF ( iauto == 1 .OR. iauto == 2 )                                        &
+      IF ( iauto == 1 .OR. iauto == 2 ) THEN
         CALL TRANSLATE_for_ad( out, status, outex, outea, outem, single,       &
                                iauto, iad0, len_rinames, RINAMES, nrival,     &
                                len_iinames, IINAMES )
-      IF ( status /= 0 ) WRITE( out, 2170 ) status
+        IF ( status /= 0 ) WRITE( out, 2170 ) status
+      END IF
+
+!  deallocate workspace
+
+      DEALLOCATE( RINAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'RINAMES' ; GO TO 990 ; END IF
+
+      DEALLOCATE( IINAMES, STAT = alloc_status )
+      IF ( alloc_status /= 0 ) THEN
+        bad_alloc = 'IINAMES' ; GO TO 990 ; END IF
+
       RETURN
 
 !  allocation errors
@@ -2466,7 +2719,7 @@
             used_length = 3 ; new_length = 3 ; min_length = 3
             used_length2 = narray - 1 ; min_length2 = narray
             new_length2 = increase_n * min_length2 / increase_d + 1 
-            CALL EXTEND_array( ARRAY, 2, len2_array, used_length,              &
+            CALL EXTEND_array( ARRAY, 3, len2_array, used_length,              &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
                                status, alloc_status )
@@ -2479,7 +2732,7 @@
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = 3 ; new_length2 = 3 ; min_length2 = 3
             used_length3 = narray - 1 ; min_length3 = narray
-            new_length3 = increase_n * min_length2 / increase_d + 1 
+            new_length3 = increase_n * min_length3 / increase_d + 1 
             CALL EXTEND_array( IARRAY, 5, 3, len3_iarray, used_length,         &
                                used_length2, used_length3,                     &
                                new_length, new_length2, new_length3,           &
@@ -19215,7 +19468,7 @@
 !  successful exit
 
  200 CONTINUE
-write(6,*) old_length, new_length
+     IF ( debug_extend ) WRITE( 6, "( 2( 1X, I0 ) )" ) old_length, new_length
      status = 0
      RETURN
 
@@ -19362,7 +19615,7 @@ write(6,*) old_length, new_length
 
  200 CONTINUE
      status = 0
-write(6,*) old_length, new_length
+     IF ( debug_extend ) WRITE( 6, "( 2( 1X, I0 ) )" ) old_length, new_length
      RETURN
 
 !  end of subroutine EXTEND_array_real
@@ -19508,7 +19761,7 @@ write(6,*) old_length, new_length
 
  200 CONTINUE
      status = 0
-write(6,*) old_length, new_length
+     IF ( debug_extend ) WRITE( 6, "( 2( 1X, I0 ) )" ) old_length, new_length
      RETURN
 
 !  end of subroutine EXTEND_array_character
@@ -19660,7 +19913,8 @@ write(6,*) old_length, new_length
 !  successful exit
 
  200 CONTINUE
-write(6,*) old_length1, new_length1, old_length2, new_length2
+     IF ( debug_extend ) WRITE( 6, "( 4( 1X, I0 ) )" ) old_length1,            &
+       new_length1, old_length2, new_length2
      status = 0
      RETURN
 
@@ -19813,7 +20067,8 @@ write(6,*) old_length1, new_length1, old_length2, new_length2
 !  successful exit
 
  200 CONTINUE
-write(6,*) old_length1, new_length1, old_length2, new_length2
+     IF ( debug_extend ) WRITE( 6, "( 4( 1X, I0 ) )" ) old_length1,            &
+       new_length1, old_length2, new_length2
      status = 0
      RETURN
 
@@ -19966,7 +20221,8 @@ write(6,*) old_length1, new_length1, old_length2, new_length2
 !  successful exit
 
  200 CONTINUE
-write(6,*) old_length1, new_length1, old_length2, new_length2
+     IF ( debug_extend ) WRITE( 6, "( 4( 1X, I0 ) )" ) old_length1,            &
+       new_length1, old_length2, new_length2
      status = 0
      RETURN
 
@@ -20131,7 +20387,8 @@ write(6,*) old_length1, new_length1, old_length2, new_length2
 !  successful exit
 
  200 CONTINUE
-write(6,*) old_length1, new_length1, old_length2, new_length2, old_length3, new_length3
+     IF ( debug_extend ) WRITE( 6, "( 6( 1X, I0 ) )" ) old_length1,            &
+       new_length1, old_length2, new_length2, old_length3, new_length3
      status = 0
      RETURN
 
