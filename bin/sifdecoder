@@ -1,4 +1,4 @@
-#!/bin/bash -vx
+#!/bin/bash
 # sifdecoder: script to decode a sif file
 #
 # Use: sifdecoder [-A architecture] [-s] [-h] [-o j] [-f] [-b] [-a j] 
@@ -54,8 +54,8 @@ let last=$#
 stop_early="false"
 if (( last < 1 )); then
     stop_early="true"
-elif [[ "`echo $1 | grep -e '^-'`" != "" ]]; then
-    stop_early="true"
+#elif [[ "`echo $1 | grep -e '^-'`" != "" ]]; then
+#    stop_early="true"
 fi
 
 if [[ "$stop_early" == "true" ]]; then
@@ -179,6 +179,7 @@ while (( i < last )); do
 #   $MYSIFDEC/bin/helpmsg
     exit 0
   elif [[ "$opt" == '-A' ]]; then
+    (( i++ ))
     ARCH=${!i}
   elif [[ "$opt" == '-s' ]]; then
     PRECISION="single"
@@ -258,13 +259,9 @@ set +C
 #  -------------------
 
 let last=$#
-echo $last $1 ${!last}
 PROBLEM=${!last}
-echo $PROBLEM
 PROBNAME=`echo $PROBLEM | $AWK -F/ '{print $NF}' | $AWK -F. '{print $1}'`
-echo $PROBNAME
 EXT=`echo $PROBLEM | $AWK -F/ '{print $NF}' | $AWK -F. '{print $2}'`
-echo $EXT
 
 PROBDIR=`echo $PROBLEM | $AWK 'BEGIN{FS="\n"}{ l = split( $1, farray, "/" ); head = ""; if( l>1 ) { head = farray[1]; for ( i=2; i<l; i++ ) { head = head "/" farray[i]; } } print head;}'`
 
