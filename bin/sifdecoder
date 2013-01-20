@@ -1,23 +1,22 @@
-#!/bin/bash
+#!/bin/bash -vx
 # sifdecoder: script to decode a sif file
 #
-# Use: sifdecoder architecture [-s] [-h] [-k] [-o j] [-l secs] [-f] [-b] [-a j] [-show] [-param name=value[,name=value...]] [-force] [-debug] probname[.SIF]
+# Use: sifdecoder [-A architecture] [-s] [-h] [-o j] [-f] [-b] [-a j] 
+#                 [-show] [-param name=value[,name=value...]] [-force]
+#                 probname[.SIF]
 #
-# where: options -s     : run the single precision version
+# where: options -A     : specify the architecture. (Default: use $MYARCH)
+#                -s     : run the single precision version
 #                         (Default: run the double precision version)
 #                -h     : print this help and stop execution
-#                -k     : keep the load module after use
-#                         (Default: delete the load module)
 #                -o     : 0 for silent mode, 1 for brief description of
-#                         the stages executed.
-#                         (Default: -o 0)
-#                -l     : sets a limit of secs second on the runtime
-#                         (Default: 99999999 seconds)
+#                         the stages executed. (Default: -o 0)
 #                -f     : use automatic differentiation in Forward mode
 #                -b     : use automatic differentiation in Backward mode
-#                -a     : 1 use the older HSL automatic differentiation package AD01
-#                         2 use the newer HSL automatic differentiation package AD02
-#                         (Default: -a 2)
+#                -a     : 1 use the older HSL automatic differentiation 
+#                           package AD01, and
+#                         2 use the newer HSL automatic differentiation 
+#                           package AD02 (Default: -a 2)
 #                -show  : displays possible parameter settings for
 #                         probname[.SIF]. Other options are ignored
 #                -param : cast probname[.SIF] against explicit parameter
@@ -29,27 +28,18 @@
 #                         even if this value is not specified in the file.
 #                         This option should be used with care.
 #                         (Default: do not enforce).
-#                -debug : links all the libraries, creates the executable
-#                         and stop to allow debugging. This option
-#                         automatically disables -n and enables -k.
 #
 #       probname      probname.SIF is the name of the file containing
 #                     the SIF file for the problem of interest.
-#
 
-#
-#  N. Gould, D. Orban & Ph. Toint, November 7th, 2000
-#
+#  N. Gould, D. Orban & Ph. Toint, November 7th, 2000, 
+#  Updated, January 20th, 2013
 
-#
 #  Directory for temporary files
-#
 
 TMP="/tmp"
 
-#
 #  basic system commands (extra!)
-#
 
 LN="/bin/ln"
 GREP="/bin/grep"
@@ -69,34 +59,25 @@ elif [[ "`echo $1 | grep -e '^-'`" != "" ]]; then
 fi
 
 if [[ "$stop_early" == "true" ]]; then
-    echo ' Use: sifdecoder architecture [-s] [-h] [-k] [-f] [-b] [-a j]'
+    echo ' Use: sifdecoder [-A architecture] [-s] [-h] [-f] [-b] [-a j]'
     echo '                       [-m] [-p] [-o j] [-l secs] [-show]'
     echo '                       [-param name=value[,name=value...]]'
-    echo '                       [-force] [-debug] probname[.SIF]'
+    echo '                       [-force] probname[.SIF]'
     exit 1
 fi
 
-#  machine-dependent bits
-
-eval "`cat $SIFDECODE/bin/sys/$1`"
-#. $SIFDECODE/bin/sys/$1
-
-set +C
-
-#
 # Environment check
-#
 
 let abort=0
 
-if [[ ${SIFDEC+set} != 'set'  ]]; then
-    echo ' SIFDEC is not set.'
+if [[ -z "$SIFDECODE" ]]; then
+    echo ' SIFDECODE is not set.'
     echo ' It should point to the directory where you installed SifDec.'
     echo ' Set it to the appropriate value and re-run.'
     let abort=1
 fi
 
-if [[ ${MYSIFDEC+set} != 'set'  ]]; then
+if [[ -z "${MYSIFDEC}" ]]; then
     echo ' MYSIFDEC is not set.'
     echo ' It should point to your working instance of SifDec.'
     echo ' Set it to the appropriate value and re-run.'
@@ -109,69 +90,49 @@ if (( abort != 0 )); then
     exit 7
 fi
 
-#
-#  variables for each option
-#
+#  =========================
+#  Variables for each option
+#  =========================
 
-#
-#  LIMIT (maximum cputime)
-#
+# the architecture to be used
 
-let LIMIT=99999999
+ARCH=""
 
-#
 # PRECISION = single (single precision), = double (double precision)
-#
 
 PRECISION="double"
 let prec=1
 
-#
-# KEEP = (null) (discard load module after use), = "-k" (keep it)
-#
-
-KEEP=""
-
-#
-# DEBUGARG = "" (normal execution)
-#
-
-DEBUGARG=""
-
-#
 # OUTPUT = 0 (summary output), = 1 (detailed output from decoder)
-#
 
 let OUTPUT=0
 
-#
 #   automatic = 0 (provided), = 1 (automatic forward), = 2 (automatic backward)
-#
 
 let automatic=0
 
-#
 #   ad0 = 1 (AD01 used), = 2 (AD02 used)
-#
 
 let ad0=2
 
-#
 # FORCE = 0 (do not enforce -param settings), = 1 (enforce settings)
-#
 
 let FORCE=0
 
-#
-#  interpret arguments
-#
+#  throwback to LANCELOT days
 
 let METHOD=3
+
+#  -------------------
+#  Interpret arguments
+#  -------------------
 
 let last=$#
 
 if (( last == 0 )); then
-  echo "Use: sifdecoder architecture [-s] [-h] [-k] [-o j] [-l secs] [-f] [-b] [-a j] [-show] [-param name=value[,name=value...]] [-debug] probname[.SIF]"
+  echo "Use: sifdecoder [-A architecture] [-s] [-h] [-o j] [-l secs]"
+  echo "           [-f] [-b] [-a j] [-show] [-param name=value[,name=value...]]"
+  echo "           [-force] probname[.SIF]"
   exit 1
 fi
 
@@ -179,62 +140,52 @@ let i=1
 let nbparam=0   # counts the number of parameters passed using -param
 PARAMLIST=( "" )
 
-while (( i <= last )); do
+while (( i < last )); do
   opt=${!i}
   if [[ "$opt" == '-h' || "$opt" == '--help' ]]; then
 
+    echo " Use: sifdecoder [-A architecture] [-s] [-h] [-o j] [-l secs]"
+    echo "         [-f] [-b] [-a j] [-show] [-param name=value[,name=value...]]"
+    echo "         [-force] probname[.SIF]"
+    echo ""where options:
+    echo "          -A     : specify the architecture. (Default: use $MYARCH)"
+    echo "          -s     : run the single precision version"
+    echo "                   (Default: run the double precision version)"
+    echo "          -h     : print this help and stop execution"
+    echo "          -o     : 0 for silent mode, 1 for brief description"
+    echo "                   of the stages executed. (Default: -o 0)"
+    echo "          -f     : use automatic differentiation in Forward mode"
+    echo "          -b     : use automatic differentiation in Backward mode"
+    echo "          -a     : 1 use the older HSL automatic differentiation "
+    echo "                     package AD01"
+    echo "                   2 use the newer HSL automatic differentiation "
+    echo "                     package AD02"
+    echo "                   (Default: -a 2)"
+    echo "          -show  : displays possible parameter settings for"
+    echo "                   probname[.SIF]. Other options are ignored"
+    echo "          -param : cast probname[.SIF] against explicit parameter"
+    echo "                   settings. Several parameter settings may be"
+    echo "                   given as a comma-separated list following"
+    echo "                   -param or using several -param flags."
+    echo "                   Use -show to view possible settings."
+    echo "          -force : forces setting of a parameter to the given value"
+    echo "                   even if this value is not specified in the file."
+    echo "                   This option should be used with care."
+    echo "                   (Default: do not enforce)."
+    echo ""
+    echo "       probname    probname.SIF is the name of the file containing"
+    echo "                   the SIF file for the problem of interest."
 
-echo " Use: sifdecoder architecture [-s] [-h] [-k] [-o j] [-l secs] [-f] [-b] "
-echo "                   [-a j] [-show] [-param name=value[,name=value...]] "
-echo "                   [-force] [-debug] probname[.SIF]"
-echo ""
-echo " where: options -s     : run the single precision version"
-echo "                         (Default: run the double precision version)"
-echo "                -h     : print this help and stop execution"
-echo "                -k     : keep the load module after use"
-echo "                         (Default: delete the load module)"
-echo "                -o     : 0 for silent mode, 1 for brief description of"
-echo "                         the stages executed."
-echo "                         (Default: -o 0)"
-echo "                -l     : sets a limit of secs second on the runtime"
-echo "                         (Default: 99999999 seconds)"
-echo "                -f     : use automatic differentiation in Forward mode"
-echo "                -b     : use automatic differentiation in Backward mode"
-echo "                -a     : 1 use the older HSL automatic differentiation "
-echo "                           package AD01"
-echo "                         2 use the newer HSL automatic differentiation "
-echo "                           package AD02"
-echo "                         (Default: -a 2)"
-echo "                -show  : displays possible parameter settings for"
-echo "                         probname[.SIF]. Other options are ignored"
-echo "                -param : cast probname[.SIF] against explicit parameter"
-echo "                         settings. Several parameter settings may be"
-echo "                         given as a comma-separated list following"
-echo "                         -param or using several -param flags."
-echo "                         Use -show to view possible settings."
-echo "                -force : forces setting of a parameter to the given value,"
-echo "                         even if this value is not specified in the file."
-echo "                         This option should be used with care."
-echo "                         (Default: do not enforce)."
-echo "                -debug : links all the libraries, creates the executable"
-echo "                         and stop to allow debugging. This option"
-echo "                         automatically disables -n and enables -k."
-echo ""
-echo "       probname      probname.SIF is the name of the file containing"
-echo "                     the SIF file for the problem of interest."
 #   $MYSIFDEC/bin/helpmsg
     exit 0
+  elif [[ "$opt" == '-A' ]]; then
+    ARCH=${!i}
   elif [[ "$opt" == '-s' ]]; then
     PRECISION="single"
     let prec=0
-  elif [[ "$opt" == '-k' ]]; then
-    KEEP="-k"
   elif [[ "$opt" == '-o' ]]; then
     (( i++ ))
     let OUTPUT=${!i}
-  elif [[ "$opt" == '-l' ]]; then
-    (( i++ ))
-    let LIMIT=${!i}
   elif [[ "$opt" == '-m' ]]; then
     (( i++ ))
     let METHOD=${!i}
@@ -275,19 +226,45 @@ echo "                     the SIF file for the problem of interest."
     (( i++ ))
   elif [[ "$opt" == '-force' ]]; then
     let FORCE=1
-  elif [[ "$opt" == '-debug' ]]; then
-    KEEP="-k"
-    DEBUGARG="-debug"
   fi
   (( i++ ))
 done
 
-# Create problem names
+#  -------------------------------------
+#  Set architecture-dependent parameters
+#  -------------------------------------
+
+if [[ -z "$ARCH" ]]; then
+#  echo "ARCH not set"
+  if [[ -z "$MYARCH" ]]; then
+    echo ' no architecture specified and environment variable MYARCH is unset.'
+    echo ' Either specificy architecture with -A option or set variable MYARCH.'
+    echo ' and re-run.'
+    echo ''
+    exit 2
+  else
+    ARCH=${MYARCH}
+  fi
+fi
+
+eval "`cat $SIFDECODE/bin/sys/$ARCH`"
+
+#  allow file clobbering
+
+set +C
+
+#  -------------------
+#  Create problem name
+#  -------------------
 
 let last=$#
+echo $last $1 ${!last}
 PROBLEM=${!last}
+echo $PROBLEM
 PROBNAME=`echo $PROBLEM | $AWK -F/ '{print $NF}' | $AWK -F. '{print $1}'`
+echo $PROBNAME
 EXT=`echo $PROBLEM | $AWK -F/ '{print $NF}' | $AWK -F. '{print $2}'`
+echo $EXT
 
 PROBDIR=`echo $PROBLEM | $AWK 'BEGIN{FS="\n"}{ l = split( $1, farray, "/" ); head = ""; if( l>1 ) { head = farray[1]; for ( i=2; i<l; i++ ) { head = head "/" farray[i]; } } print head;}'`
 
@@ -418,7 +395,6 @@ if ((  nbparam > 0  )); then
     else
         $LN -s $problemLoc $sifFile
     fi
-
 fi
 
 # If necessary, create a symbolic link between the current directory
@@ -451,14 +427,14 @@ fi
 
 # Define the path to the decoder
 
-DECODER=$SIFDECODE/objects/$1/double/run_sifdecode
+DECODER=$SIFDECODE/objects/$ARCH/double/run_sifdecode
 
 if [[ ! -x $DECODER  ]]; then
-  DECODER=$SIFDECODE/objects/$1/single/run_sifdecode
+  DECODER=$SIFDECODE/objects/$ARCH/single/run_sifdecode
   if [[ ! -x $DECODER  ]]; then
     echo ' '
-    echo "No SIF decoder sifdec found in $SIFDECODE/objects/$1/double/run_sifdecode"
-    echo "or $SIFDECODE/objects/$1/single/run_sifdecode"
+    echo "No SIF decoder sifdec found in $SIFDECODE/objects/$ARCH/double/run_sifdecode"
+    echo "or $SIFDECODE/objects/$ARCH/single/run_sifdecode"
     echo 'Terminating execution.'
     exit 4
   fi
