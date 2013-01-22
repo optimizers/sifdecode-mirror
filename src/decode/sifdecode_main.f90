@@ -27,7 +27,7 @@
 
 !  local variables
 
-      INTEGER :: i, ad0, auto, print_level, status, algorithm
+      INTEGER :: i, ad0, auto, print_level, status, algorithm, size
       LOGICAL :: single
 
 !  assign the standard output unit numbers
@@ -107,6 +107,12 @@
       READ( in, "( I2 )" ) i
       single = i == 0
 
+!  specify the "size" of the problem (1=small,2=medium,3=large). This value
+!  is simply used to set initial array sizes; incorrect values will be
+!  increased, so the parameter is simply a convenience for larger problems
+
+      READ( in, "( I2 )" ) size
+
 !  open the relevant files - unix systems
 
       OPEN( ingps, FILE = prbdat, FORM = 'FORMATTED', STATUS = 'UNKNOWN' )
@@ -145,7 +151,7 @@
       CALL SIFDECODE_decode( ingps, outda, infn, outfn, outff, outfd, outra,   &
                              ingr, outgr, outgf, outgd, inex, outex, outem,    &
                              outea, print_level, out, noname, algorithm,       &
-                             auto, ad0, single, status )
+                             auto, ad0, single, size, status )
 
 !  close the opened files
 
