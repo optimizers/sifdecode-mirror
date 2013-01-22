@@ -56,112 +56,123 @@
 
 !  maximum number of variables
 
-!     INTEGER, PARAMETER :: n_guess = 1
-      INTEGER, PARAMETER :: n_guess = 1000
-!     INTEGER, PARAMETER :: n_guess = 1000000
+      INTEGER, PARAMETER :: n_guess_debug = 1
+      INTEGER, PARAMETER :: n_guess_small = 100
+      INTEGER, PARAMETER :: n_guess_medium = 10000
+      INTEGER, PARAMETER :: n_guess_large = 1000000
 
 !  maximum number of groups
 
-!     INTEGER, PARAMETER :: ng_guess = 1
-      INTEGER, PARAMETER :: ng_guess = 1000
-!     INTEGER, PARAMETER :: ng_guess = 600000
+      INTEGER, PARAMETER :: ng_guess_debug = 1
+      INTEGER, PARAMETER :: ng_guess_small = 100
+      INTEGER, PARAMETER :: ng_guess_medium = 10000
+      INTEGER, PARAMETER :: ng_guess_large = 600000
 
 !  maximum number of different group types
 
-!     INTEGER, PARAMETER :: ngtype_guess = 1
-      INTEGER, PARAMETER :: ngtype_guess = 10   
+      INTEGER, PARAMETER :: ngtype_guess_debug = 1
+      INTEGER, PARAMETER :: ngtype_guess_small = 10   
+      INTEGER, PARAMETER :: ngtype_guess_medium = 10   
+      INTEGER, PARAMETER :: ngtype_guess_large = 10   
 
 !  maximum total number of real parameters associated with groups
 
-!     INTEGER, PARAMETER :: ngp_guess = 1
-      INTEGER, PARAMETER :: ngp_guess = 2000
-!     INTEGER, PARAMETER :: ngp_guess = 1200000
+      INTEGER, PARAMETER :: ngp_guess_debug = 1
+      INTEGER, PARAMETER :: ngp_guess_small = 200
+      INTEGER, PARAMETER :: ngp_guess_medium = 20000
+      INTEGER, PARAMETER :: ngp_guess_large = 1200000
 
 !  maximum number of nonlinear elements
 
-!     INTEGER, PARAMETER :: nel_guess = 1
-      INTEGER, PARAMETER :: nel_guess = 5000
-!     INTEGER, PARAMETER :: nel_guess = 1000000
+      INTEGER, PARAMETER :: nel_guess_debug = 1
+      INTEGER, PARAMETER :: nel_guess_small = 1000
+      INTEGER, PARAMETER :: nel_guess_medium = 100000
+      INTEGER, PARAMETER :: nel_guess_large = 1000000
 
 !  maximum number of different nonlinear element types
 
-!     INTEGER, PARAMETER :: netype_guess = 1
-      INTEGER, PARAMETER :: netype_guess = 20
+      INTEGER, PARAMETER :: netype_guess_debug = 1
+      INTEGER, PARAMETER :: netype_guess_small = 20
+      INTEGER, PARAMETER :: netype_guess_medium = 20
+      INTEGER, PARAMETER :: netype_guess_large = 20
 
 !  maximum total number of elemental variables
 
-!     INTEGER, PARAMETER :: nelvar_guess = 1
-      INTEGER, PARAMETER :: nelvar_guess = 5000
-!     INTEGER, PARAMETER :: nelvar_guess = 100000
+      INTEGER, PARAMETER :: nelvar_guess_debug = 1
+      INTEGER, PARAMETER :: nelvar_guess_small = 100
+      INTEGER, PARAMETER :: nelvar_guess_medium = 10000
+      INTEGER, PARAMETER :: nelvar_guess_large = 100000
 
 !  maximum total number of auxliliary parameters used when defining function
 !  and derivative values
 
-!     INTEGER, PARAMETER :: nauxpar_guess = 1
-      INTEGER, PARAMETER :: nauxpar_guess = 100
+      INTEGER, PARAMETER :: nauxpar_guess_debug = 1
+      INTEGER, PARAMETER :: nauxpar_guess_small = 100
+      INTEGER, PARAMETER :: nauxpar_guess_medium = 100
+      INTEGER, PARAMETER :: nauxpar_guess_large = 100
 
 !  maximum number of real parameters associated with nonlinear elements
 
-!     INTEGER, PARAMETER :: nelp_guess = 1
-      INTEGER, PARAMETER :: nelp_guess = 10000
-!     INTEGER, PARAMETER :: nelp_guess = 1000000
+      INTEGER, PARAMETER :: nelp_guess_debug = 1
+      INTEGER, PARAMETER :: nelp_guess_small = 1000
+      INTEGER, PARAMETER :: nelp_guess_medium = 100000
+      INTEGER, PARAMETER :: nelp_guess_large = 1000000
 
 !  maximum number of nonzeros in linear elements
 
-!     INTEGER, PARAMETER :: nnza_guess = 1
-      INTEGER, PARAMETER :: nnza_guess = 10000
-!     INTEGER, PARAMETER :: nnza_guess = 8000000
+      INTEGER, PARAMETER :: nnza_guess_debug = 1
+      INTEGER, PARAMETER :: nnza_guess_small = 8000
+      INTEGER, PARAMETER :: nnza_guess_medium = 800000
+      INTEGER, PARAMETER :: nnza_guess_large = 8000000
 
 !  maximum number of integer parameters
 
-!     INTEGER, PARAMETER :: niindex_guess = 1
-      INTEGER, PARAMETER :: niindex_guess = 100
+      INTEGER, PARAMETER :: niindex_guess_debug = 1
+      INTEGER, PARAMETER :: niindex_guess_small = 100
+      INTEGER, PARAMETER :: niindex_guess_medium = 100
+      INTEGER, PARAMETER :: niindex_guess_large = 100
 
 !  maximum number of real parameters
 
-!     INTEGER, PARAMETER :: nrindex_guess = 1
-      INTEGER, PARAMETER :: nrindex_guess = 20000 
+      INTEGER, PARAMETER :: nrindex_guess_debug = 1
+      INTEGER, PARAMETER :: nrindex_guess_small = 20000 
+      INTEGER, PARAMETER :: nrindex_guess_medium = 20000 
+      INTEGER, PARAMETER :: nrindex_guess_large = 20000 
 
 !  maximum number of statements in any level of a do-loop
 
-      INTEGER, PARAMETER :: maxins_guess = 1
-!     INTEGER, PARAMETER :: maxins_guess = 200
+      INTEGER, PARAMETER :: maxins_guess_debug = 1
+      INTEGER, PARAMETER :: maxins_guess_small = 200
+      INTEGER, PARAMETER :: maxins_guess_medium = 200
+      INTEGER, PARAMETER :: maxins_guess_large = 200
 
 !  maximum number of array instructions
 
-      INTEGER, PARAMETER :: maxarray_guess = 1
-!     INTEGER, PARAMETER :: maxarray_guess = 150
+      INTEGER, PARAMETER :: maxarray_guess_debug = 1
+      INTEGER, PARAMETER :: maxarray_guess_small = 150
+      INTEGER, PARAMETER :: maxarray_guess_medium = 150
+      INTEGER, PARAMETER :: maxarray_guess_large = 150
 
 !  maximum number of vectors of bounds
 
-      INTEGER, PARAMETER :: nbnd_guess  = 2     
+      INTEGER, PARAMETER :: nbnd_guess_debug = 1
+      INTEGER, PARAMETER :: nbnd_guess_small = 2
+      INTEGER, PARAMETER :: nbnd_guess_medium = 2
+      INTEGER, PARAMETER :: nbnd_guess_large = 2
 
 !  maximum number of vectors of solutions
 
-      INTEGER, PARAMETER :: nstart_guess = 3     
+      INTEGER, PARAMETER :: nstart_guess_debug = 1
+      INTEGER, PARAMETER :: nstart_guess_small = 3     
+      INTEGER, PARAMETER :: nstart_guess_medium = 3     
+      INTEGER, PARAMETER :: nstart_guess_large = 3     
 
 !  maximum number of vectors of bounds on the objective function
 
-      INTEGER, PARAMETER :: nobjbound_guess = 2
-
-!  dependencies on the maximum number of nontrivial group types
-!  ngrp_guess is the total number of group parameters
-
-      INTEGER, PARAMETER :: ngrp_guess = 2 * ngtype_guess
-
-!  dependencies on the maximum number of nonlinear element types nev_guess, 
-!  niv_guess and nep_guess are the total number of elemental and internal 
-!  variables and parameters respectively
-
-      INTEGER, PARAMETER :: nev_guess = 5 * netype_guess
-      INTEGER, PARAMETER :: niv_guess = 5 * netype_guess
-      INTEGER, PARAMETER :: nep_guess = 3 * netype_guess
-
-!  maximum size of dictionary
-
-!     INTEGER, PARAMETER :: len_table_guess = 2
-      INTEGER, PARAMETER :: len_table_guess                                    &
-        = n_guess + ng_guess + nel_guess + nauxpar_guess + 1000
+      INTEGER, PARAMETER :: nobjbound_guess_debug = 1
+      INTEGER, PARAMETER :: nobjbound_guess_small = 2
+      INTEGER, PARAMETER :: nobjbound_guess_medium = 2
+      INTEGER, PARAMETER :: nobjbound_guess_large = 2
 
 !  increase factor when enlarging arrays = increase_n / increase_d > 1
 
@@ -245,10 +256,11 @@
       SUBROUTINE SIFDECODE_decode( iingps, outda, iinfn, outfn, outff, outfd,  &
                                    outra, iingr, outgr, outgf, outgd, iinex,   &
                                    outex, outem, outea, print_level, out,      &
-                                   noname, ialgor, iauto, iad0, single, status )
-      INTEGER :: iingps, iinfn, iingr
+                                   noname, ialgor, iauto, iad0, single, size,  &
+                                   status )
+      INTEGER :: iingps, iinfn, iingr, outea, outex, print_level, out
       INTEGER :: outda, outra, outfn, outgr, outff, outfd, outgf, outgd, outem
-      INTEGER :: outea, outex, print_level, out, ialgor, iad0, iauto, status
+      INTEGER :: ialgor, iad0, iauto, size, status
       LOGICAL :: noname, single
 
 !  ------------------------------------------------------------------------
@@ -266,12 +278,8 @@
       INTEGER :: n, ng, nbnd, neltype, nlvars, nobj, nrange, nconst, nobjgr
       INTEGER :: nnza, ngtype, nstart, nlisgp, nlisep, nnlvrs, nobbnd, nrival
       INTEGER :: nelvar, nelnum, neling, len1_vstart, len1_cstart, len_defined
-      INTEGER :: len1_blu, len_rinames, len_iinames, length
-      INTEGER :: len_renames = nauxpar_guess
-      INTEGER :: len_innames = nauxpar_guess
-      INTEGER :: len_lonames = nauxpar_guess
-      INTEGER :: len_minames = nauxpar_guess
-      INTEGER :: len_exnames = nauxpar_guess
+      INTEGER :: len1_blu, len_rinames, len_iinames, length, len_exnames
+      INTEGER :: len_renames, len_innames, len_lonames, len_minames
       REAL ( KIND = wp ) :: blo, bup
       LOGICAL :: debug, gotlin
       CHARACTER ( LEN = 8 ) :: pname
@@ -326,6 +334,46 @@
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: IINAMES, RINAMES
       CHARACTER ( LEN = 12 ), ALLOCATABLE, DIMENSION( : ) :: KEY
 
+!  set starting array sizes 
+
+!  debug problems
+
+      IF ( size == 0 ) THEN
+        len_renames = nauxpar_guess_debug
+        len_innames = nauxpar_guess_debug
+        len_lonames = nauxpar_guess_debug
+        len_minames = nauxpar_guess_debug
+        len_exnames = nauxpar_guess_debug
+
+!  small problems
+
+      ELSE IF ( size == 1 ) THEN
+        len_renames = nauxpar_guess_small
+        len_innames = nauxpar_guess_small
+        len_lonames = nauxpar_guess_small
+        len_minames = nauxpar_guess_small
+        len_exnames = nauxpar_guess_small
+
+!  large problems
+
+      ELSE IF ( size == 3 ) THEN
+        len_renames = nauxpar_guess_large
+        len_innames = nauxpar_guess_large
+        len_lonames = nauxpar_guess_large
+        len_minames = nauxpar_guess_large
+        len_exnames = nauxpar_guess_large
+
+!  medium problems (default)
+
+      ELSE ! IF ( size == 2 ) THEN
+        len_renames = nauxpar_guess_medium
+        len_innames = nauxpar_guess_medium
+        len_lonames = nauxpar_guess_medium
+        len_minames = nauxpar_guess_medium
+        len_exnames = nauxpar_guess_medium
+
+      END IF
+
       debug = print_level < 0
       IF ( single ) THEN
         WRITE( out, 2050 )
@@ -353,7 +401,7 @@
                    len_iinames, IINAMES, len_rinames, RINAMES,                 &
                    GNAMES, VNAMES, BNAMES, ETYPES, IVNAMES,                    &
                    LNAMES, ONAMES, EVNAMES, SNAMES, GANAMES, GTYPES, EPNAMES,  &
-                   GPNAMES, OBBNAME, single, iingps, out, status, debug )
+                   GPNAMES, OBBNAME, single, size, iingps, out, status, debug )
       IF ( status /= 0 ) THEN
         WRITE( out, 2010 ) status
         RETURN
@@ -556,7 +604,6 @@
                           VSCALE, pname, VNAMES, GNAMES, LNAMES, ETYPES,       &
                           EVNAMES, GANAMES, EPNAMES, GPNAMES, GTYPES,          &
                           out, print_level )
-write(6,*) ' after print_details'
       IF ( noname ) pname = '        '
 
 !  deallocate workspace
@@ -581,19 +628,14 @@ write(6,*) ' after print_details'
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'VSCALE' ; GO TO 990 ; END IF
 
-write(6,*) ' after 3'
-
       DEALLOCATE( ELVAR, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'ELVAR' ; GO TO 990 ; END IF
 
-
-write(6,*) ' after 4', ALLOCATED( IWK )
-!      DEALLOCATE( IWK, STAT = alloc_status )
+      DEALLOCATE( IWK, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'IWK' ; GO TO 990 ; END IF
 
-write(6,*) ' after 5'
       DEALLOCATE( GSTATE, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'GSTATE' ; GO TO 990 ; END IF
@@ -609,8 +651,6 @@ write(6,*) ' after 5'
       DEALLOCATE( TYPEV, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'TYPEV' ; GO TO 990 ; END IF
-
-write(6,*) ' after 1'
 
       DEALLOCATE( TYPEE, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
@@ -636,8 +676,7 @@ write(6,*) ' after 1'
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'EP_val' ; GO TO 990 ; END IF
 
-write(6,*) ' after 6', ALLOCATED( GP_val )
-!     DEALLOCATE( GP_val, STAT = alloc_status )
+      DEALLOCATE( GP_val, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'GP_val' ; GO TO 990 ; END IF
 
@@ -661,8 +700,6 @@ write(6,*) ' after 6', ALLOCATED( GP_val )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'LNAMES' ; GO TO 990 ; END IF
 
-write(6,*) ' after deallocates'
-
 !  allocate workspace
 
       len_defined = MAX( neltype, ngtype )
@@ -670,32 +707,26 @@ write(6,*) ' after deallocates'
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'DEFINED' ; GO TO 980 ; END IF
 
-write(6,*) ' after 0', len_renames
       CALL ALLOCATE_array( RENAMES, len_renames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'RENAMES' ; GO TO 980 ; END IF
 
-write(6,*) ' after 1'
       CALL ALLOCATE_array( INNAMES, len_innames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'INNAMES' ; GO TO 980 ; END IF
 
-write(6,*) ' after 2'
       CALL ALLOCATE_array( LONAMES, len_lonames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'LONAMES' ; GO TO 980 ; END IF
 
-write(6,*) ' after 3'
       CALL ALLOCATE_array( MINAMES, len_minames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'MINAMES' ; GO TO 980 ; END IF
 
-write(6,*) ' after 4'
       CALL ALLOCATE_array( EXNAMES, len_exnames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'EXNAMES' ; GO TO 980 ; END IF
    
-write(6,*) ' before make_elfun'
 !  make subroutines elfun and range
 
       IF ( iauto == 0 ) THEN
@@ -961,12 +992,12 @@ write(6,*) ' before make_elfun'
                          len_iinames, IINAMES, len_rinames, RINAMES,           &
                          GNAMES, VNAMES, BNAMES, ETYPES, IVNAMES, LNAMES,      &
                          ONAMES, EVNAMES, SNAMES, GANAMES, GTYPES, EPNAMES,    &
-                         GPNAMES, OBBNAME, single, input, out, status, debug )
-      INTEGER :: nobbnd, nrival, nelvar
-      INTEGER :: nnza, length, n, ng
+                         GPNAMES, OBBNAME, single, size, input, out,           &
+                         status, debug )
+      INTEGER :: nobbnd, nrival, nelvar, nnza, length, n, ng
       INTEGER :: nconst, nrange, nbnd, nstart, neltype, ngtype
       INTEGER :: nlvars, nnlvrs, nelnum, neling, narray, nobj
-      INTEGER :: nlisgp, nlisep, input, out, status
+      INTEGER :: nlisgp, nlisep, size, input, out, status
       INTEGER :: len1_blu, len1_vstart, len1_cstart, len_iinames, len_rinames
       INTEGER :: nevnames, nivnames, nepnames, ngpnames
       LOGICAL :: single, debug 
@@ -1122,6 +1153,17 @@ write(6,*) ' before make_elfun'
       INTEGER :: used_length, new_length, min_length, alloc_status
       INTEGER :: used_length2, new_length2, min_length2
       INTEGER :: used_length3, new_length3, min_length3
+      INTEGER :: len_elvar, len_gtypesp_ptr, len_ganames, len_gtypes, len_gstate
+      INTEGER :: len_gtype, len_gnames, len_rscale, len2_idrows, len2_rdrows
+      INTEGER :: len2_cstart, len2_vstart, len_snames, len_onames
+      INTEGER :: len_eling_el, len_eling_g, len_weight, len_typee, len_ev_ptr
+      INTEGER :: len_ep_ptr, len_lnames, len_elv, len_inv, len_elp, len_etypes
+      INTEGER :: len_evnames, len_ivnames, len_epnames, len_gpnames, len_ep_val
+      INTEGER :: len_a, len2_blu, len_blu_default, len_bnames, len_obbname
+      INTEGER :: len_cscale, len_typev, len_default, len_vnames, len_iival
+      INTEGER :: len2_instr1, len2_instr2, len2_instr3, len_rvalue1, len_rvalue2
+      INTEGER :: len_rvalue3, len_farray, len2_array, len2_carray, len2_varray
+      INTEGER :: len_gp_val_orig, len_fbound, len_rival, len3_iarray
       REAL ( KIND = wp ) :: value4, value6
       LOGICAL :: defnam, inrep, defaut, doloop
       LOGICAL :: end_bound_section, end_start_section, end_quadratic_section
@@ -1148,78 +1190,267 @@ write(6,*) ' before make_elfun'
 !  initial allocatble array dimensions
 
       INTEGER :: len_gp_ptr, len_eling_ptr
-      INTEGER :: len_elvar = nelvar_guess 
-      INTEGER :: len_gtypesp_ptr = MAX( ngtype_guess + 1, 2 )
-      INTEGER :: len_ganames = MAX( ngtype_guess, 1 )
-      INTEGER :: len_gtypes = MAX( ngtype_guess, 1 )
-      INTEGER :: len_gstate = ng_guess
-      INTEGER :: len_gtype = ng_guess
-      INTEGER :: len_gnames = ng_guess 
-      INTEGER :: len_rscale = ng_guess
       INTEGER :: len1_idrows = 2
-      INTEGER :: len2_idrows = ng_guess
       INTEGER :: len1_rdrows = 2
-      INTEGER :: len2_rdrows = ng_guess
-      INTEGER :: len2_cstart = MAX( nstart_guess, 1 )
-      INTEGER :: len2_vstart = MAX( nstart_guess, 1 )
-      INTEGER :: len_snames = nstart_guess
-      INTEGER :: len_onames = ng_guess
-      INTEGER :: len_gp_val_orig = ngp_guess
-      INTEGER :: len_eling_el = nel_guess
-      INTEGER :: len_eling_g = nel_guess
-      INTEGER :: len_weight = nel_guess
-      INTEGER :: len_typee = nel_guess
-      INTEGER :: len_ev_ptr = nel_guess + 1
-      INTEGER :: len_ep_ptr = nel_guess + 1
-      INTEGER :: len_lnames = nel_guess
-      INTEGER :: len_elv = netype_guess + 1
-      INTEGER :: len_inv = netype_guess + 1
-      INTEGER :: len_elp = netype_guess + 1
-      INTEGER :: len_etypes = MAX( netype_guess, 1 )
-      INTEGER :: len_evnames = nev_guess 
-      INTEGER :: len_ivnames = niv_guess 
-      INTEGER :: len_epnames = nep_guess 
-      INTEGER :: len_gpnames = ngrp_guess
-      INTEGER :: len_ep_val = nelp_guess
-      INTEGER :: len_a = nnza_guess
-      INTEGER :: len2_blu = MAX( nbnd_guess, 1 )
-      INTEGER :: len_blu_default = MAX( nbnd_guess, 1 )
-      INTEGER :: len_bnames = MAX( nbnd_guess, 1 )
-      INTEGER :: len_obbname = nobjbound_guess
-      INTEGER :: len_fbound = nobjbound_guess
-      INTEGER :: len_cscale = n_guess
-      INTEGER :: len_typev = n_guess
-      INTEGER :: len_default = n_guess
-      INTEGER :: len_vnames = n_guess
-      INTEGER :: len_iival = niindex_guess
-      INTEGER :: len_rival = nrindex_guess
       INTEGER :: len1_instr1 = 5
-      INTEGER :: len2_instr1 = MAX( maxins_guess, 1 )
       INTEGER :: len1_instr2 = 5
-      INTEGER :: len2_instr2 = maxins_guess
       INTEGER :: len1_instr3 = 5
-      INTEGER :: len2_instr3 = maxins_guess
-      INTEGER :: len_rvalue1 = MAX( maxarray_guess, 1 )
-      INTEGER :: len_rvalue2 = maxarray_guess
-      INTEGER :: len_rvalue3 = maxarray_guess
-      INTEGER :: len_farray = MAX( maxarray_guess, 1 )
       INTEGER :: len1_array = 3
-      INTEGER :: len2_array = maxarray_guess
       INTEGER :: len1_carray = 2
-      INTEGER :: len2_carray = maxarray_guess
       INTEGER :: len1_varray = 2
-      INTEGER :: len2_varray = maxarray_guess
       INTEGER :: len1_iarray = 5
       INTEGER :: len2_iarray = 3
-      INTEGER :: len3_iarray = maxarray_guess
 
-!      INTEGER :: len_inlist = length
-!      INTEGER :: len_itable = length
-!      INTEGER :: len_key = length
+!  set starting array sizes 
 
-      length = len_table_guess
-      len_iinames = niindex_guess
-      len_rinames = nrindex_guess
+!  debug problems
+
+      IF ( size == 0 ) THEN
+        len_elvar = nelvar_guess_debug
+        len_gtypesp_ptr = MAX( ngtype_guess_debug + 1, 2 )
+        len_ganames = MAX( ngtype_guess_debug, 1 )
+        len_gtypes = MAX( ngtype_guess_debug, 1 )
+        len_gstate = ng_guess_debug
+        len_gtype = ng_guess_debug
+        len_gnames = ng_guess_debug 
+        len_rscale = ng_guess_debug
+        len2_idrows = ng_guess_debug
+        len2_rdrows = ng_guess_debug
+        len2_cstart = MAX( nstart_guess_debug, 1 )
+        len2_vstart = MAX( nstart_guess_debug, 1 )
+        len_snames = nstart_guess_debug
+        len_onames = ng_guess_debug
+        len_gp_val_orig = ngp_guess_debug
+        len_eling_el = nel_guess_debug
+        len_eling_g = nel_guess_debug
+        len_weight = nel_guess_debug
+        len_typee = nel_guess_debug
+        len_ev_ptr = nel_guess_debug + 1
+        len_ep_ptr = nel_guess_debug + 1
+        len_lnames = nel_guess_debug
+        len_elv = netype_guess_debug + 1
+        len_inv = netype_guess_debug + 1
+        len_elp = netype_guess_debug + 1
+        len_etypes = MAX( netype_guess_debug, 1 )
+        len_evnames = 5 * netype_guess_debug
+        len_ivnames = 5 * netype_guess_debug
+        len_epnames = 3 * netype_guess_debug
+        len_gpnames = 2 * ngtype_guess_debug
+        len_ep_val = nelp_guess_debug
+        len_a = nnza_guess_debug
+        len2_blu = MAX( nbnd_guess_debug, 1 )
+        len_blu_default = MAX( nbnd_guess_debug, 1 )
+        len_bnames = MAX( nbnd_guess_debug, 1 )
+        len_obbname = nobjbound_guess_debug
+        len_fbound = nobjbound_guess_debug
+        len_cscale = n_guess_debug
+        len_typev = n_guess_debug
+        len_default = n_guess_debug
+        len_vnames = n_guess_debug
+        len_iival = niindex_guess_debug
+        len_rival = nrindex_guess_debug
+        len2_instr1 = MAX( maxins_guess_debug, 1 )
+        len2_instr2 = maxins_guess_debug
+        len2_instr3 = maxins_guess_debug
+        len_rvalue1 = MAX( maxarray_guess_debug, 1 )
+        len_rvalue2 = maxarray_guess_debug
+        len_rvalue3 = maxarray_guess_debug
+        len_farray = MAX( maxarray_guess_debug, 1 )
+        len2_array = maxarray_guess_debug
+        len2_carray = maxarray_guess_debug
+        len2_varray = maxarray_guess_debug
+        len3_iarray = maxarray_guess_debug
+        len_iinames = niindex_guess_debug
+        len_rinames = nrindex_guess_debug
+        length = n_guess_debug + ng_guess_debug + nel_guess_debug              &
+                   + nauxpar_guess_debug + 1000
+
+!  small problems
+
+      ELSE IF ( size == 1 ) THEN
+        len_elvar = nelvar_guess_small
+        len_gtypesp_ptr = MAX( ngtype_guess_small + 1, 2 )
+        len_ganames = MAX( ngtype_guess_small, 1 )
+        len_gtypes = MAX( ngtype_guess_small, 1 )
+        len_gstate = ng_guess_small
+        len_gtype = ng_guess_small
+        len_gnames = ng_guess_small 
+        len_rscale = ng_guess_small
+        len2_idrows = ng_guess_small
+        len2_rdrows = ng_guess_small
+        len2_cstart = MAX( nstart_guess_small, 1 )
+        len2_vstart = MAX( nstart_guess_small, 1 )
+        len_snames = nstart_guess_small
+        len_onames = ng_guess_small
+        len_gp_val_orig = ngp_guess_small
+        len_eling_el = nel_guess_small
+        len_eling_g = nel_guess_small
+        len_weight = nel_guess_small
+        len_typee = nel_guess_small
+        len_ev_ptr = nel_guess_small + 1
+        len_ep_ptr = nel_guess_small + 1
+        len_lnames = nel_guess_small
+        len_elv = netype_guess_small + 1
+        len_inv = netype_guess_small + 1
+        len_elp = netype_guess_small + 1
+        len_etypes = MAX( netype_guess_small, 1 )
+        len_evnames = 5 * netype_guess_small
+        len_ivnames = 5 * netype_guess_small
+        len_epnames = 3 * netype_guess_small
+        len_gpnames = 2 * ngtype_guess_small
+        len_ep_val = nelp_guess_small
+        len_a = nnza_guess_small
+        len2_blu = MAX( nbnd_guess_small, 1 )
+        len_blu_default = MAX( nbnd_guess_small, 1 )
+        len_bnames = MAX( nbnd_guess_small, 1 )
+        len_obbname = nobjbound_guess_small
+        len_fbound = nobjbound_guess_small
+        len_cscale = n_guess_small
+        len_typev = n_guess_small
+        len_default = n_guess_small
+        len_vnames = n_guess_small
+        len_iival = niindex_guess_small
+        len_rival = nrindex_guess_small
+        len2_instr1 = MAX( maxins_guess_small, 1 )
+        len2_instr2 = maxins_guess_small
+        len2_instr3 = maxins_guess_small
+        len_rvalue1 = MAX( maxarray_guess_small, 1 )
+        len_rvalue2 = maxarray_guess_small
+        len_rvalue3 = maxarray_guess_small
+        len_farray = MAX( maxarray_guess_small, 1 )
+        len2_array = maxarray_guess_small
+        len2_carray = maxarray_guess_small
+        len2_varray = maxarray_guess_small
+        len3_iarray = maxarray_guess_small
+        length = n_guess_small + ng_guess_small + nel_guess_small              &
+                   + nauxpar_guess_small + 1000
+        len_iinames = niindex_guess_small
+        len_rinames = nrindex_guess_small
+
+!  large  problems
+
+      ELSE IF ( size == 3 ) THEN
+        len_elvar = nelvar_guess_large
+        len_gtypesp_ptr = MAX( ngtype_guess_large + 1, 2 )
+        len_ganames = MAX( ngtype_guess_large, 1 )
+        len_gtypes = MAX( ngtype_guess_large, 1 )
+        len_gstate = ng_guess_large
+        len_gtype = ng_guess_large
+        len_gnames = ng_guess_large 
+        len_rscale = ng_guess_large
+        len2_idrows = ng_guess_large
+        len2_rdrows = ng_guess_large
+        len2_cstart = MAX( nstart_guess_large, 1 )
+        len2_vstart = MAX( nstart_guess_large, 1 )
+        len_snames = nstart_guess_large
+        len_onames = ng_guess_large
+        len_gp_val_orig = ngp_guess_large
+        len_eling_el = nel_guess_large
+        len_eling_g = nel_guess_large
+        len_weight = nel_guess_large
+        len_typee = nel_guess_large
+        len_ev_ptr = nel_guess_large + 1
+        len_ep_ptr = nel_guess_large + 1
+        len_lnames = nel_guess_large
+        len_elv = netype_guess_large + 1
+        len_inv = netype_guess_large + 1
+        len_elp = netype_guess_large + 1
+        len_etypes = MAX( netype_guess_large, 1 )
+        len_evnames = 5 * netype_guess_large
+        len_ivnames = 5 * netype_guess_large
+        len_epnames = 3 * netype_guess_large
+        len_gpnames = 2 * ngtype_guess_large
+        len_ep_val = nelp_guess_large
+        len_a = nnza_guess_large
+        len2_blu = MAX( nbnd_guess_large, 1 )
+        len_blu_default = MAX( nbnd_guess_large, 1 )
+        len_bnames = MAX( nbnd_guess_large, 1 )
+        len_obbname = nobjbound_guess_large
+        len_fbound = nobjbound_guess_large
+        len_cscale = n_guess_large
+        len_typev = n_guess_large
+        len_default = n_guess_large
+        len_vnames = n_guess_large
+        len_iival = niindex_guess_large
+        len_rival = nrindex_guess_large
+        len2_instr1 = MAX( maxins_guess_large, 1 )
+        len2_instr2 = maxins_guess_large
+        len2_instr3 = maxins_guess_large
+        len_rvalue1 = MAX( maxarray_guess_large, 1 )
+        len_rvalue2 = maxarray_guess_large
+        len_rvalue3 = maxarray_guess_large
+        len_farray = MAX( maxarray_guess_large, 1 )
+        len2_array = maxarray_guess_large
+        len2_carray = maxarray_guess_large
+        len2_varray = maxarray_guess_large
+        len3_iarray = maxarray_guess_large
+        len_iinames = niindex_guess_large
+        len_rinames = nrindex_guess_large
+        length = n_guess_large + ng_guess_large + nel_guess_large              &
+                   + nauxpar_guess_large + 1000
+
+!  medium problems (default)
+
+      ELSE ! IF ( size == 2 ) THEN
+        len_elvar = nelvar_guess_medium
+        len_gtypesp_ptr = MAX( ngtype_guess_medium + 1, 2 )
+        len_ganames = MAX( ngtype_guess_medium, 1 )
+        len_gtypes = MAX( ngtype_guess_medium, 1 )
+        len_gstate = ng_guess_medium
+        len_gtype = ng_guess_medium
+        len_gnames = ng_guess_medium 
+        len_rscale = ng_guess_medium
+        len2_idrows = ng_guess_medium
+        len2_rdrows = ng_guess_medium
+        len2_cstart = MAX( nstart_guess_medium, 1 )
+        len2_vstart = MAX( nstart_guess_medium, 1 )
+        len_snames = nstart_guess_medium
+        len_onames = ng_guess_medium
+        len_gp_val_orig = ngp_guess_medium
+        len_eling_el = nel_guess_medium
+        len_eling_g = nel_guess_medium
+        len_weight = nel_guess_medium
+        len_typee = nel_guess_medium
+        len_ev_ptr = nel_guess_medium + 1
+        len_ep_ptr = nel_guess_medium + 1
+        len_lnames = nel_guess_medium
+        len_elv = netype_guess_medium + 1
+        len_inv = netype_guess_medium + 1
+        len_elp = netype_guess_medium + 1
+        len_etypes = MAX( netype_guess_medium, 1 )
+        len_evnames = 5 * netype_guess_medium
+        len_ivnames = 5 * netype_guess_medium
+        len_epnames = 3 * netype_guess_medium
+        len_gpnames = 2 * ngtype_guess_medium
+        len_ep_val = nelp_guess_medium
+        len_a = nnza_guess_medium
+        len2_blu = MAX( nbnd_guess_medium, 1 )
+        len_blu_default = MAX( nbnd_guess_medium, 1 )
+        len_bnames = MAX( nbnd_guess_medium, 1 )
+        len_obbname = nobjbound_guess_medium
+        len_fbound = nobjbound_guess_medium
+        len_cscale = n_guess_medium
+        len_typev = n_guess_medium
+        len_default = n_guess_medium
+        len_vnames = n_guess_medium
+        len_iival = niindex_guess_medium
+        len_rival = nrindex_guess_medium
+        len2_instr1 = MAX( maxins_guess_medium, 1 )
+        len2_instr2 = maxins_guess_medium
+        len2_instr3 = maxins_guess_medium
+        len_rvalue1 = MAX( maxarray_guess_medium, 1 )
+        len_rvalue2 = maxarray_guess_medium
+        len_rvalue3 = maxarray_guess_medium
+        len_farray = MAX( maxarray_guess_medium, 1 )
+        len2_array = maxarray_guess_medium
+        len2_carray = maxarray_guess_medium
+        len2_varray = maxarray_guess_medium
+        len3_iarray = maxarray_guess_medium
+        len_iinames = niindex_guess_medium
+        len_rinames = nrindex_guess_medium
+        length = n_guess_medium + ng_guess_medium + nel_guess_medium           &
+                   + nauxpar_guess_medium + 1000
+      END IF
 
 !  set initial values for integer variables
 
@@ -1241,6 +1472,7 @@ write(6,*) ' before make_elfun'
       grpyet = .FALSE. ; varyet = .FALSE. ; delset = .FALSE. ; dgrset = .FALSE.
       grp1st = .TRUE. ; fixed = .TRUE. ; qgroup = .FALSE. ; qsqr = .FALSE.
       qprod = .FALSE.
+      elmnt = "          "
 
 !  set initial values for real variables
 
@@ -1717,7 +1949,15 @@ write(6,*) ' before make_elfun'
         IF ( intype >= mqhess ) THEN
           IF ( .NOT. end_start_section ) THEN
             end_start_section = .TRUE.
-            IF ( nstart == 0 ) nstart = 1
+            IF ( nstart == 0 ) THEN
+              nstart = 1
+              DO i = 1, nlvars
+                VSTART( i, nstart ) = zero
+              END DO
+              DO i = 1, ng
+                CSTART( i, nstart ) = zero
+              END DO
+            END IF
           END IF
         END IF
 
@@ -1912,7 +2152,7 @@ write(6,*) ' before make_elfun'
          END IF
 
          IF ( intype == mendat ) THEN
-           k = MAX( ng, nelnum )
+           k = MAX( ng + 1, nelnum )
            CALL ALLOCATE_array( IWK, k, alloc_status )
            IF ( alloc_status /= 0 ) THEN
              bad_alloc = 'IWK' ; GO TO 980 ; END IF
@@ -2760,6 +3000,7 @@ write(6,*) ' before make_elfun'
                        IINAMES, len_rinames, RINAMES,                          &
                        ARRAY( 1, narray ), CARRAY( 1, narray ),                &
                        length, TABLE, KEY, INLIST, out, status )
+            RVALUE1( ninstr1 ) = zero
           ELSE IF ( level == 2 ) THEN
             CALL DECODE_array_instruction( 2,                                  &
                        ninstr2, niival, nrival, narray,                        &
@@ -2772,6 +3013,7 @@ write(6,*) ' before make_elfun'
                        IINAMES, len_rinames, RINAMES,                          &
                        ARRAY( 1, narray ), CARRAY( 1, narray ),                &
                        length, TABLE, KEY, INLIST, out, status )
+            RVALUE2( ninstr2 ) = zero
           ELSE
             CALL DECODE_array_instruction( 3,                                  &
                        ninstr3, niival, nrival, narray,                        &
@@ -2784,6 +3026,7 @@ write(6,*) ' before make_elfun'
                        IINAMES, len_rinames, RINAMES,                          &
                        ARRAY( 1, narray ), CARRAY( 1, narray ),                &
                        length, TABLE, KEY, INLIST, out, status )
+            RVALUE3( ninstr3 ) = zero
           END IF
           IF ( status > 0 ) GO TO 800
           IF ( status < 0 ) GO TO 700
@@ -2855,6 +3098,7 @@ write(6,*) ' before make_elfun'
                          IINAMES, len_rinames, RINAMES,                        &
                          ARRAY( 1, 1 ), CARRAY( 1, 1 ),                        &
                          length, TABLE, KEY, INLIST, out, status )
+            RVALUE1( 1 ) = zero
             IF ( status > 0 ) GO TO 800
             IF ( status < 0 ) GO TO 700
 
@@ -5930,11 +6174,11 @@ write(6,*) ' before make_elfun'
         END IF
         delset = .TRUE.
         detype = field3
-      ELSE
 
 !  if the element named in field2 is not that of the previous card,
 !  determine the characteristics of the element
 
+      ELSE
         IF ( elmnt /= field2 ) THEN
 
 !  look the name up in the dictionary to see if it already exists
@@ -6957,6 +7201,9 @@ write(6,*) ' before make_elfun'
       CHARACTER ( LEN = 12 ) :: field
       CHARACTER ( LEN = 24 ) :: bad_alloc
 
+      rvalue = zero
+      INSTR( 1 : 5 ) = (/ 0, 0, 0, 0, 0 /)
+
 !  decide what sort of instruction is to be performed: integer instructions
 
       IF ( field1 == 'IE' .OR. field1 == 'IA' .OR.                             &
@@ -7375,6 +7622,8 @@ write(6,*) ' before make_elfun'
       INTEGER :: i, kindar, ifree
       INTEGER :: used_length, new_length, min_length, alloc_status
       CHARACTER ( LEN = 24 ) :: bad_alloc
+
+      INSTR( 1 : 5 ) = (/ 0, 0, 0, 0, 0 /)
 
 !  determine how much information must be saved by determining
 !  the kind of array definition being made
@@ -8575,7 +8824,7 @@ write(6,*) ' before make_elfun'
       INTEGER :: ELV( neltype + 1 ), INV( neltype + 1 )
       INTEGER :: EP_ptr ( nelnum + 1 ), GP_ptr( ng + 1 )
       INTEGER :: ELING_el( neling ), GTYPESP_ptr( ngtype + 1 ) 
-      INTEGER :: TYPEV( n ), TYPEE( nelnum ), GTYPE( ng ), IWK( ng )
+      INTEGER :: TYPEV( n ), TYPEE( nelnum ), GTYPE( ng ), IWK( ng + 1 )
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ABYROW_ptr, ABYROW_col
       REAL ( KIND = wp ) :: A_val( nnza )
       REAL ( KIND = wp ) :: RDROWS( 2, ng ), WEIGHT( neling )
@@ -8963,7 +9212,7 @@ write(6,*) ' before make_elfun'
 
 !  record the starting point
 
-      X( : nlvars ) = VSTART( : nlvars, jstart )
+      X( 1 : nlvars ) = VSTART( 1 : nlvars, jstart )
 
 !  initialize all slack and nonlinear variables as zero, with weight 1
 
@@ -9226,11 +9475,11 @@ write(6,*) ' before make_elfun'
 
 !  write REAL ( KIND = wp ) :: format
 
-      ELSE
-
 !  output the values of the nonzeros in each linear element, the
 !  constant term in each group, the lower and upper bounds on
 !  the variables and the starting point for the minimization
+
+      ELSE
 
         WRITE( outda, 3120 ) ( ABYROW_val( i ), i = 1, nnza )
         WRITE( outda, 3120 ) ( B( i ), i = 1, ng )
@@ -18179,10 +18428,10 @@ write(6,*) ' before make_elfun'
 
 !-*-*-*-*- S I F D E C O D E   R E O R D E R    S U B R O U T I N E -*-*-*-*-*-
 
-      SUBROUTINE REORDER( nc, nnz, A_row, A_col, A_val, ip, IW )
+      SUBROUTINE REORDER( nc, nnz, A_row, A_col, A_val, IP, IW )
       INTEGER :: nc, nnz
       INTEGER :: A_row( nnz ), A_col( nnz )
-      INTEGER :: IW( * ), IP( * )
+      INTEGER :: IW( nc + 1 ), IP( nc + 1 )
       REAL ( KIND = wp ) ::   A_val( nnz  )
 
 !  ---------------------------------------------------------
@@ -18198,7 +18447,7 @@ write(6,*) ' before make_elfun'
 !  initialize the workspace as zero
 
       ncp1 = nc + 1
-      IW( : ncp1 ) = 0
+      IW( 1 : ncp1 ) = 0
 
 !  pass 1. count the number of elements in each column
 

@@ -1,22 +1,27 @@
 #!/bin/bash
 # sifdecoder: script to decode a sif file
 #
-# Use: sifdecoder [-A architecture] [-s] [-h] [-o j] [-f] [-b] [-a j] 
-#                 [-show] [-param name=value[,name=value...]] [-force]
-#                 probname[.SIF]
+# Use: sifdecoder [-A architecture] [-sp] [-h] [-o j] [-m] [-f] [-b] [-a j] 
+#                 [-p package] [-show] [-param name=value[,name=value...]] 
+#                 [-force] probname[.SIF]
 #
 # where: options -A     : specify the architecture. (Default: use $MYARCH)
-#                -s     : run the single precision version
+#                -sp    : run the single precision version
 #                         (Default: run the double precision version)
 #                -h     : print this help and stop execution
 #                -o     : 0 for silent mode, 1 for brief description of
 #                         the stages executed. (Default: -o 0)
+#                -m     : check for memory leaks (when possible) using valgrind
 #                -f     : use automatic differentiation in Forward mode
 #                -b     : use automatic differentiation in Backward mode
 #                -a     : 1 use the older HSL automatic differentiation 
 #                           package AD01, and
 #                         2 use the newer HSL automatic differentiation 
 #                           package AD02 (Default: -a 2)
+#                -p     : decode for a particular package
+#                         1=LANCELOT, 2=BARIA, 3=CUTEst (default)
+#                -s     : rough size of problem 
+#                         1=small,2=medium,3=large (default)
 #                -show  : displays possible parameter settings for
 #                         probname[.SIF]. Other options are ignored
 #                -param : cast probname[.SIF] against explicit parameter
@@ -59,9 +64,9 @@ if (( last < 1 )); then
 fi
 
 if [[ "$stop_early" == "true" ]]; then
-    echo ' Use: sifdecoder [-A architecture] [-s] [-h] [-f] [-b] [-a j]'
-    echo '                       [-m] [-p] [-o j] [-l secs] [-show]'
-    echo '                       [-param name=value[,name=value...]]'
+    echo ' Use: sifdecoder [-A architecture] [-sp] [-h] [-f] [-b] [-a j]'
+    echo '                       [-p package] [-p] [-o j] [-m] [-l secs]'
+    echo '                       [-show] [-param name=value[,name=value...]]'
     echo '                       [-force] probname[.SIF]'
     exit 1
 fi
@@ -119,9 +124,17 @@ let ad0=2
 
 let FORCE=0
 
-#  throwback to LANCELOT days
+# MEMCHECK = 0 (do not grind the code for memory leaks), = 1 (grind it)
 
-let METHOD=3
+MEMCHECK=0
+
+#  throwback to LANCELOT days (1 = LANCELOT, 2 = BARIA, 3 = CUTEst, other = 3)
+
+let PACKAGE=3
+
+#  rough size of problem (1 = small, 2 = medium, 3 = large, other = 3)
+
+let size=2
 
 #  -------------------
 #  Interpret arguments
@@ -130,7 +143,7 @@ let METHOD=3
 let last=$#
 
 if (( last == 0 )); then
-  echo "Use: sifdecoder [-A architecture] [-s] [-h] [-o j] [-l secs]"
+  echo "Use: sifdecoder [-A architecture] [-sp] [-h] [-o j] [-l secs]"
   echo "           [-f] [-b] [-a j] [-show] [-param name=value[,name=value...]]"
   echo "           [-force] probname[.SIF]"
   exit 1
@@ -144,16 +157,17 @@ while (( i < last )); do
   opt=${!i}
   if [[ "$opt" == '-h' || "$opt" == '--help' ]]; then
 
-    echo " Use: sifdecoder [-A architecture] [-s] [-h] [-o j] [-l secs]"
+    echo " Use: sifdecoder [-A architecture] [-sp] [-h] [-o j] [-l secs]"
     echo "         [-f] [-b] [-a j] [-show] [-param name=value[,name=value...]]"
     echo "         [-force] probname[.SIF]"
-    echo ""where options:
+    echo "where options:"
     echo "          -A     : specify the architecture. (Default: use $MYARCH)"
-    echo "          -s     : run the single precision version"
+    echo "          -sp    : run the single precision version"
     echo "                   (Default: run the double precision version)"
     echo "          -h     : print this help and stop execution"
     echo "          -o     : 0 for silent mode, 1 for brief description"
     echo "                   of the stages executed. (Default: -o 0)"
+    echo "          -m     : check for memory leaks using valgrind"
     echo "          -f     : use automatic differentiation in Forward mode"
     echo "          -b     : use automatic differentiation in Backward mode"
     echo "          -a     : 1 use the older HSL automatic differentiation "
@@ -161,6 +175,8 @@ while (( i < last )); do
     echo "                   2 use the newer HSL automatic differentiation "
     echo "                     package AD02"
     echo "                   (Default: -a 2)"
+    echo "          -p     : decode for a particular package"
+    echo "                   1=LANCELOT, 2=BARIA, 3=CUTEst (default)"
     echo "          -show  : displays possible parameter settings for"
     echo "                   probname[.SIF]. Other options are ignored"
     echo "          -param : cast probname[.SIF] against explicit parameter"
@@ -181,15 +197,22 @@ while (( i < last )); do
   elif [[ "$opt" == '-A' ]]; then
     (( i++ ))
     ARCH=${!i}
-  elif [[ "$opt" == '-s' ]]; then
+  elif [[ "$opt" == '-sp' ]]; then
     PRECISION="single"
     let prec=0
   elif [[ "$opt" == '-o' ]]; then
     (( i++ ))
     let OUTPUT=${!i}
   elif [[ "$opt" == '-m' ]]; then
+    MEMCHECK=1
+    VALGRIND="-v --tool=memcheck --leak-check=full --show-reachable=yes \
+      --trace-children=yes --show-reachable=yes --log-file=valgrind_sifdecoder"
+  elif [[ "$opt" == '-p' ]]; then
     (( i++ ))
-    let METHOD=${!i}
+    let PACKAGE=${!i}
+  elif [[ "$opt" == '-s' ]]; then
+    (( i++ ))
+    let size=${!i}
   elif [[ "$opt" == '-f' ]]; then
     let automatic=1
   elif [[ "$opt" == '-b' ]]; then
@@ -451,17 +474,30 @@ fi
 sdinput=${thiscaller}.$$.input
 
 echo $TEMPNAME   > $sdinput
-echo $METHOD    >> $sdinput
+echo $PACKAGE   >> $sdinput
 echo $OUTPUT    >> $sdinput
 echo $PROBNAME  >> $sdinput
 echo $automatic >> $sdinput
 echo $ad0       >> $sdinput
 echo $prec      >> $sdinput
+echo $size      >> $sdinput
 
 # Finally, decode the problem
 
-#$DECODER < $sdinput
-valgrind --leak-check=yes -v --track-origins=yes --log-file=valdebug $DECODER < $sdinput
+if [[ $MEMCHECK == "1" ]]; then
+  which valgrind > /dev/null 2>&1
+  if [[ $? == "0" ]]; then
+    valgrind $VALGRIND $DECODER < $sdinput
+  else
+    if [[ $OUTPUT == "1" ]]; then
+      echo 'no memory checking available, sorry ... '
+      echo ' '
+    fi
+    $DECODER < $sdinput
+  fi
+else
+  $DECODER < $sdinput
+fi
 
 # Clean up
 
