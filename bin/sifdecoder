@@ -460,7 +460,8 @@ echo $prec      >> $sdinput
 
 # Finally, decode the problem
 
-$DECODER < $sdinput
+#$DECODER < $sdinput
+valgrind --leak-check=yes -v --track-origins=yes --log-file=valdebug $DECODER < $sdinput
 
 # Clean up
 

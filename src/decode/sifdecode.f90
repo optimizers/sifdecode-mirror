@@ -57,12 +57,14 @@
 !  maximum number of variables
 
 !     INTEGER, PARAMETER :: n_guess = 1
-      INTEGER, PARAMETER :: n_guess = 1000000
+      INTEGER, PARAMETER :: n_guess = 1000
+!     INTEGER, PARAMETER :: n_guess = 1000000
 
 !  maximum number of groups
 
 !     INTEGER, PARAMETER :: ng_guess = 1
-      INTEGER, PARAMETER :: ng_guess = 600000
+      INTEGER, PARAMETER :: ng_guess = 1000
+!     INTEGER, PARAMETER :: ng_guess = 600000
 
 !  maximum number of different group types
 
@@ -72,12 +74,14 @@
 !  maximum total number of real parameters associated with groups
 
 !     INTEGER, PARAMETER :: ngp_guess = 1
-      INTEGER, PARAMETER :: ngp_guess = 1200000
+      INTEGER, PARAMETER :: ngp_guess = 2000
+!     INTEGER, PARAMETER :: ngp_guess = 1200000
 
 !  maximum number of nonlinear elements
 
 !     INTEGER, PARAMETER :: nel_guess = 1
-      INTEGER, PARAMETER :: nel_guess = 1000000
+      INTEGER, PARAMETER :: nel_guess = 5000
+!     INTEGER, PARAMETER :: nel_guess = 1000000
 
 !  maximum number of different nonlinear element types
 
@@ -87,7 +91,8 @@
 !  maximum total number of elemental variables
 
 !     INTEGER, PARAMETER :: nelvar_guess = 1
-      INTEGER, PARAMETER :: nelvar_guess = 1000000
+      INTEGER, PARAMETER :: nelvar_guess = 5000
+!     INTEGER, PARAMETER :: nelvar_guess = 100000
 
 !  maximum total number of auxliliary parameters used when defining function
 !  and derivative values
@@ -98,12 +103,14 @@
 !  maximum number of real parameters associated with nonlinear elements
 
 !     INTEGER, PARAMETER :: nelp_guess = 1
-      INTEGER, PARAMETER :: nelp_guess = 1000000
+      INTEGER, PARAMETER :: nelp_guess = 10000
+!     INTEGER, PARAMETER :: nelp_guess = 1000000
 
 !  maximum number of nonzeros in linear elements
 
 !     INTEGER, PARAMETER :: nnza_guess = 1
-      INTEGER, PARAMETER :: nnza_guess = 8000000
+      INTEGER, PARAMETER :: nnza_guess = 10000
+!     INTEGER, PARAMETER :: nnza_guess = 8000000
 
 !  maximum number of integer parameters
 
@@ -549,6 +556,7 @@
                           VSCALE, pname, VNAMES, GNAMES, LNAMES, ETYPES,       &
                           EVNAMES, GANAMES, EPNAMES, GPNAMES, GTYPES,          &
                           out, print_level )
+write(6,*) ' after print_details'
       IF ( noname ) pname = '        '
 
 !  deallocate workspace
@@ -573,14 +581,19 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'VSCALE' ; GO TO 990 ; END IF
 
+write(6,*) ' after 3'
+
       DEALLOCATE( ELVAR, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'ELVAR' ; GO TO 990 ; END IF
 
-      DEALLOCATE( IWK, STAT = alloc_status )
+
+write(6,*) ' after 4', ALLOCATED( IWK )
+!      DEALLOCATE( IWK, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'IWK' ; GO TO 990 ; END IF
 
+write(6,*) ' after 5'
       DEALLOCATE( GSTATE, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'GSTATE' ; GO TO 990 ; END IF
@@ -596,6 +609,8 @@
       DEALLOCATE( TYPEV, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'TYPEV' ; GO TO 990 ; END IF
+
+write(6,*) ' after 1'
 
       DEALLOCATE( TYPEE, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
@@ -621,7 +636,8 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'EP_val' ; GO TO 990 ; END IF
 
-      DEALLOCATE( GP_val, STAT = alloc_status )
+write(6,*) ' after 6', ALLOCATED( GP_val )
+!     DEALLOCATE( GP_val, STAT = alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'GP_val' ; GO TO 990 ; END IF
 
@@ -645,32 +661,41 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'LNAMES' ; GO TO 990 ; END IF
 
+write(6,*) ' after deallocates'
+
 !  allocate workspace
 
       len_defined = MAX( neltype, ngtype )
       CALL ALLOCATE_array( DEFINED, len_defined, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'DEFINED' ; GO TO 980 ; END IF
+
+write(6,*) ' after 0', len_renames
       CALL ALLOCATE_array( RENAMES, len_renames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'RENAMES' ; GO TO 980 ; END IF
 
+write(6,*) ' after 1'
       CALL ALLOCATE_array( INNAMES, len_innames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'INNAMES' ; GO TO 980 ; END IF
 
+write(6,*) ' after 2'
       CALL ALLOCATE_array( LONAMES, len_lonames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'LONAMES' ; GO TO 980 ; END IF
 
+write(6,*) ' after 3'
       CALL ALLOCATE_array( MINAMES, len_minames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'MINAMES' ; GO TO 980 ; END IF
 
+write(6,*) ' after 4'
       CALL ALLOCATE_array( EXNAMES, len_exnames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'EXNAMES' ; GO TO 980 ; END IF
    
+write(6,*) ' before make_elfun'
 !  make subroutines elfun and range
 
       IF ( iauto == 0 ) THEN
