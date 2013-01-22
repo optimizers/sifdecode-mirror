@@ -1728,6 +1728,9 @@
 !  initialize row data
 
       RSCALE( :  len_rscale ) = one
+      IDROWS( : len1_idrows, : len2_idrows ) = 0
+      RDROWS( : len1_idrows, : len2_idrows ) = zero
+      DEFAULT( : len_default ) = zero
 
 !  initialize dictionary data
 
@@ -1920,7 +1923,19 @@
                 bad_alloc = 'DEFAULT' ; status = - 7 ; GO TO 980 ; END IF
               len_default = new_length
             END IF
+
+            IF ( nvar > len_vnames ) THEN
+              used_length = nvar - 1 ; min_length = nvar
+              new_length = increase_n * min_length / increase_d + 1 
+              CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,  &
+                                 min_length, buffer, status, alloc_status )
+              IF ( status /= 0 ) THEN
+                bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
+              len_vnames = new_length
+            END IF
+
             DEFAULT( nvar ) = zero
+            VNAMES( nvar ) = 'no rhs    '
           END IF
         END IF
 
@@ -3670,7 +3685,7 @@
 !  the group is the ng-th encountered; ensure there is sufficient space
 
         ng = ng + 1
-        IF ( ng >= len_gstate ) THEN
+        IF ( ng > len_gstate ) THEN
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1 
           CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
@@ -3680,7 +3695,7 @@
           len_gstate = new_length
         END IF
 
-        IF ( ng >= len_gtype ) THEN
+        IF ( ng > len_gtype ) THEN
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1 
           CALL EXTEND_array( GTYPE, len_gtype, used_length, new_length,        &
@@ -3690,7 +3705,7 @@
           len_gtype = new_length
         END IF
 
-        IF ( ng >= len_gnames ) THEN
+        IF ( ng > len_gnames ) THEN
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1 
           CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
@@ -3700,7 +3715,7 @@
           len_gnames = new_length
         END IF
 
-        IF ( ng >= len_rscale ) THEN
+        IF ( ng > len_rscale ) THEN
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1 
           CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
@@ -3710,7 +3725,7 @@
           len_rscale = new_length
         END IF
 
-        IF ( ng >= len2_idrows ) THEN
+        IF ( ng > len2_idrows ) THEN
           used_length = 2 ; new_length = 2 ; min_length = 2
           used_length2 = ng - 1 ; min_length2 = ng
           new_length2 = increase_n * min_length2 / increase_d + 1 
@@ -3723,7 +3738,7 @@
           len2_idrows = new_length2
         END IF
 
-        IF ( ng >= len2_rdrows ) THEN
+        IF ( ng > len2_rdrows ) THEN
           used_length = 2 ; new_length = 2 ; min_length = 2
           used_length2 = ng - 1 ; min_length2 = ng
           new_length2 = increase_n * min_length2 / increase_d + 1 
@@ -3744,6 +3759,10 @@
         GNAMES( ng ) = field2
         GTYPE( ng ) = - 1
         RSCALE( ng ) = one
+        IDROWS( 1, ng ) = 0
+        IDROWS( 2, ng ) = 0
+        RDROWS( 1, ng ) = zero
+        RDROWS( 2, ng ) = zero
         is = 0
 
 !  record the status, GSTATE, of the group. GSTATE( ng ) = :
@@ -3923,7 +3942,7 @@
 !  the group is the ng-th encountered; ensure there is sufficient space
 
         ng = ng + 1
-        IF ( ng >= len_gstate ) THEN
+        IF ( ng > len_gstate ) THEN
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1 
           CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
@@ -3933,7 +3952,7 @@
           len_gstate = new_length
         END IF
 
-        IF ( ng >= len_gtype ) THEN
+        IF ( ng > len_gtype ) THEN
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1 
           CALL EXTEND_array( GTYPE, len_gtype, used_length, new_length,        &
@@ -3943,7 +3962,7 @@
           len_gtype = new_length
         END IF
 
-        IF ( ng >= len_gnames ) THEN
+        IF ( ng > len_gnames ) THEN
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1 
           CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
@@ -3953,7 +3972,7 @@
           len_gnames = new_length
         END IF
 
-        IF ( ng >= len_rscale ) THEN
+        IF ( ng > len_rscale ) THEN
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1 
           CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
@@ -3963,7 +3982,7 @@
           len_rscale = new_length
         END IF
 
-        IF ( ng >= len2_idrows ) THEN
+        IF ( ng > len2_idrows ) THEN
           used_length = 2 ; new_length = 2 ;  min_length = 2
           used_length2 = ng - 1 ; min_length2 = ng
           new_length2 = increase_n * min_length2 / increase_d + 1 
@@ -3976,7 +3995,7 @@
           len2_idrows = new_length2
         END IF
 
-        IF ( ng >= len2_rdrows ) THEN
+        IF ( ng > len2_rdrows ) THEN
           used_length = 2 ; new_length = 2 ;  min_length = 2
           used_length2 = ng - 1 ; min_length2 = ng
           new_length2 = increase_n * min_length2 / increase_d + 1 
@@ -3996,6 +4015,11 @@
         INLIST( ifree ) = ng
         GNAMES( ng ) = field2
         GTYPE( ng ) = - 1
+        RSCALE( ng ) = one
+        IDROWS( 1, ng ) = 0
+        IDROWS( 2, ng ) = 0
+        RDROWS( 1, ng ) = zero
+        RDROWS( 2, ng ) = zero
         is = 0
 
 !  record the status, GSTATE, of the group. GSTATE( ng ) = :
