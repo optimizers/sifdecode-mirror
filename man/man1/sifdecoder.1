@@ -24,9 +24,9 @@ interface.
 You can start sifdecoder with the following options:
 .TP 5
 .BI \-A " arch"
-Run the decoder using the architecture \farch\fP; the architeture 
+Run the decoder using the architecture \fIarch\fP; the architeture 
 is a string of the form machine.system.compiler as specified in the
-directory $CUTEST/versions. If no \-A option is given, a valid
+directory $SIFDECODE/versions. If no \-A option is given, a valid
 architecture given by the environment variable $MYARCH will be
 used, but if $MYARCH is invalid or empty the decoder will terminate.
 .TP
@@ -94,7 +94,7 @@ information on the problem to be solved.
 .SH ENVIRONMENT 
 .TP
 .SB SIFDECODE
-Parent directory for SIFDecode.
+Directory containing SIFDecode.
 .TP
 .SB MYARCH 
  The default architecture.
@@ -116,9 +116,4 @@ Environment, revisited\fP,
    I. Bongartz, A.R. Conn, N.I.M. Gould and Ph.L. Toint, 
    TOMS, \fB21\fP:1, pp.123-160, 1995.
 
-valgrind(1),
-cob(1), fil(1), gen(1), hrb(1), knit(1), lmb(1), mns(1), nps(1),
-osl(1), prx(1), sdcob(1), sdfil(1), sdgen(1), sdhrb(1), sdknit(1),
-sdlmb(1), sdmns(1), sdnps(1), sdosl(1), sdprx(1), sdsnp(1), sdten(1),
-sdunc(1), sdva15(1), sdve09(1), sdve12(1), sdve14(1), sdvf13(1),
-snp(1), ten(1), unc(1), va15(1), ve09(1), ve12(1), ve14(1), vf13(1).
+valgrind(1).
