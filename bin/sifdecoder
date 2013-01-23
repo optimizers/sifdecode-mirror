@@ -20,8 +20,8 @@
 #                           package AD02 (Default: -a 2)
 #                -p     : decode for a particular package
 #                         1=LANCELOT, 2=BARIA, 3=CUTEst (default)
-#                -s     : rough size of problem 
-#                         1=small,2=medium,3=large (default)
+#                -s     : rough size of problem for array initialization
+#                         0=debug,1=small,2=medium,3=large (default)
 #                -show  : displays possible parameter settings for
 #                         probname[.SIF]. Other options are ignored
 #                -param : cast probname[.SIF] against explicit parameter
@@ -65,7 +65,7 @@ fi
 
 if [[ "$stop_early" == "true" ]]; then
     echo ' Use: sifdecoder [-A architecture] [-sp] [-h] [-f] [-b] [-a j]'
-    echo '                       [-p package] [-p] [-o j] [-m] [-l secs]'
+    echo '                       [-p package] [-s size] [-o j] [-m] [-l secs]'
     echo '                       [-show] [-param name=value[,name=value...]]'
     echo '                       [-force] probname[.SIF]'
     exit 1
@@ -132,7 +132,7 @@ MEMCHECK=0
 
 let PACKAGE=3
 
-#  rough size of problem (1 = small, 2 = medium, 3 = large, other = 3)
+#  rough size of problem (0 = debug,1 = small, 2 = medium, 3 = large, other = 3)
 
 let size=2
 
@@ -144,8 +144,8 @@ let last=$#
 
 if (( last == 0 )); then
   echo "Use: sifdecoder [-A architecture] [-sp] [-h] [-o j] [-l secs]"
-  echo "           [-f] [-b] [-a j] [-show] [-param name=value[,name=value...]]"
-  echo "           [-force] probname[.SIF]"
+  echo "           [-f] [-b] [-a j] [-show] [-p package] [-s size] "
+  echo "           [-param name=value[,name=value...]][-force] probname[.SIF]"
   exit 1
 fi
 
@@ -177,6 +177,8 @@ while (( i < last )); do
     echo "                   (Default: -a 2)"
     echo "          -p     : decode for a particular package"
     echo "                   1=LANCELOT, 2=BARIA, 3=CUTEst (default)"
+    echo "          -s     : rough size of problem for array initialization"
+    echo "                   0=debug,1=small,2=medium,3=large (default)"
     echo "          -show  : displays possible parameter settings for"
     echo "                   probname[.SIF]. Other options are ignored"
     echo "          -param : cast probname[.SIF] against explicit parameter"
