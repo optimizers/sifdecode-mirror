@@ -297,7 +297,6 @@ if [[  "$PROBDIR" == ""  ]]; then
     PROBDIR='.'
 fi
 
-
 problemLoc=${PROBDIR}/${PROBNAME}.SIF
 
 # Specify correct path for problemLoc
