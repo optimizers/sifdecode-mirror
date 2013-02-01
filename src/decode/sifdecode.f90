@@ -906,7 +906,7 @@
 
       IF ( iauto == 1 .OR. iauto == 2 ) THEN
         CALL TRANSLATE_for_ad( out, status, outex, outea, outem, single,       &
-                               iauto, iad0, len_rinames, RINAMES, nrival,     &
+                               iauto, iad0, len_rinames, RINAMES,              &
                                len_iinames, IINAMES )
         IF ( status /= 0 ) WRITE( out, 2170 ) status
       END IF
@@ -3389,7 +3389,7 @@
   490 CONTINUE
       CALL SGUSES( ng, ngtype, ngpnames, ngrupe, nlisgp,                       &
                    novals, neling, ndtype, start_group_uses_section, grupe,    &
-                   len_gtypesp_ptr, GTYPESP_ptr, GTYPE,                        &
+                   GTYPESP_ptr, GTYPE,                                         &
                    len_eling_el, ELING_el, len_eling_g, ELING_g, GP_ptr,       &
                    GSTATE, dgrset, dgtype,                                     &
                    field1, field2, field3, value4, field5, value6,             &
@@ -6714,7 +6714,7 @@
 
       SUBROUTINE SGUSES( ng, ngtype, ngpnames, ngrupe, nlisgp, novals,         &
                          neling, ndtype, start_group_uses_section, grupe,      &
-                         len_gtypesp_ptr, GTYPESP_ptr,                         &
+                         GTYPESP_ptr,                                          &
                          GTYPE, len_eling_el, ELING_el, len_eling_g, ELING_g,  &
                          GP_ptr, GSTATE, dgrset, dgtype,                       &
                          field1, field2, field3, value4, field5, value6,       &
@@ -6723,7 +6723,7 @@
                          length, TABLE, KEY, INLIST, out, status )
       INTEGER :: length, out, status
       INTEGER :: ng, nlisgp, neling, novals, ngrupe, ndtype
-      INTEGER :: ngtype, ngpnames, len_gtypesp_ptr, len_gp_val_orig
+      INTEGER :: ngtype, ngpnames, len_gp_val_orig
       INTEGER :: len_weight, len_eling_el, len_eling_g
       REAL ( KIND = wp ) :: value4, value6
       LOGICAL :: dgrset, start_group_uses_section
@@ -17616,9 +17616,9 @@
 !-*-*-*-*-*- S I F D E C O D E   T R A N S    S U B R O U T I N E -*-*-*-*-*-
 
       SUBROUTINE TRANSLATE_for_ad( out, status, input, output, tempry, single, &
-                                   iauto, iad0, len_rinames, RINAMES, lnames,  &
+                                   iauto, iad0, len_rinames, RINAMES,  &
                                    len_dummy, DUMMY )
-      INTEGER :: out, status, input, output, tempry, iauto, iad0, lnames
+      INTEGER :: out, status, input, output, tempry, iauto, iad0
       INTEGER :: len_rinames, len_dummy
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RINAMES, DUMMY
       LOGICAL :: single
