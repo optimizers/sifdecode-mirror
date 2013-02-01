@@ -82,14 +82,6 @@ if [[ -z "$SIFDECODE" ]]; then
     let abort=1
 fi
 
-if [[ -z "${MYSIFDEC}" ]]; then
-    echo ' MYSIFDEC is not set.'
-    echo ' It should point to your working instance of SifDec.'
-    echo ' Set it to the appropriate value and re-run.'
-    echo ''
-    let abort=1
-fi
-
 if (( abort != 0 )); then
     echo ' Aborting.'
     exit 7
@@ -194,7 +186,6 @@ while (( i < last )); do
     echo "       probname    probname.SIF is the name of the file containing"
     echo "                   the SIF file for the problem of interest."
 
-#   $MYSIFDEC/bin/helpmsg
     exit 0
   elif [[ "$opt" == '-A' ]]; then
     (( i++ ))
@@ -323,7 +314,7 @@ fi
 # See if the -show flag is present
 
 if (( SHOWPARAMS != 0 )); then
-    SHOWDOTAWK=${MYSIFDEC}/bin/show.awk
+    SHOWDOTAWK=${SIFDECODE}/bin/show.awk
     if (( OUTPUT == 1 )); then
     echo "possible parameter settings for $PROBNAME are:"
     fi
@@ -348,7 +339,7 @@ if ((  nbparam > 0  )); then
         (( p++ ))
     done
 
-    PARAMDOTAWK=${MYSIFDEC}/bin/param.awk
+    PARAMDOTAWK=${SIFDECODE}/bin/param.awk
     # substitute the chosen parameter values in the SIF file
     let p=0
 
