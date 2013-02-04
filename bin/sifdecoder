@@ -46,11 +46,11 @@ TMP="/tmp"
 
 #  basic system commands (extra!)
 
-LN="/bin/ln"
-GREP="/bin/grep"
-AWK="/usr/bin/gawk"
-HEAD="/usr/bin/head"
-TAIL="/usr/bin/tail"
+#LN="/bin/ln"
+#GREP="/bin/grep"
+#AWK="/usr/bin/gawk"
+#HEAD="/usr/bin/head"
+#TAIL="/usr/bin/tail"
 
 # Obtain number of arguments
 let last=$#
