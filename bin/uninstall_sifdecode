@@ -8,6 +8,21 @@
 # N. Gould, D. Orban & Ph. Toint
 # ( Last modified on 20 October 2012 at 11:00 GMT )
 
+# Simple helper functions
+yesno_default_no() {
+    read -p "$1 (y/N)? " -r -n 1 answer;
+    [[ $answer == [Yy] ]] && retval=0 || retval=1
+    echo
+    return $retval  # retval=0 means user chose against default option.
+}
+
+yesno_default_yes() {
+    read -p "$1 (Y/n)? " -r -n 1 answer;
+    [[ $answer == [Nn] ]] && retval=0 || retval=1
+    echo
+    return $retval  # retval=0 means user chose against default option.
+}
+
 #  check input arguments (if any)
 
 if [[ $# != 0 ]]; then
@@ -26,88 +41,69 @@ while [[ $finished != 'true' ]]; do
     NUMBER=${#VERS[@]}
 
     if [[ $NUMBER == 0 ]]; then
-	echo "No versions of SIFDECODE are currently installed."
-	exit 1
+        echo "No versions of SIFDECODE are currently installed."
+        exit 1
     fi
 
     LIST=( ${VERS[@]} )
 
     CORRECT_VERSION="false"
-    while [[ $CORRECT_VERSION == "false" ]]; do 
+    while [[ $CORRECT_VERSION == "false" ]]; do
 
-	echo " The following versions of SIFDECODE are currently installed."
-	echo " "
-	count=0
-	for i  in  ${LIST[@]}; do
-	    (( count++ ))
-	    (( cnt = count-1 )) # 0-based indexing
-	    VERSION="`cat ${VERS[$cnt]}`"
-	    echo "        ($count) ${VERSION}"
-	done
-	echo " "
-	echo " Which do you wish to uninstall: (1-$NUMBER)?" 
+    echo " The following versions of SIFDECODE are currently installed."
+    echo " "
+    count=0
+    for i  in  ${LIST[@]}; do
+        (( count++ ))
+        (( cnt = count-1 )) # 0-based indexing
+        VERSION="`cat ${VERS[$cnt]}`"
+        echo "        ($count) ${VERSION}"
+    done
+    echo -e "\n Which do you wish to uninstall: (1-$NUMBER)?"
 
-	read CHOICE
-	(( CHOICE-- ))
-   
-	i=0
-	while [[ $i -lt $NUMBER &&  $CORRECT_VERSION == "false" ]]; do
-	    if [[ $CHOICE == $i ]]; then
-		CORRECT_VERSION="true"
-		CHOICE=$i
-	    fi
-	    (( i++ ))
-	done
-	if [[ $CORRECT_VERSION == "true" ]]; then
-	    VERSION=${VERS[$CHOICE]##*/}
-	    VERNAME=`cat ${VERS[$CHOICE]}`
-	else
-	    echo " Please give an integer between 1 and $NUMBER"
-	fi
+    read CHOICE
+    (( CHOICE-- ))
+
+    i=0
+    while [[ $i -lt $NUMBER &&  $CORRECT_VERSION == "false" ]]; do
+        if [[ $CHOICE == $i ]]; then
+        CORRECT_VERSION="true"
+        CHOICE=$i
+        fi
+        (( i++ ))
+    done
+    if [[ $CORRECT_VERSION == "true" ]]; then
+        VERSION=${VERS[$CHOICE]##*/}
+        VERNAME=`cat ${VERS[$CHOICE]}`
+    else
+        echo " Please give an integer between 1 and $NUMBER"
+    fi
     done
 
     echo " Are you sure you wish to uninstall the version for"
-    echo "  $VERNAME (Y/n)?"
+    yesno_default_yes "$VERNAME"
 
-    YESNO=""
+    if [[ $? != 0 ]]; then
 
-    while [[ $YESNO != 'Y' && $YESNO != 'N' ]]; do
-	read YESNO
-	[[  $YESNO == ""  ]] && YESNO="Y"
-	YESNO=`echo $YESNO | tr a-z A-Z`
-    done
-
-    if [[  $YESNO == 'Y'  ]]; then
-
-	echo " Removing object files and libraries ... "
-	\rm -f -r $SIFDECODE/objects/$VERSION
-	echo " Removing module information files ... "
-	\rm -f -r $SIFDECODE/modules/$VERSION
-	echo " Removing AMPL executable ... "
-	\rm -f -r $SIFDECODE/ampl_bin/$VERSION
-	echo " Removing environment information file ... "
-	\rm -f -r $SIFDECODE/bin/sys/$VERSION
-	echo " Removing make information file ... "
-	\rm -f -r $SIFDECODE/makefiles/$VERSION
-	echo " Removing version record file ... "
-	\rm -f -r $SIFDECODE/versions/$VERSION
-	echo " Version for"
-	echo "  $VERNAME"
-	echo " successfully removed."
+        echo " Removing object files and libraries ... "
+        \rm -f -r $SIFDECODE/objects/$VERSION
+        echo " Removing module information files ... "
+        \rm -f -r $SIFDECODE/modules/$VERSION
+        echo " Removing AMPL executable ... "
+        \rm -f -r $SIFDECODE/ampl_bin/$VERSION
+        echo " Removing environment information file ... "
+        \rm -f -r $SIFDECODE/bin/sys/$VERSION
+        echo " Removing make information file ... "
+        \rm -f -r $SIFDECODE/makefiles/$VERSION
+        echo " Removing version record file ... "
+        \rm -f -r $SIFDECODE/versions/$VERSION
+        echo " Version for"
+        echo "  $VERNAME"
+        echo " successfully removed."
 
     fi
 
-    echo " "
-    echo " Do you wish to uninstall another version (N/y)?"
-	
-    YESNO=""
-
-    while [[ $YESNO != 'Y' && $YESNO != 'N' ]]; do
-	read YESNO
-	[[  $YESNO == ""  ]] && YESNO="N"
-	YESNO=`echo $YESNO | tr a-z A-Z`
-    done
-
-    [[  $YESNO == 'N'  ]] && finished='true'
+    yesno_default_no 'Do you wish to uninstall another version'
+    [[ $? != 0 ]] && finished='true'
 done
 
