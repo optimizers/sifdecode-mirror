@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build script for sifdecode 
+# Build script for sifdecode
 # version for Bourne/bash shell
 
 # syntax: install_sifdecode
@@ -17,7 +17,7 @@ fi
 
 #  function to create missing symblic links
 
-#sifdecode_create_missing_link () { 
+#sifdecode_create_missing_link () {
 # if [[ -f $1 && ! -L $2 ]] ;
 #   then echo "creating missing link $2" ;
 ##  else echo "link $2 already exists" ;
@@ -29,7 +29,7 @@ fi
 if [[ -z "$ARCHDEFS" ]]; then
   if [[ ! -d "$PWD/../archdefs" ]]; then
     echo ' environment variable ARCHDEFS is not set and the directory '
-    echo ' ../../arcrdefs does not exist. Install the archdefs package,'
+    echo ' ../../archdefs does not exist. Install the archdefs package,'
     echo ' set $ARCHDEFS to the archdefs directory and re-run.'
     exit 1
   else
@@ -44,7 +44,7 @@ fi
 #  determine the platform and operating system used
 
 CORRECT_PLATFORM="false"
-while [ $CORRECT_PLATFORM == "false" ]; do 
+while [ $CORRECT_PLATFORM == "false" ]; do
    echo ' Select platform'
    echo
    echo '   (1) Compaq (DEC) alpha'
@@ -58,11 +58,11 @@ while [ $CORRECT_PLATFORM == "false" ]; do
    echo '   (9) PC with 64-bit Athlon processor'
    echo '  (10) SGI workstation'
    echo '  (11) SUN workstation'
-   echo '  (12) MAC OS/X'   
-   echo '  (13) 64-bit MAC OS/X'   
+   echo '  (12) MAC OS/X'
+   echo '  (13) 64-bit MAC OS/X'
 
    read CHOICE
-   
+
    case  $CHOICE  in
        "1")
             CORRECT_PLATFORM="true"
@@ -70,14 +70,14 @@ while [ $CORRECT_PLATFORM == "false" ]; do
             export MACHINE="Compaq Alpha"
 
             CORRECT_OS="false"
-            while [ $CORRECT_OS == "false" ]; do 
+            while [ $CORRECT_OS == "false" ]; do
 
                echo ' Select operating system'
                echo
                echo '   (1) Digital Unix'
                echo '   (2) Tru-64 Unix'
                echo '   (3) Linux'
-               
+
                read CHOICE
 
                case  $CHOICE  in
@@ -114,13 +114,13 @@ while [ $CORRECT_PLATFORM == "false" ]; do
             export MACHINE="HP workstation"
 
             CORRECT_OS="false"
-            while [ $CORRECT_OS == "false" ]; do 
+            while [ $CORRECT_OS == "false" ]; do
 
                echo ' Select operating system'
                echo
                echo '   (1) HP-UX'
                echo '   (2) Linux'
-            
+
                read CHOICE
 
                case  $CHOICE  in
@@ -145,13 +145,13 @@ while [ $CORRECT_PLATFORM == "false" ]; do
             export MACHINE="IBM RS6000"
 
             CORRECT_OS="false"
-            while [ $CORRECT_OS == "false" ]; do 
+            while [ $CORRECT_OS == "false" ]; do
 
                echo ' Select operating system'
                echo
                echo '   (1) AIX'
                echo '   (2) Linux'
-           
+
                read CHOICE
 
                case  $CHOICE  in
@@ -176,13 +176,13 @@ while [ $CORRECT_PLATFORM == "false" ]; do
             export MACHINE="Intel-like PC"
 
             CORRECT_OS="false"
-            while [ $CORRECT_OS == "false" ]; do 
+            while [ $CORRECT_OS == "false" ]; do
 
                echo ' Select operating system'
                echo
                echo '   (1) Windows 2000/XP with MinGW/Msys'
                echo '   (2) Linux'
-           
+
                read CHOICE
 
                case  $CHOICE  in
@@ -207,13 +207,13 @@ while [ $CORRECT_PLATFORM == "false" ]; do
             export MACHINE="Intel-like PC with a 64-bit processor"
 
             CORRECT_OS="false"
-            while [ $CORRECT_OS == "false" ]; do 
+            while [ $CORRECT_OS == "false" ]; do
 
                echo ' Select operating system'
                echo
                echo '   (1) Windows 2000/XP with MinGW/Msys'
                echo '   (2) Linux'
-           
+
                read CHOICE
 
                case  $CHOICE  in
@@ -259,13 +259,13 @@ while [ $CORRECT_PLATFORM == "false" ]; do
             export MACHINE="SGI workstation"
 
             CORRECT_OS="false"
-            while [ $CORRECT_OS == "false" ]; do 
+            while [ $CORRECT_OS == "false" ]; do
 
                echo ' Select operating system'
                echo
                echo '   (1) IRIX'
                echo '   (2) Linux'
-            
+
                read CHOICE
 
                case  $CHOICE  in
@@ -290,7 +290,7 @@ while [ $CORRECT_PLATFORM == "false" ]; do
             export MACHINE="Sun workstation"
 
             CORRECT_OS="false"
-            while [ $CORRECT_OS == "false" ]; do 
+            while [ $CORRECT_OS == "false" ]; do
 
                echo ' Select operating system'
                echo
@@ -359,7 +359,7 @@ for i  in  ${LIST[@]}; do
   echo "        ($counter) ${COMP[$count]}"
 done
 
-while [ $CORRECT_COMPILER == "false" ]; do 
+while [ $CORRECT_COMPILER == "false" ]; do
    read CHOICE
    let CHOICE=CHOICE-1
    if (( 0 <= CHOICE && CHOICE < NUMBER )); then
@@ -387,7 +387,7 @@ VERSION=${MCH}.${OS}.${CMP}
 if [[ -e $SIFDECODE/versions/$VERSION ]]; then
 
     YESNO=""
-    
+
     echo " There is already a SIFDECODE installation with version $VERSION."
     echo ' Do you wish to proceed ... existing version will be destroyed (N/y)?'
     while [[ $YESNO != 'Y' && $YESNO != 'N' ]]; do
@@ -399,7 +399,7 @@ if [[ -e $SIFDECODE/versions/$VERSION ]]; then
     done
     if [[ $YESNO == 'N' ]]; then
       exit 4
-    fi    
+    fi
 fi
 
 #echo $CMP
@@ -412,7 +412,7 @@ MODDIR=$SIFDECODE/modules/$VERSION
 echo "$MACHINE ($OPSYS) $COMPUSED" > $SIFDECODE/versions/$VERSION
 
 if [[ ! -e $OBJDIR ]]; then
-    $MKDIR $OBJDIR 
+    $MKDIR $OBJDIR
     $MKDIR $OBJDIR/double $OBJDIR/single
 else
     if [[ ! -e $OBJDIR/double ]]; then
@@ -424,7 +424,7 @@ else
 fi
 
 if [[ ! -e $MODDIR ]]; then
-    $MKDIR $MODDIR 
+    $MKDIR $MODDIR
     $MKDIR $MODDIR/double $MODDIR/single
 else
     if [[ ! -e $MODDIR/double ]]; then
@@ -583,7 +583,7 @@ if [[ $YESNO == 'Y' ]]; then
         PREC="D"
     fi
         PREC=`echo $PREC | tr a-z A-Z`
-    done 
+    done
     if [[ $PREC == 'S' ]]; then
       PREC="single"
     else
@@ -618,13 +618,13 @@ if [[ $YESNO == 'Y' ]]; then
     fi
         YESNO2=`echo $YESNO2 | tr a-z A-Z`
     done
-    
+
     if [[ $YESNO2 == 'Y' ]]; then
 
         echo ' '
         echo "Installing the $PREC precision version"
         MACROS="PRECIS=$PREC PWD=$SIFDECODE/src SIFDECODE=$SIFDECODE"
-        $MAKE $OPTIONS all_cuter $MACROS
+        $MAKE $OPTIONS all $MACROS
         [[ $? != 0 ]] && exit 2
 
     fi
