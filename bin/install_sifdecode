@@ -561,35 +561,13 @@ yesno_default_no "$msg"
 
 yesno_default_yes ' Do you now wish to compile the package ...'
 
-#if [[ $YESNO == 'Y' ]]; then
-if [[ $? != 0 ]]; then
+cd $SIFDECODE/src/
 
-    echo -e '\n The package may be installed in Single or Double precision'
-    read -p ' Which precision do you require (D/s) ? ' -r -n 1 PREC;
-    [[ $PREC == [Ss] ]] && PREC='single' || PREC='double'
-
-    cd $SIFDECODE/src/
-
-    echo -e "\nInstalling the $PREC precision version"
-    OPTIONS="-s -f $SIFDECODE/makefiles/$VERSION"
-    MACROS="PRECIS=$PREC PWD=$SIFDECODE/src SIFDECODE=$SIFDECODE"
-    $MAKE $OPTIONS all $MACROS
-    [[ $? != 0 ]] && exit 2
-
-#  optionally compile the selected packages in the other precision
-
-    [[ $PREC == 'single' ]] && PREC='double' || PREC='single'
-    yesno_default_no "Do you also wish to install the $PREC precision version"
-
-    if [[ $? == 0 ]]; then
-
-        echo -e "\nInstalling the $PREC precision version"
-        MACROS="PRECIS=$PREC PWD=$SIFDECODE/src SIFDECODE=$SIFDECODE"
-        $MAKE $OPTIONS all $MACROS
-        [[ $? != 0 ]] && exit 2
-
-    fi
-fi
+echo -e "\nInstalling the double precision version"
+OPTIONS="-s -f $SIFDECODE/makefiles/$VERSION"
+MACROS="PRECIS=double PWD=$SIFDECODE/src SIFDECODE=$SIFDECODE"
+$MAKE $OPTIONS all $MACROS
+[[ $? != 0 ]] && exit 2
 
 echo ''
 echo " Remember to set the environment variable"
