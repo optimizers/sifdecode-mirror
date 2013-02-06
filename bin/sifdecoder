@@ -1,90 +1,90 @@
 #!/bin/bash
 # sifdecoder: script to decode a sif file
 #
-# Use: sifdecoder [-A architecture] [-sp] [-h] [-o j] [-m] [-f] [-b] [-a j] 
-#                 [-p package] [-show] [-param name=value[,name=value...]] 
-#                 [-force] probname[.SIF]
-#
-# where: options -A     : specify the architecture. (Default: use $MYARCH)
-#                -sp    : run the single precision version
-#                         (Default: run the double precision version)
-#                -h     : print this help and stop execution
-#                -o     : 0 for silent mode, 1 for brief description of
-#                         the stages executed. (Default: -o 0)
-#                -m     : check for memory leaks (when possible) using valgrind
-#                -f     : use automatic differentiation in Forward mode
-#                -b     : use automatic differentiation in Backward mode
-#                -a     : 1 use the older HSL automatic differentiation 
-#                           package AD01, and
-#                         2 use the newer HSL automatic differentiation 
-#                           package AD02 (Default: -a 2)
-#                -p     : decode for a particular package
-#                         1=LANCELOT, 2=BARIA, 3=CUTEst (default)
-#                -s     : rough size of problem for array initialization
-#                         0=debug,1=small,2=medium,3=large (default)
-#                -show  : displays possible parameter settings for
-#                         probname[.SIF]. Other options are ignored
-#                -param : cast probname[.SIF] against explicit parameter
-#                         settings. Several parameter settings may be
-#                         given as a comma-separated list following
-#                         -param or using several -param flags.
-#                         Use -show to view possible settings.
-#                -force : forces setting of a parameter to the given value,
-#                         even if this value is not specified in the file.
-#                         This option should be used with care.
-#                         (Default: do not enforce).
-#
-#       probname      probname.SIF is the name of the file containing
-#                     the SIF file for the problem of interest.
-
-#  N. Gould, D. Orban & Ph. Toint, November 7th, 2000, 
+#  N. Gould, D. Orban & Ph. Toint, November 7th, 2000,
 #  Updated, January 20th, 2013
+
+display_short_help() {
+    echo ' Use: sifdecoder [-A architecture] [-sp] [-h] [-f] [-b] [-a j]'
+    echo '                       [-p package] [-s size] [-o j] [-m] [-l secs]'
+    echo '                       [-show] [-param name=value[,name=value...]]'
+    echo '                       [-force] probname[.SIF]'
+}
+
+display_long_help() {
+    display_short_help
+    echo "where options:"
+    echo "          -A     : specify the architecture. (Default: use $MYARCH)"
+    echo "          -h     : print this help and stop execution"
+    echo "          -o     : 0 for silent mode, 1 for brief description"
+    echo "                   of the stages executed. (Default: -o 0)"
+    echo "          -m     : check for memory leaks using valgrind"
+    echo "          -f     : use automatic differentiation in Forward mode"
+    echo "          -b     : use automatic differentiation in Backward mode"
+    echo "          -a     : 1 use the older HSL automatic differentiation "
+    echo "                     package AD01"
+    echo "                   2 use the newer HSL automatic differentiation "
+    echo "                     package AD02"
+    echo "                   (Default: -a 2)"
+    echo "          -p     : decode for a particular package"
+    echo "                   1=LANCELOT, 2=BARIA, 3=CUTEst (default)"
+    echo "          -s     : rough size of problem for array initialization"
+    echo "                   0=debug, 1=small, 2=medium, 3=large (default)"
+    echo "          -show  : displays possible parameter settings for"
+    echo "                   probname[.SIF]. Other options are ignored"
+    echo "          -param : cast probname[.SIF] against explicit parameter"
+    echo "                   settings. Several parameter settings may be"
+    echo "                   given as a comma-separated list following"
+    echo "                   -param or using several -param flags."
+    echo "                   Use -show to view possible settings."
+    echo "          -force : forces setting of a parameter to the given value"
+    echo "                   even if this value is not specified in the file."
+    echo "                   This option should be used with care."
+    echo "                   (Default: do not enforce)."
+    echo ""
+    echo "       probname    probname.SIF is the name of the file containing"
+    echo "                   the SIF file for the problem of interest."
+}
+
+warning() {
+    # The line below is output in light red.
+    echo -e " \0033[1;31mWarning: $1 \0033[00m"
+}
+
+error() {
+    # The line below is output in bright red.
+    echo -e " \0033[0;31mError: $1 \0033[00m"
+}
+
+success() {
+    # The line below is output in green.
+    echo -e " \0033[0;32mSuccess: $1 \0033[00m"
+}
 
 #  Directory for temporary files
 
 TMP="/tmp"
 
-#  basic system commands (extra!)
-
-#LN="/bin/ln"
-#GREP="/bin/grep"
-#AWK="/usr/bin/gawk"
-#HEAD="/usr/bin/head"
-#TAIL="/usr/bin/tail"
-
 # Obtain number of arguments
+
 let last=$#
-#(( last=last-1 ))
-
-stop_early="false"
 if (( last < 1 )); then
-    stop_early="true"
-#elif [[ "`echo $1 | grep -e '^-'`" != "" ]]; then
-#    stop_early="true"
-fi
-
-if [[ "$stop_early" == "true" ]]; then
-    echo ' Use: sifdecoder [-A architecture] [-sp] [-h] [-f] [-b] [-a j]'
-    echo '                       [-p package] [-s size] [-o j] [-m] [-l secs]'
-    echo '                       [-show] [-param name=value[,name=value...]]'
-    echo '                       [-force] probname[.SIF]'
+    display_short_help
     exit 1
 fi
 
 # Environment check
 
-let abort=0
-
 if [[ -z "$SIFDECODE" ]]; then
-    echo ' SIFDECODE is not set.'
-    echo ' It should point to the directory where you installed SifDec.'
-    echo ' Set it to the appropriate value and re-run.'
-    let abort=1
+    error 'The SIFDECODE environment variable is not set.
+ It should point to the directory where you installed Sifdecode.
+ Set it to the appropriate value and re-run.
+ Aborting.'
+    exit 7
 fi
 
-if (( abort != 0 )); then
-    echo ' Aborting.'
-    exit 7
+if [[ ${MASTSIF+set} != 'set' ]]; then
+    warning 'MASTSIF is not set. Problems may not be discovered.'
 fi
 
 #  =========================
@@ -94,11 +94,6 @@ fi
 # the architecture to be used
 
 ARCH=""
-
-# PRECISION = single (single precision), = double (double precision)
-
-PRECISION="double"
-let prec=1
 
 # OUTPUT = 0 (summary output), = 1 (detailed output from decoder)
 
@@ -132,67 +127,18 @@ let size=2
 #  Interpret arguments
 #  -------------------
 
-let last=$#
-
-if (( last == 0 )); then
-  echo "Use: sifdecoder [-A architecture] [-sp] [-h] [-o j] [-l secs]"
-  echo "           [-f] [-b] [-a j] [-show] [-p package] [-s size] "
-  echo "           [-param name=value[,name=value...]][-force] probname[.SIF]"
-  exit 1
-fi
-
 let i=1
 let nbparam=0   # counts the number of parameters passed using -param
 PARAMLIST=( "" )
 
-while (( i < last )); do
+while (( i <= last )); do
   opt=${!i}
   if [[ "$opt" == '-h' || "$opt" == '--help' ]]; then
-
-    echo " Use: sifdecoder [-A architecture] [-sp] [-h] [-o j] [-l secs]"
-    echo "         [-f] [-b] [-a j] [-show] [-param name=value[,name=value...]]"
-    echo "         [-force] probname[.SIF]"
-    echo "where options:"
-    echo "          -A     : specify the architecture. (Default: use $MYARCH)"
-    echo "          -sp    : run the single precision version"
-    echo "                   (Default: run the double precision version)"
-    echo "          -h     : print this help and stop execution"
-    echo "          -o     : 0 for silent mode, 1 for brief description"
-    echo "                   of the stages executed. (Default: -o 0)"
-    echo "          -m     : check for memory leaks using valgrind"
-    echo "          -f     : use automatic differentiation in Forward mode"
-    echo "          -b     : use automatic differentiation in Backward mode"
-    echo "          -a     : 1 use the older HSL automatic differentiation "
-    echo "                     package AD01"
-    echo "                   2 use the newer HSL automatic differentiation "
-    echo "                     package AD02"
-    echo "                   (Default: -a 2)"
-    echo "          -p     : decode for a particular package"
-    echo "                   1=LANCELOT, 2=BARIA, 3=CUTEst (default)"
-    echo "          -s     : rough size of problem for array initialization"
-    echo "                   0=debug,1=small,2=medium,3=large (default)"
-    echo "          -show  : displays possible parameter settings for"
-    echo "                   probname[.SIF]. Other options are ignored"
-    echo "          -param : cast probname[.SIF] against explicit parameter"
-    echo "                   settings. Several parameter settings may be"
-    echo "                   given as a comma-separated list following"
-    echo "                   -param or using several -param flags."
-    echo "                   Use -show to view possible settings."
-    echo "          -force : forces setting of a parameter to the given value"
-    echo "                   even if this value is not specified in the file."
-    echo "                   This option should be used with care."
-    echo "                   (Default: do not enforce)."
-    echo ""
-    echo "       probname    probname.SIF is the name of the file containing"
-    echo "                   the SIF file for the problem of interest."
-
-    exit 0
+      display_long_help
+      exit 0
   elif [[ "$opt" == '-A' ]]; then
     (( i++ ))
     ARCH=${!i}
-  elif [[ "$opt" == '-sp' ]]; then
-    PRECISION="single"
-    let prec=0
   elif [[ "$opt" == '-o' ]]; then
     (( i++ ))
     let OUTPUT=${!i}
@@ -214,9 +160,9 @@ while (( i < last )); do
     (( i++ ))
     if [[  ${!i} == '1' || ${!i} == '2'  ]]; then
         let ad0=${!i}
-        else
-        echo " ${thiscaller} : error processing -a flag"
-    exit 6
+    else
+        error "error processing -a flag"
+        exit 6
     fi
   elif [[ "$opt" == '-param' ]]; then
     # parameters can either be separated by -param flags
@@ -226,13 +172,13 @@ while (( i < last )); do
     # see if some parameters were given as a comma-separated list
     let nbparInThisGroup=`echo ${!i} | $AWK -F, '{print NF}'`
     if [[ "$nbparInThisGroup" == "0" ]]; then
-        echo " ${thiscaller} : error processing -param flag"
+        error "error processing -param flag"
         exit 5
     fi
     # check if what follows -param looks like a parameter setting
     chkparam=`echo ${!i} | $GREP =`
     if [[  $chkparam == ""  ]]; then
-        echo " ${thiscaller} : error processing -param flag"
+        error "error processing -param flag"
         exit 5
     fi
     # store the parameters in the PARAM array
@@ -254,10 +200,9 @@ done
 if [[ -z "$ARCH" ]]; then
 #  echo "ARCH not set"
   if [[ -z "$MYARCH" ]]; then
-    echo ' no architecture specified and environment variable MYARCH is unset.'
-    echo ' Either specificy architecture with -A option or set variable MYARCH.'
-    echo ' and re-run.'
-    echo ''
+    error ' no architecture specified and environment variable MYARCH is unset.
+ Either specificy architecture with -A option or set variable MYARCH.
+ and re-run.'
     exit 2
   else
     ARCH=${MYARCH}
@@ -276,38 +221,31 @@ set +C
 
 let last=$#
 PROBLEM=${!last}
-PROBNAME=`echo $PROBLEM | $AWK -F/ '{print $NF}' | $AWK -F. '{print $1}'`
-EXT=`echo $PROBLEM | $AWK -F/ '{print $NF}' | $AWK -F. '{print $2}'`
+PROBNAME=`basename $PROBLEM .SIF`
+PROBDIR=`dirname $PROBLEM`
 
-PROBDIR=`echo $PROBLEM | $AWK 'BEGIN{FS="\n"}{ l = split( $1, farray, "/" ); head = ""; if( l>1 ) { head = farray[1]; for ( i=2; i<l; i++ ) { head = head "/" farray[i]; } } print head;}'`
-
-probDirNotGiven="false"
-
-if [[  "$PROBDIR" == ""  ]]; then
-    probDirNotGiven="true"
-    PROBDIR='.'
-fi
+#if [[  "$PROBDIR" == ""  ]]; then
+#    probDirNotGiven="true"
+#    PROBDIR='.'
+#fi
 
 problemLoc=${PROBDIR}/${PROBNAME}.SIF
+[[ (! -e $problemLoc) && ("$PROBDIR" == ".") ]] && probDirNotGiven='true' || probDirNotGiven='false'
 
 # Specify correct path for problemLoc
 
 let lookInMastSif=0
-if [[ (! -e "$problemLoc") && ("$probDirNotGiven" == "true") && (${MASTSIF+set} == 'set') ]]; then
+if [[ (! -e "$problemLoc") && ("$PROBDIR" == ".") && (${MASTSIF+set} == 'set') ]]; then
     let lookInMastSif=1
     problemLoc=${MASTSIF}/${PROBNAME}.SIF
 fi
-#echo "Using source file ${problemLoc}"
 
 # See whether the specified SIF file exists
 
 if [[ ! -e "$problemLoc" ]]; then
-  if [[ ${MASTSIF+set} != 'set' ]]; then
-    echo ' MASTSIF is not set'
-  fi
-  echo "file $PROBNAME.SIF is not known in directories"
-  [[  $PROBDIR == "$PROBLEM" ]] && PROBDIR=$PWD
-  echo " $PROBDIR or "'$MASTSIF'
+  [[ $PROBDIR == "$PROBLEM" ]] && PROBDIR=$PWD
+  error "file $PROBNAME.SIF is not known in directories
+ $PROBDIR or \$MASTSIF"
   exit 2
 fi
 
@@ -378,7 +316,7 @@ if ((  nbparam > 0  )); then
 
     if [[  "$matchingLines" == ""  ]]; then
         if (( FORCE == 0 )); then
-            echo " ${thiscaller} : Failed setting ${PARNAMELIST[$p]} to ${PARVALUELIST[$p]} -- skipping"
+            warning "Failed setting ${PARNAMELIST[$p]} to ${PARVALUELIST[$p]} -- skipping"
             let failed=1
         else
             # get the number of the first line defining the parameter
@@ -426,13 +364,11 @@ if [[  "$probDirNotGiven" == "true" && $nbparam == 0  ]]; then
 elif ((  nbparam > 0  )); then
     link="true"
     TEMPNAME=`echo $$ | $AWK 'BEGIN{nb=10}{l=length($1); if(l<nb){start=1} else{start=l-nb+1} print substr($1,start,nb)}'`
-#    TEMPNAME="${PROBNAME}__${TEMPNAME}"
     $RM $TEMPNAME.SIF
-    $LN -s $sifFile ./$TEMPNAME.SIF
+    $LN -s $sifFile $TEMPNAME.SIF
 else
     link="true"
     TEMPNAME=`echo $$ | $AWK 'BEGIN{nb=10}{l=length($1); if(l<nb){start=1} else{start=l-nb+1} print substr($1,start,nb)}'`
-    #    TEMPNAME="${PROBNAME}__${TEMPNAME}"
     $RM $TEMPNAME.SIF
     $LN -s $PROBDIR/${PROBNAME}.SIF ./$TEMPNAME.SIF
 fi
@@ -442,28 +378,22 @@ fi
 DECODER=$SIFDECODE/objects/$ARCH/double/run_sifdecode
 
 if [[ ! -x $DECODER  ]]; then
-  DECODER=$SIFDECODE/objects/$ARCH/single/run_sifdecode
-  if [[ ! -x $DECODER  ]]; then
-    echo ' '
-    echo "No SIF decoder sifdec found in $SIFDECODE/objects/$ARCH/double/run_sifdecode"
-    echo "or $SIFDECODE/objects/$ARCH/single/run_sifdecode"
-    echo 'Terminating execution.'
+    error "No SIF decoder sifdec found in
+ $SIFDECODE/objects/$ARCH/double/run_sifdecode
+ Terminating execution."
     exit 4
-  fi
 fi
 
 if (( OUTPUT == 1 )); then
-  echo 'convert the sif file into data and routines suitable for optimizer...'
-  echo ' '
-  echo 'problem details will be given'
-  echo ' '
+  echo -e 'convert the sif file into data and routines suitable for optimizer...\n'
+  echo -e 'problem details will be given\n'
 fi
 
 [[ -e EXTERN.f ]] && $RM EXTERN.f
 
 # construct input file for the decoder
 
-sdinput=${thiscaller}.$$.input
+sdinput=sifdecoder.$$.input
 
 echo $TEMPNAME   > $sdinput
 echo $PACKAGE   >> $sdinput
@@ -471,7 +401,7 @@ echo $OUTPUT    >> $sdinput
 echo $PROBNAME  >> $sdinput
 echo $automatic >> $sdinput
 echo $ad0       >> $sdinput
-echo $prec      >> $sdinput
+echo '1'        >> $sdinput   # Double precision.
 echo $size      >> $sdinput
 
 # Finally, decode the problem
@@ -481,10 +411,7 @@ if [[ $MEMCHECK == "1" ]]; then
   if [[ $? == "0" ]]; then
     valgrind $VALGRIND $DECODER < $sdinput
   else
-    if [[ $OUTPUT == "1" ]]; then
-      echo 'no memory checking available, sorry ... '
-      echo ' '
-    fi
+    warning 'no memory checking available, sorry ...\n'
     $DECODER < $sdinput
   fi
 else
@@ -499,14 +426,12 @@ if ((  nbparam > 0  )); then
     $RM $sifFile
 fi
 
-
 if [[  $link == "true"  ]]; then
     $RM $TEMPNAME.SIF
 fi
 
 if [[ ! -e OUTSDIF.d ]]; then
-  echo ' '
-  echo "error exit from decoding stage. terminating execution."
+  error 'Error exit from decoding stage. terminating execution.'
   exit 3
 fi
 
@@ -531,6 +456,5 @@ fi
 #  Record the type of derivatives used in the decoding
 
 echo $automatic $ad0 > AUTOMAT.d
-
-(( OUTPUT == 1 )) && echo ' '
 exit 0
+
