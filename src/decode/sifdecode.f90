@@ -884,7 +884,7 @@
 
       DO 
         IF ( gotlin ) THEN
-          LINEEX( 1 : 72 ) = NULINE( 1 : 72 )
+          lineex( 1 : 72 ) = nuline( 1 : 72 )
           gotlin = .FALSE.
         ELSE
           READ( UNIT = iinex, FMT = 1000, END = 600, ERR = 600 ) lineex
@@ -893,17 +893,17 @@
 !  skip blank lines
 
         DO i = 1, 72
-          IF ( LINEEX( i : i ) /= ' ' ) THEN
+          IF ( lineex( i : i ) /= ' ' ) THEN
             WRITE( outex, 1000 ) lineex
-            CYCLE
+            EXIT
           END IF
         END DO
       END DO
-  600 CONTINUE
 
 !  if required, translate any external file to accept automatic differentiation
 !   constructs
 
+  600 CONTINUE
       IF ( iauto == 1 .OR. iauto == 2 ) THEN
         CALL TRANSLATE_for_ad( out, status, outex, outea, outem, single,       &
                                iauto, iad0, len_rinames, RINAMES,              &
@@ -2150,28 +2150,35 @@
 
 !  the group types have all been specified
 
-         IF ( intype >= mguses .AND. ngtype > 0 ) THEN
+         IF ( intype >= mguses ) THEN
+
+!  check if this is the first group type
+
+           IF ( ngtype == 0 ) THEN
+             ngpnames = 0
 
 !  check that the argument for the last group-type has been set
 
-           IF ( .NOT. end_group_type_section ) THEN
-             end_group_type_section = .TRUE.
-             IF ( .NOT. setana ) THEN
-               status = 25
-               IF ( out > 0 ) WRITE( out, 2250 )
-               RETURN
+           ELSE
+             IF ( .NOT. end_group_type_section ) THEN
+               end_group_type_section = .TRUE.
+               IF ( .NOT. setana ) THEN
+                 status = 25
+                 IF ( out > 0 ) WRITE( out, 2250 )
+                 RETURN
+               END IF
+               IF ( ngtype >= len_gtypesp_ptr ) THEN
+                 used_length = ngtype ; min_length = ngtype + 1
+                 new_length = increase_n * min_length / increase_d + 1
+                 CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr,              &
+                                    used_length, new_length, min_length,       &
+                                    buffer, status, alloc_status )
+                 IF ( status /= 0 ) THEN
+                   bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
+                 len_gtypesp_ptr = new_length
+               END IF
+               GTYPESP_ptr( ngtype + 1 ) = ngpnames + 1
              END IF
-             IF ( ngtype >= len_gtypesp_ptr ) THEN
-               used_length = ngtype ; min_length = ngtype + 1
-               new_length = increase_n * min_length / increase_d + 1
-               CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr,                &
-                                  used_length, new_length, min_length,         &
-                                  buffer, status, alloc_status )
-               IF ( status /= 0 ) THEN
-                 bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
-               len_gtypesp_ptr = new_length
-             END IF
-             GTYPESP_ptr( ngtype + 1 ) = ngpnames + 1
            END IF
          END IF
 
@@ -9098,8 +9105,11 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'ABYROW_col' ; GO TO 980 ; END IF
 
-      IF ( nnza > 0 ) CALL REORDER( ng, nnza, A_col, A_row, A_val, ABYROW_ptr, &
-                                    IWK )
+      IF ( nnza > 0 ) THEN
+        CALL REORDER( ng, nnza, A_col, A_row, A_val, ABYROW_ptr, IWK )
+      ELSE
+        ABYROW_ptr( : ng1 ) = 1
+      END IF
 
 !  decode the 'd'-groups/rows. set the workspace array WK to zero
 
