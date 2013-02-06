@@ -1,6 +1,15 @@
 #!/bin/bash
 
+# Build script for sifdecode
+# version for Bourne/bash shell
+
+# syntax: install_sifdecode
+
+# N. Gould, D. Orban & Ph. Toint
+# ( Last modified on 6 February 2013 at 07:15 GMT )
+
 # Simple helper functions
+
 yesno_default_no() {
     read -p "$1 (y/N)? " -r -n 1 answer;
     [[ $answer == [Yy] ]] && retval=0 || retval=1
@@ -14,14 +23,6 @@ yesno_default_yes() {
     echo
     return $retval  # retval=0 means user chose against default option.
 }
-
-# Build script for sifdecode
-# version for Bourne/bash shell
-
-# syntax: install_sifdecode
-
-# N. Gould, D. Orban & Ph. Toint
-# ( Last modified on 20 October 2012 at 11:00 GMT )
 
 #  check input arguments (if any)
 

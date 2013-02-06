@@ -1950,7 +1950,16 @@
         IF ( intype >= mstart ) THEN
           IF ( .NOT. end_bound_section ) THEN
             end_bound_section = .TRUE.
-            IF ( nbnd == 0 ) nbnd = 1
+            IF ( nbnd == 0 ) THEN
+              nbnd = 1
+              defaut = .TRUE.
+              B_l_default( nbnd ) = zero
+              B_u_default( nbnd ) = biginf
+              DO i = 1, nlvars
+                B_l( i, nbnd ) = zero
+                B_u( i, nbnd ) = biginf
+              END DO
+            END IF
             len1_cstart = ng + 1
             CALL ALLOCATE_array( CSTART, len1_cstart, len2_cstart,             &
                                  alloc_status )
