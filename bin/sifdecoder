@@ -46,20 +46,12 @@ display_long_help() {
     echo "                   the SIF file for the problem of interest."
 }
 
-warning() {
-    # The line below is output in light red.
-    echo -e " \0033[1;31mWarning: $1 \0033[00m"
-}
+if [[ ${SIFDECODE+set} != 'set' ]]; then
+    echo 'The SIFDECODE environment variable is not set.'
+    exit 1
+fi
 
-error() {
-    # The line below is output in bright red.
-    echo -e " \0033[0;31mError: $1 \0033[00m"
-}
-
-success() {
-    # The line below is output in green.
-    echo -e " \0033[0;32mSuccess: $1 \0033[00m"
-}
+. $SIFDECODE/bin/helper_functions
 
 #  Directory for temporary files
 
