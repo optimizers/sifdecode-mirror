@@ -8,20 +8,7 @@
 # N. Gould, D. Orban & Ph. Toint
 # ( Last modified on 20 October 2012 at 11:00 GMT )
 
-# Simple helper functions
-yesno_default_no() {
-    read -p "$1 (y/N)? " -r -n 1 answer;
-    [[ $answer == [Yy] ]] && retval=0 || retval=1
-    echo
-    return $retval  # retval=0 means user chose against default option.
-}
-
-yesno_default_yes() {
-    read -p "$1 (Y/n)? " -r -n 1 answer;
-    [[ $answer == [Nn] ]] && retval=0 || retval=1
-    echo
-    return $retval  # retval=0 means user chose against default option.
-}
+. bin/helper_functions
 
 #  check input arguments (if any)
 
@@ -41,7 +28,7 @@ while [[ $finished != 'true' ]]; do
     NUMBER=${#VERS[@]}
 
     if [[ $NUMBER == 0 ]]; then
-        echo "No versions of SIFDECODE are currently installed."
+        warning "No versions of SIFDECODE are currently installed."
         exit 1
     fi
 
@@ -50,8 +37,7 @@ while [[ $finished != 'true' ]]; do
     CORRECT_VERSION="false"
     while [[ $CORRECT_VERSION == "false" ]]; do
 
-    echo " The following versions of SIFDECODE are currently installed."
-    echo " "
+    echo -e " The following versions of SIFDECODE are currently installed.\n"
     count=0
     for i  in  ${LIST[@]}; do
         (( count++ ))
@@ -97,9 +83,9 @@ while [[ $finished != 'true' ]]; do
         \rm -f -r $SIFDECODE/makefiles/$VERSION
         echo " Removing version record file ... "
         \rm -f -r $SIFDECODE/versions/$VERSION
-        echo " Version for"
-        echo "  $VERNAME"
-        echo " successfully removed."
+        success " Version for
+  $VERNAME
+ successfully removed."
 
     fi
 

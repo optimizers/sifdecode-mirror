@@ -8,21 +8,7 @@
 # N. Gould, D. Orban & Ph. Toint
 # ( Last modified on 6 February 2013 at 07:15 GMT )
 
-# Simple helper functions
-
-yesno_default_no() {
-    read -p "$1 (y/N)? " -r -n 1 answer;
-    [[ $answer == [Yy] ]] && retval=0 || retval=1
-    echo
-    return $retval  # retval=0 means user chose against default option.
-}
-
-yesno_default_yes() {
-    read -p "$1 (Y/n)? " -r -n 1 answer;
-    [[ $answer == [Nn] ]] && retval=0 || retval=1
-    echo
-    return $retval  # retval=0 means user chose against default option.
-}
+. bin/helper_functions
 
 #  check input arguments (if any)
 
@@ -44,9 +30,9 @@ fi
 
 if [[ -z "$ARCHDEFS" ]]; then
   if [[ ! -d "$PWD/../archdefs" ]]; then
-    echo ' The environment variable ARCHDEFS is not set and the directory'
-    echo ' ../../archdefs does not exist. Install the archdefs package,'
-    echo ' set $ARCHDEFS to the archdefs directory and re-run.'
+    error ' The environment variable ARCHDEFS is not set and the directory
+ ../../archdefs does not exist. Install the archdefs package,
+ set $ARCHDEFS to the archdefs directory and re-run.'
     exit 1
   else
     export ARCH=$PWD/../archdefs
@@ -54,8 +40,6 @@ if [[ -z "$ARCHDEFS" ]]; then
 else
   export ARCH=${ARCHDEFS}
 fi
-
-#export ARCH=$PWD/arch
 
 #  determine the platform and operating system used
 
@@ -393,8 +377,7 @@ VERSION=${MCH}.${OS}.${CMP}
 #PLPLOT=""
 
 if [[ -e $SIFDECODE/versions/$VERSION ]]; then
-
-    echo " There is already a SIFDECODE installation with version $VERSION."
+    warning " There is already a SIFDECODE installation with version $VERSION."
     yesno_default_no ' Do you wish to proceed ... existing version will be destroyed'
     [[ $? != 0 ]] && exit 4
 fi
@@ -549,39 +532,34 @@ echo 'include $(PWD)/makemaster'                                   >> $MAKEFILE
 
 #  optionally edit the compiler and platform settings
 
-echo
-msg=' Would you like to review and modify if necessary the compiler settings'
-yesno_default_no "$msg"
+yesno_default_no ' Would you like to review and modify if necessary the compiler settings'
 [[ $? == 0 ]] && ${FCEDIT:-${VISUAL:-${EDITOR:-vim}}} $PWD/makefiles/$VERSION
 
-msg=' Would you like to review and modify if necessary the system commands'
-yesno_default_no "$msg"
+yesno_default_no ' Would you like to review and modify if necessary the system commands'
 [[ $? == 0 ]] && ${FCEDIT:-${VISUAL:-${EDITOR:-vim}}} $PWD/bin/sys/$VERSION
 
 #  optionally compile the selected packages
 
 yesno_default_yes ' Do you now wish to compile the package ...'
 
-cd $SIFDECODE/src/
+if [[ $? != 0 ]]; then
+    cd $SIFDECODE/src/
 
-echo -e "\nInstalling the double precision version"
-OPTIONS="-s -f $SIFDECODE/makefiles/$VERSION"
-MACROS="PRECIS=double PWD=$SIFDECODE/src SIFDECODE=$SIFDECODE"
-$MAKE $OPTIONS all $MACROS
-[[ $? != 0 ]] && exit 2
+    echo -e "\nInstalling the double precision version"
+    OPTIONS="-s -f $SIFDECODE/makefiles/$VERSION"
+    MACROS="PRECIS=double PWD=$SIFDECODE/src SIFDECODE=$SIFDECODE"
+    $MAKE $OPTIONS all $MACROS
+    [[ $? != 0 ]] && exit 2
+    success 'SIFdecode successfully installed.'
 
-echo ''
-echo " Remember to set the environment variable"
-echo "  SIFDECODE to $SIFDECODE"
-echo " In addition, please update your MANPATH to include"
-echo "    $SIFDECODE/man"
-echo " and your PATH to include"
-echo "    $SIFDECODE/bin"
-echo ''
-echo " (see $SIFDECODE/doc/README.cshrc"
-echo "  and $SIFDECODE/doc/README.bashrc"
-echo "  for examples on how to do this)"
-echo ''
-
+    echo -e "\n Remember to set the environment variable"
+    echo "  SIFDECODE to $SIFDECODE"
+    echo " In addition, please update your MANPATH to include"
+    echo "    $SIFDECODE/man"
+    echo " and your PATH to include"
+    echo "    $SIFDECODE/bin"
+    echo ''
+    echo " (see $SIFDECODE/doc/README.bashrc"
+    echo -e "  for an example on how to do that).\n"
+fi
 exit 0
-
