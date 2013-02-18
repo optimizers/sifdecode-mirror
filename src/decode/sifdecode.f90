@@ -2150,109 +2150,131 @@
 
 !  the group types have all been specified
 
-         IF ( intype >= mguses ) THEN
+        IF ( intype >= mguses ) THEN
 
 !  check if this is the first group type
 
-           IF ( ngtype == 0 ) THEN
-             ngpnames = 0
+          IF ( ngtype == 0 ) THEN
+            ngpnames = 0
 
 !  check that the argument for the last group-type has been set
 
-           ELSE
-             IF ( .NOT. end_group_type_section ) THEN
-               end_group_type_section = .TRUE.
-               IF ( .NOT. setana ) THEN
-                 status = 25
-                 IF ( out > 0 ) WRITE( out, 2250 )
-                 RETURN
-               END IF
-               IF ( ngtype >= len_gtypesp_ptr ) THEN
-                 used_length = ngtype ; min_length = ngtype + 1
-                 new_length = increase_n * min_length / increase_d + 1
-                 CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr,              &
-                                    used_length, new_length, min_length,       &
-                                    buffer, status, alloc_status )
-                 IF ( status /= 0 ) THEN
-                   bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
-                 len_gtypesp_ptr = new_length
-               END IF
-               GTYPESP_ptr( ngtype + 1 ) = ngpnames + 1
-             END IF
-           END IF
-         END IF
+          ELSE
+            IF ( .NOT. end_group_type_section ) THEN
+              end_group_type_section = .TRUE.
+              IF ( .NOT. setana ) THEN
+                status = 25
+                IF ( out > 0 ) WRITE( out, 2250 )
+                RETURN
+              END IF
+              IF ( ngtype >= len_gtypesp_ptr ) THEN
+                used_length = ngtype ; min_length = ngtype + 1
+                new_length = increase_n * min_length / increase_d + 1
+                CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr,              &
+                                   used_length, new_length, min_length,       &
+                                   buffer, status, alloc_status )
+                IF ( status /= 0 ) THEN
+                  bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
+                len_gtypesp_ptr = new_length
+              END IF
+              GTYPESP_ptr( ngtype + 1 ) = ngpnames + 1
+            END IF
+          END IF
+        END IF
 
-         IF ( intype == mendat ) THEN
-           k = MAX( ng + 1, nelnum )
-           CALL ALLOCATE_array( IWK, k, alloc_status )
-           IF ( alloc_status /= 0 ) THEN
-             bad_alloc = 'IWK' ; GO TO 980 ; END IF
+        IF ( intype == mendat ) THEN
+          k = MAX( ng + 1, nelnum )
+          CALL ALLOCATE_array( IWK, k, alloc_status )
+          IF ( alloc_status /= 0 ) THEN
+            bad_alloc = 'IWK' ; GO TO 980 ; END IF
 
-           CALL ALLOCATE_array( GP_val, nlisgp, alloc_status )
-           IF ( alloc_status /= 0 ) THEN
-             bad_alloc = 'GP_val' ; GO TO 980 ; END IF
+          CALL ALLOCATE_array( GP_val, nlisgp, alloc_status )
+          IF ( alloc_status /= 0 ) THEN
+            bad_alloc = 'GP_val' ; GO TO 980 ; END IF
 
 !  check that the groups have been completely specified by checking that the 
 !  parameter values have been set
 
-           nlisgp = 0
-           DO j = 1, ng
-             k = GTYPE( j )
-             IF ( k < 0 ) THEN
-               k = - k - 1
-               GTYPE( j ) = k
-               GP_ptr( j ) = nlisgp + 1
-               IF ( k /= 0 ) THEN
-                 k1 = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
-                 IF ( k1 > 0 ) THEN
-                   ip = GTYPESP_ptr( k ) - 1
-                   k2 = GP_ptr( j ) - 1
-                   status = 34
-                   DO i = 1, k1
-                     nlisgp = nlisgp + 1
-                     GP_val( nlisgp ) = biginf
-                     IF ( out > 0 )                                            &
-                       WRITE( out, 2340 ) GNAMES( j ), GPNAMES( ip + i )
-                   END DO 
-                 END IF 
-               END IF 
-             ELSE IF ( k == 0 ) THEN
-               GP_ptr( j ) = nlisgp + 1
-             ELSE
-               GP_ptr( j ) = nlisgp + 1
-               ip = GTYPESP_ptr( k ) - 1
-               k1 = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
-               k2 = GP_ptr( j ) - 1
-               DO i = 1, k1
-                 nlisgp = nlisgp + 1
-                 GP_val( nlisgp ) = GP_val_orig( k2 + i )
-                 IF ( GP_val( nlisgp ) == biginf ) THEN
-                   status = 34
-                   IF ( out > 0 ) WRITE( out, 2340 )                           &
-                     GNAMES( j ), GPNAMES( ip + i )
-                 END IF
-               END DO
-             END IF
-           END DO
-           GP_ptr( ng + 1 ) = nlisgp + 1
-           IF ( status /= 0 ) RETURN
+          nlisgp = 0
+          DO j = 1, ng
+            k = GTYPE( j )
+            IF ( k < 0 ) THEN
+              k = - k - 1
+              GTYPE( j ) = k
+              GP_ptr( j ) = nlisgp + 1
+              IF ( k /= 0 ) THEN
+                k1 = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
+                IF ( k1 > 0 ) THEN
+                  ip = GTYPESP_ptr( k ) - 1
+                  k2 = GP_ptr( j ) - 1
+                  status = 34
+                  DO i = 1, k1
+                    nlisgp = nlisgp + 1
+                    GP_val( nlisgp ) = biginf
+                    IF ( out > 0 )                                             &
+                      WRITE( out, 2340 ) GNAMES( j ), GPNAMES( ip + i )
+                  END DO 
+                END IF 
+              END IF 
+            ELSE IF ( k == 0 ) THEN
+              GP_ptr( j ) = nlisgp + 1
+            ELSE
+              GP_ptr( j ) = nlisgp + 1
+              ip = GTYPESP_ptr( k ) - 1
+              k1 = GTYPESP_ptr( k + 1 ) - GTYPESP_ptr( k )
+              k2 = GP_ptr( j ) - 1
+              DO i = 1, k1
+                nlisgp = nlisgp + 1
+                GP_val( nlisgp ) = GP_val_orig( k2 + i )
+                IF ( GP_val( nlisgp ) == biginf ) THEN
+                  status = 34
+                  IF ( out > 0 ) WRITE( out, 2340 )                            &
+                    GNAMES( j ), GPNAMES( ip + i )
+                END IF
+              END DO
+            END IF
+          END DO
+          GP_ptr( ng + 1 ) = nlisgp + 1
+          IF ( status /= 0 ) RETURN
 
 !  sort the list of elements for each group, so that the elements for group i 
 !  precede those for group i + 1, i = 1, ng - 1
 
-           IF ( neling > 0 ) THEN
-             CALL REORDER( ng, neling, ELING_el, ELING_g,                      &
-                           WEIGHT, ELING_ptr, IWK )
-           ELSE
-             ELING_ptr( : ng + 1 ) = 1
-           END IF
-         END IF
+          IF ( neling > 0 ) THEN
+            CALL REORDER( ng, neling, ELING_el, ELING_g,                       &
+                          WEIGHT, ELING_ptr, IWK )
+          ELSE
+            ELING_ptr( : ng + 1 ) = 1
+          END IF
+
+!  ensure there is sufficient room for the names of slack variables
+
+          IF ( n + ng > len_vnames ) THEN
+            used_length = n ; min_length = n + ng
+            new_length = n + ng
+            CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,    &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
+            len_vnames = new_length
+          END IF
+
+          IF ( n + ng > len_typev ) THEN
+            used_length = n ; min_length = n + ng
+            new_length = n + ng
+            CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,      &
+                               min_length, buffer, status, alloc_status )
+            IF ( status /= 0 ) THEN
+              bad_alloc = 'TYPEV' ; status = - 7 ; GO TO 980 ; END IF
+            len_typev = new_length
+          END IF
+        END IF
 
 !  indicator card is endata
 !  -------------------------
 
-         IF ( intype == mendat ) GO TO 900
-         GO TO 100
+        IF ( intype == mendat ) GO TO 900
+        GO TO 100
       END IF
 
 !  a data card has been found. Rread the character fields 1, 2, 3 and 5 
@@ -8864,7 +8886,7 @@
       INTEGER :: ELV( neltype + 1 ), INV( neltype + 1 )
       INTEGER :: EP_ptr ( nelnum + 1 ), GP_ptr( ng + 1 )
       INTEGER :: ELING_el( neling ), GTYPESP_ptr( ngtype + 1 ) 
-      INTEGER :: TYPEV( n ), TYPEE( nelnum ), GTYPE( ng ), IWK( ng + 1 )
+      INTEGER :: TYPEV( n + ng ), TYPEE( nelnum ), GTYPE( ng ), IWK( ng + 1 )
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ABYROW_ptr, ABYROW_col
       REAL ( KIND = wp ) :: A_val( nnza )
       REAL ( KIND = wp ) :: RDROWS( 2, ng ), WEIGHT( neling )
@@ -8881,7 +8903,7 @@
       REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: B, BL, BU, ABYROW_val
       CHARACTER ( LEN = 10 ) :: GNAMES( ng ), BNAMES( nbnd )
       CHARACTER ( LEN = 10 ) :: ONAMES( nobj ), OBBNAME( nobbnd )
-      CHARACTER ( LEN = 10 ) :: VNAMES( n ), SNAMES( nstart )
+      CHARACTER ( LEN = 10 ) :: VNAMES( n + ng ), SNAMES( nstart )
       CHARACTER ( LEN = 10 ) :: ETYPES( neltype ), GTYPES( ngtype )
 !     CHARACTER ( LEN = 12 ) :: KEY( length  )
       CHARACTER ( LEN = 12 ), ALLOCATABLE, DIMENSION( : ) :: KEY
@@ -8941,7 +8963,18 @@
   120   CONTINUE
       END IF
 
-      nnz = n
+!  compute the number of slack variables
+
+      nslack = 0
+      IF ( ialgor <= 2 ) THEN
+        DO ig = 1, ng
+          is = GSTATE( ig )
+          IF ( is > 4 ) is = is - 4
+          IF ( is /= 1 .AND. is /= 2 ) nslack = nslack  + 1
+        END DO
+      END IF
+
+      nnz = n + nslack
       CALL ALLOCATE_array( X, nnz, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'X' ; GO TO 980 ; END IF
@@ -9096,7 +9129,7 @@
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'ABYROW_ptr' ; GO TO 980 ; END IF
 
-      len_abyrow = nnza
+      len_abyrow = nnza + nslack
       CALL ALLOCATE_array( ABYROW_val, len_abyrow, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'ABYROW_val' ; GO TO 980 ; END IF
@@ -9129,100 +9162,101 @@
 !  consider the groups in order
 
       DO ig = 1, ng
-         k1 = ABYROW_ptr( ig )
-         ABYROW_ptr( ig ) = nnz + 1
+        k1 = ABYROW_ptr( ig )
+        ABYROW_ptr( ig ) = nnz + 1
 
 !  first pass: determine the nonzeros in the row
 
-         IF ( GSTATE( ig ) <= 4 ) THEN
-           DO k = k1, ABYROW_ptr( ig + 1 ) - 1
-             j = A_col( k )
-             IF ( WK( j ) /= zero ) THEN
-               WK( j ) = WK( j ) + A_val( k )
-             ELSE
-               WK( j ) = A_val( k )
-             END IF
-           END DO
+        IF ( GSTATE( ig ) <= 4 ) THEN
+          DO k = k1, ABYROW_ptr( ig + 1 ) - 1
+            j = A_col( k )
+            IF ( WK( j ) /= zero ) THEN
+              WK( j ) = WK( j ) + A_val( k )
+            ELSE
+              WK( j ) = A_val( k )
+            END IF
+          END DO
 
 !  second pass: only record nonzeros
 
-           DO k = k1, ABYROW_ptr( ig + 1 ) - 1
-             j = A_col( k )
-             IF ( WK( j ) /= zero ) THEN
-               nnz = nnz + 1
-               ABYROW_col( nnz ) = j
-               ABYROW_val( nnz ) = WK( j )
-               WK( j ) = zero
-             END IF
-           END DO
+          DO k = k1, ABYROW_ptr( ig + 1 ) - 1
+            j = A_col( k )
+            IF ( WK( j ) /= zero ) THEN
+              nnz = nnz + 1
+              ABYROW_col( nnz ) = j
+              ABYROW_val( nnz ) = WK( j )
+              WK( j ) = zero
+            END IF
+          END DO
 
 !  the ig-th group is a 'd'-group. construct the new group from its
 !  two donors. consider each donor row in turn. form the new row in WK
 
-         ELSE
-           DO i = 1, 2
-             irow = IDROWS( i, ig )
-             rrow = RDROWS( i, ig )
-             DO k = ABYROW_ptr( irow ), ABYROW_ptr( irow + 1 ) - 1
-               ic = ABYROW_col( k )
-               IF ( ic <= nlvars ) WK( ic ) = WK( ic ) + ABYROW_val( k ) * rrow
-             END DO
-           END DO
+        ELSE
+          DO i = 1, 2
+            irow = IDROWS( i, ig )
+            rrow = RDROWS( i, ig )
+            DO k = ABYROW_ptr( irow ), ABYROW_ptr( irow + 1 ) - 1
+              ic = ABYROW_col( k )
+              IF ( ic <= nlvars ) WK( ic ) = WK( ic ) + ABYROW_val( k ) * rrow
+            END DO
+          END DO
 
 !  move the new row into ABYROW_val, resetting WK to zero as we proceed
 
-           DO i = 1, 2
-             irow = IDROWS( i, ig )
-             DO k = ABYROW_ptr( irow ), ABYROW_ptr( irow + 1 ) - 1
-               ic = ABYROW_col( k )
-               IF ( ic <= nlvars ) THEN
-                 IF ( WK( ic ) /= zero ) THEN
-                   nnz = nnz + 1
-                   ABYROW_col( nnz ) = ic
-                   ABYROW_val( nnz ) = WK( ic )
-                   WK( ic ) = zero
-                 END IF
-               END IF
-             END DO
-           END DO
-         END IF
+          DO i = 1, 2
+            irow = IDROWS( i, ig )
+            DO k = ABYROW_ptr( irow ), ABYROW_ptr( irow + 1 ) - 1
+              ic = ABYROW_col( k )
+              IF ( ic <= nlvars ) THEN
+                IF ( WK( ic ) /= zero ) THEN
+                  nnz = nnz + 1
+                  ABYROW_col( nnz ) = ic
+                  ABYROW_val( nnz ) = WK( ic )
+                  WK( ic ) = zero
+                END IF
+              END IF
+            END DO
+          END DO
+        END IF
 
 !  if the group is of type 'l' or 'g', insert a slack variable in the 
 !  linear element
 
-         is = GSTATE( ig )
-         IF ( is > 4 ) is = is - 4
-         IF ( ialgor <= 2 ) THEN
-           IF ( is /= 1 .AND. is /= 2 ) THEN
-             IF ( .NOT. GXEQX( ig ) ) THEN
-               WRITE( out, 1990 )
-               status = 51
-               GO TO 800
-             END IF
-             nnz = nnz + 1
-             nslack = nslack  + 1
-             jcol = n + nslack
-             ABYROW_col( nnz ) = jcol
-             IF ( is == 3 ) THEN
-                ABYROW_val( nnz ) =   one
-             ELSE
-                ABYROW_val( nnz ) = - one
-             END IF
+        is = GSTATE( ig )
+        IF ( is > 4 ) is = is - 4
+        IF ( ialgor <= 2 ) THEN
+          IF ( is /= 1 .AND. is /= 2 ) THEN
+            IF ( .NOT. GXEQX( ig ) ) THEN
+              WRITE( out, 1990 )
+              status = 51
+              GO TO 800
+            END IF
+            nnz = nnz + 1
+            nslack = nslack  + 1
+            jcol = n + nslack
+            ABYROW_col( nnz ) = jcol
+            IF ( is == 3 ) THEN
+               ABYROW_val( nnz ) =   one
+            ELSE
+               ABYROW_val( nnz ) = - one
+            END IF
 
 !  give the slack variable the same name as its corresponding group
 
-             VNAMES( jcol ) = GNAMES( ig )
+            VNAMES( jcol ) = GNAMES( ig )
+            TYPEV( jcol ) = 0
 
 !  assign the correct bounds for the slack variable
 
-             BL( jcol ) = BL( n + ig )
-             BU( jcol ) = BU( n + ig )
-           END IF
-         ELSE
-           IF ( is == 3 ) BL( n + ig ) = - BU( n + ig )
-           IF ( is == 1 .OR. is == 2 .OR. is == 3 ) BU( n + ig ) = zero
-         END IF
-         GSTATE( ig ) = is
+            BL( jcol ) = BL( n + ig )
+            BU( jcol ) = BU( n + ig )
+          END IF
+        ELSE
+          IF ( is == 3 ) BL( n + ig ) = - BU( n + ig )
+          IF ( is == 1 .OR. is == 2 .OR. is == 3 ) BU( n + ig ) = zero
+        END IF
+        GSTATE( ig ) = is
       END DO
 
 !  reset the number of variables to include the slacks
