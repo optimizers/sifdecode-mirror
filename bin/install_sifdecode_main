@@ -14,7 +14,7 @@ export SIFDECODE=`echo $SIFDECODE | $SED 's"/tmp_mnt""'`
 if [[ -e $SIFDECODE/versions/$VERSION ]]; then
     warning "There is already an installed SIFDECODE version $VERSION"
     yesno_default_no ' Do you wish to proceed ... existing version will be destroyed'
-    [[ $? != 0 ]] && exit 4
+    [[ $? != 1 ]] && exit 4
 fi
 
 #echo $CMP
@@ -154,7 +154,7 @@ echo 'include $(PWD)/makemaster'                                   >> $MAKEFILE
 
 #  optionally compile the selected packages
 
-yesno_default_yes ' Do you now wish to compile the package ...'
+yesno_default_yes ' Would you like to compile SIFDecode ...'
 
 if [[ $? != 0 ]]; then
     cd $SIFDECODE/src/
@@ -168,7 +168,7 @@ if [[ $? != 0 ]]; then
       $MAKE $OPTIONS all $MACROS
       [[ $? != 0 ]] && exit 2
     fi
-    success 'SIFdecode successfully installed.'
+    success 'SIFDecode successfully installed'
 
 fi
 

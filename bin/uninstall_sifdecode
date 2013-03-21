@@ -75,8 +75,6 @@ while [[ $finished != 'true' ]]; do
         \rm -f -r $SIFDECODE/objects/$VERSION
         echo " Removing module information files ... "
         \rm -f -r $SIFDECODE/modules/$VERSION
-        echo " Removing AMPL executable ... "
-        \rm -f -r $SIFDECODE/ampl_bin/$VERSION
         echo " Removing environment information file ... "
         \rm -f -r $SIFDECODE/bin/sys/$VERSION
         echo " Removing make information file ... "
