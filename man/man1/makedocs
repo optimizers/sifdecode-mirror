@@ -11,8 +11,8 @@ foreach pack ( classall  classify  select  sifdecoder )
   pdfroff -e -m man $pack.1 > ../../doc/pdf/$pack.pdf
   echo "      .. making html"
   groff -e -m man -T html -P "-Istem $pack-" -P "-i150" $pack.1 \
-    > /numerical/nimg/fortran/cutest.svn/doc/html/$pack.html
-  mv *.png /numerical/nimg/fortran/cutest.svn/doc/html
+    > ${SIFDECODE}/doc/html/$pack.html
+  mv *.png ${SIFDECODE}/doc/html
 end
 
 
