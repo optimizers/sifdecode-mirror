@@ -8,8 +8,6 @@
 # N. Gould, D. Orban & Ph. Toint
 # ( Last modified on 6 February 2013 at 07:15 GMT )
 
-. bin/helper_functions
-
 #  check input arguments (if any)
 
 if [ $# != 0 ]; then
@@ -17,20 +15,11 @@ if [ $# != 0 ]; then
    exit 1
 fi
 
-#  function to create missing symblic links
-
-#sifdecode_create_missing_link () {
-# if [[ -f $1 && ! -L $2 ]] ;
-#   then echo "creating missing link $2" ;
-##  else echo "link $2 already exists" ;
-# fi ;
-#}
-
 #  locate the archdefs directory
 
 if [[ -z "$ARCHDEFS" ]]; then
   if [[ ! -d "$PWD/../archdefs" ]]; then
-    error ' The environment variable ARCHDEFS is not set and the directory
+    echo ' The environment variable ARCHDEFS is not set and the directory
  ../../archdefs does not exist. Install the archdefs package,
  set $ARCHDEFS to the archdefs directory and re-run.'
     exit 1
@@ -40,6 +29,8 @@ if [[ -z "$ARCHDEFS" ]]; then
 else
   export ARCH=${ARCHDEFS}
 fi
+
+. $ARCH/bin/helper_functions
 
 #  determine the platform and operating system used
 
@@ -379,7 +370,7 @@ VERSION=${MCH}.${OS}.${CMP}
 if [[ -e $SIFDECODE/versions/$VERSION ]]; then
     warning " There is already a SIFDECODE installation with version $VERSION."
     yesno_default_no ' Do you wish to proceed ... existing version will be destroyed'
-    [[ $? != 0 ]] && exit 4
+    [[ $? == 0 ]] && exit 4
 fi
 
 #echo $CMP
@@ -533,23 +524,26 @@ echo 'include $(PWD)/makemaster'                                   >> $MAKEFILE
 #  optionally edit the compiler and platform settings
 
 yesno_default_no ' Would you like to review and modify if necessary the compiler settings'
-[[ $? == 0 ]] && ${FCEDIT:-${VISUAL:-${EDITOR:-vim}}} $PWD/makefiles/$VERSION
+[[ $? == 1 ]] && ${FCEDIT:-${VISUAL:-${EDITOR:-vim}}} $PWD/makefiles/$VERSION
 
 yesno_default_no ' Would you like to review and modify if necessary the system commands'
-[[ $? == 0 ]] && ${FCEDIT:-${VISUAL:-${EDITOR:-vim}}} $PWD/bin/sys/$VERSION
+[[ $? == 1 ]] && ${FCEDIT:-${VISUAL:-${EDITOR:-vim}}} $PWD/bin/sys/$VERSION
 
 #  optionally compile the selected packages
 
 yesno_default_yes ' Do you now wish to compile the package ...'
 
-if [[ $? != 0 ]]; then
+if [[ $? == 1 ]]; then
     cd $SIFDECODE/src/
 
     echo -e "\nInstalling the double precision version"
     OPTIONS="-s -f $SIFDECODE/makefiles/$VERSION"
     MACROS="PRECIS=double PWD=$SIFDECODE/src SIFDECODE=$SIFDECODE"
     $MAKE $OPTIONS all $MACROS
-    [[ $? != 0 ]] && exit 2
+    if [[ $? != 0 ]]; then
+        error 'A compilation error occurred.'
+        exit 2
+    fi
     success 'SIFdecode successfully installed.'
 
     echo -e "\n Remember to set the environment variable"

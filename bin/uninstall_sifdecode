@@ -8,7 +8,18 @@
 # N. Gould, D. Orban & Ph. Toint
 # ( Last modified on 20 October 2012 at 11:00 GMT )
 
-. bin/helper_functions
+if [[ -z "$ARCHDEFS" ]]; then
+  if [[ ! -d "$PWD/../archdefs" ]]; then
+    echo ' The environment variable ARCHDEFS is not set and the directory
+ ../../archdefs does not exist. Install the archdefs package,
+ set $ARCHDEFS to the archdefs directory and re-run.'
+    exit 1
+  else
+    export ARCHDEFS=$PWD/../archdefs
+  fi
+fi
+
+. $ARCHDEFS/bin/helper_functions
 
 #  check input arguments (if any)
 
@@ -69,7 +80,7 @@ while [[ $finished != 'true' ]]; do
     echo " Are you sure you wish to uninstall the version for"
     yesno_default_yes "$VERNAME"
 
-    if [[ $? != 0 ]]; then
+    if [[ $? == 1 ]]; then
 
         echo " Removing object files and libraries ... "
         \rm -f -r $SIFDECODE/objects/$VERSION
@@ -88,6 +99,6 @@ while [[ $finished != 'true' ]]; do
     fi
 
     yesno_default_no 'Do you wish to uninstall another version'
-    [[ $? != 0 ]] && finished='true'
+    [[ $? == 0 ]] && finished='true'
 done
 
