@@ -46,12 +46,29 @@ display_long_help() {
     echo "                   the SIF file for the problem of interest."
 }
 
+# Environment check
+
+if [[ -z "$ARCHDEFS" ]]; then
+  if [[ ! -d "$PWD/../archdefs" ]]; then
+    echo ' The environment variable ARCHDEFS is not set and the directory
+ ../../archdefs does not exist. Install the archdefs package,
+ set $ARCHDEFS to the archdefs directory and re-run.'
+    exit 1
+  else
+    export ARCHDEFS=$PWD/../archdefs
+  fi
+fi
+
+. $ARCHDEFS/bin/helper_functions
+
 if [[ ${SIFDECODE+set} != 'set' ]]; then
-    echo 'The SIFDECODE environment variable is not set.'
+    error 'The SIFDECODE environment variable is not set.'
     exit 1
 fi
 
-. $SIFDECODE/bin/helper_functions
+if [[ ${MASTSIF+set} != 'set' ]]; then
+    warning 'MASTSIF is not set. Problems may not be discovered.'
+fi
 
 #  Directory for temporary files
 
@@ -63,20 +80,6 @@ let last=$#
 if (( last < 1 )); then
     display_short_help
     exit 1
-fi
-
-# Environment check
-
-if [[ -z "$SIFDECODE" ]]; then
-    error 'The SIFDECODE environment variable is not set.
- It should point to the directory where you installed Sifdecode.
- Set it to the appropriate value and re-run.
- Aborting.'
-    exit 7
-fi
-
-if [[ ${MASTSIF+set} != 'set' ]]; then
-    warning 'MASTSIF is not set. Problems may not be discovered.'
 fi
 
 #  =========================
