@@ -15,22 +15,7 @@ if [ $# != 0 ]; then
    exit 1
 fi
 
-#  locate the archdefs directory
-
-if [[ -z "$ARCHDEFS" ]]; then
-  if [[ ! -d "$PWD/../archdefs" ]]; then
-    echo ' The environment variable ARCHDEFS is not set and the directory
- ../../archdefs does not exist. Install the archdefs package,
- set $ARCHDEFS to the archdefs directory and re-run.'
-    exit 1
-  else
-    export ARCH=$PWD/../archdefs
-  fi
-else
-  export ARCH=${ARCHDEFS}
-fi
-
-. $ARCH/bin/helper_functions
+. ./bin/sifdecode_envcheck
 
 #  determine the platform and operating system used
 
@@ -322,6 +307,9 @@ unalias source 2>/dev/null
 
 source $ARCH/system.$OS
 
+export SIFDECODE=`dirs -l`
+export SIFDECODE=`echo $SIFDECODE | $SED 's"/tmp_mnt""'`
+
 echo -e ' Select compiler\n'
 
 COMP=( `$LS $ARCH/compiler.${MCH}.${OS}.* $ARCH/compiler.all.all.* 2>/dev/null` )
@@ -356,9 +344,6 @@ while [ $CORRECT_COMPILER == "false" ]; do
 done
 
 source $ARCH/$COMPILER
-
-export SIFDECODE=`dirs -l`
-export SIFDECODE=`echo $SIFDECODE | $SED 's"/tmp_mnt""'`
 
 VERSION=${MCH}.${OS}.${CMP}
 #PREFIX=$VERSION
