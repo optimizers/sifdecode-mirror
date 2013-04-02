@@ -63,9 +63,9 @@ slct: $(OBJ)/slct.o
 $(OBJ)/slct.o: ../select/slct.f
 	@printf ' %-9s %-15s\t\t' "Compiling" "slct"
 	$(SED) -f $(SEDS) ../select/slct.f > $(OBJ)/slct.f
-	cd $(OBJ); $(FORTRAN) -c -o slct.o $(FFLAGS77) slct.f \
+	cd $(OBJ); $(FORTRAN) -o slct.o $(FFLAGS77) slct.f \
                 || ( printf ' %-26s' "=> Disabling optimization " ; \
-                   $(FORTRAN) -c -o slct.o $(FFLAGS77N) slct.f )
+                   $(FORTRAN) -o slct.o $(FFLAGS77N) slct.f )
 	cd $(OBJ); $(FORTRAN) -o slct $(RUNFFLAGS) slct.o
 	cd $(OBJ); $(RM) slct.f
 	@printf '[ OK ]\n'
@@ -75,9 +75,9 @@ clsf: $(OBJ)/clsf.o
 $(OBJ)/clsf.o: ../select/clsf.f
 	@printf ' %-9s %-15s\t\t' "Compiling" "clsf"
 	$(SED) -f $(SEDS) ../select/clsf.f > $(OBJ)/clsf.f
-	cd $(OBJ); $(FORTRAN) -c -o clsf.o $(FFLAGS77) clsf.f \
+	cd $(OBJ); $(FORTRAN) -o clsf.o $(FFLAGS77) clsf.f \
                 || ( printf ' %-26s' "=> Disabling optimization " ; \
-                   $(FORTRAN) -c -o clsf.o $(FFLAGS77N) clsf.f )
+                   $(FORTRAN) -o clsf.o $(FFLAGS77N) clsf.f )
 	cd $(OBJ); $(FORTRAN) -o clsf $(RUNFFLAGS) clsf.o
 	cd $(OBJ); $(RM) clsf.f
 	@printf '[ OK ]\n'

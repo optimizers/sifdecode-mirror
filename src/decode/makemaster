@@ -82,9 +82,9 @@ sifdecode.o: $(LS)(sifdecode.o)
 $(LS)(sifdecode.o): ../decode/sifdecode.f90
 	@printf ' %-9s %-15s\t\t' "Compiling" "sifdecode"
 	$(SED) -f $(SEDS) ../decode/sifdecode.f90 > $(OBJ)/sifdecode.f90
-	cd $(OBJ); $(FORTRAN) -c -o sifdecode.o $(FFLAGS) sifdecode.f90 \
+	cd $(OBJ); $(FORTRAN) -o sifdecode.o $(FFLAGS) sifdecode.f90 \
                 || ( printf ' %-26s' "=> Disabling optimization " ; \
-                   $(FORTRAN) -c -o sifdecode.o $(FFLAGSN) sifdecode.f90 )
+                   $(FORTRAN) -o sifdecode.o $(FFLAGSN) sifdecode.f90 )
 	cd $(OBJ); $(ARR) sifdecode.o; $(RM) sifdecode.f90 sifdecode.o
 	$(RMOBFILE) sifdecode_main.o
 	@printf '[ OK ]\n'
@@ -97,9 +97,9 @@ $(OBJ)/sifdecode_main.o: ../decode/sifdecode_main.f90
 	@printf ' %-9s %-15s\t\t' "Compiling" "sifdecode_main"
 	$(SED) -f $(SEDS) ../decode/sifdecode_main.f90 > \
                 $(OBJ)/sifdecode_main.f90
-	cd $(OBJ); $(FORTRAN) -c -o sifdecode_main.o $(FFLAGS) sifdecode_main.f90 \
+	cd $(OBJ); $(FORTRAN) -o sifdecode_main.o $(FFLAGS) sifdecode_main.f90 \
           || ( printf ' %-26s' "=> Disabling optimization " ; \
-            $(FORTRAN) -c -o sifdecode_main.o $(FFLAGSN) sifdecode_main.f90 )
+            $(FORTRAN) -o sifdecode_main.o $(FFLAGSN) sifdecode_main.f90 )
 	cd $(OBJ); $(FORTRAN) -o run_sifdecode $(RUNFFLAGS) \
           sifdecode_main.o -L$(OBJ) $(PLIBS) ; $(RM) sifdecode_main.f90
 	@printf '[ OK ]\n'
