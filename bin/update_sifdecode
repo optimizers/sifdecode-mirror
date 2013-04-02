@@ -1,0 +1,19 @@
+#!/bin/bash
+
+. $SIFDECODE/bin/sifdecode_envcheck
+
+cd $SIFDECODE
+message "Fetching updates (if any)"
+svn update >/dev/null 2>&1
+cd src
+fails=0
+for version in `ls $SIFDECODE/versions`
+do
+    message "Rebuilding version $version"
+    make -s -f $SIFDECODE/makefiles/$version
+    if [[ $? != 0 ]]; then
+        (( fails++ ))
+        error "Compilation error for version $version"
+    fi
+done
+(( $fails > 0 )) && error "$fails failures." || success "All versions rebuilt."
