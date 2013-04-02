@@ -8,19 +8,6 @@
 # N. Gould, D. Orban & Ph. Toint
 # ( Last modified on 20 October 2012 at 11:00 GMT )
 
-if [[ -z "$ARCHDEFS" ]]; then
-  if [[ ! -d "$PWD/../archdefs" ]]; then
-    echo ' The environment variable ARCHDEFS is not set and the directory
- ../../archdefs does not exist. Install the archdefs package,
- set $ARCHDEFS to the archdefs directory and re-run.'
-    exit 1
-  else
-    export ARCHDEFS=$PWD/../archdefs
-  fi
-fi
-
-. $ARCHDEFS/bin/helper_functions
-
 #  check input arguments (if any)
 
 if [[ $# != 0 ]]; then
@@ -30,6 +17,8 @@ fi
 
 export SIFDECODE=`dirs -l`
 export SIFDECODE=`echo $SIFDECODE | \sed 's"/tmp_mnt""'`
+
+. $SIFDECODE/bin/sifdecode_envcheck
 
 finished='false'
 while [[ $finished != 'true' ]]; do
