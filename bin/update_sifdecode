@@ -1,4 +1,9 @@
 #!/bin/bash
+# This script fetches source code updates (if any) and rebuilds
+# the architectures supplied as arguments. If no architecture
+# is passed as argument, nothing is rebuilt.
+
+to_rebuild="$@"
 
 . $SIFDECODE/bin/sifdecode_envcheck
 
@@ -7,7 +12,7 @@ message "Fetching updates (if any)"
 svn update >/dev/null 2>&1
 cd src
 fails=0
-for version in `ls $SIFDECODE/versions`
+for version in $to_rebuild
 do
     message "Rebuilding version $version"
     make -s -f $SIFDECODE/makefiles/$version
@@ -16,4 +21,4 @@ do
         error "Compilation error for version $version"
     fi
 done
-(( $fails > 0 )) && error "$fails failures." || success "All versions rebuilt."
+(( $fails > 0 )) && error "$fails failures." || success "All requested versions rebuilt."
