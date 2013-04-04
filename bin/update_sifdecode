@@ -1,9 +1,24 @@
 #!/bin/bash
-# This script fetches source code updates (if any) and rebuilds
-# the architectures supplied as arguments. If no architecture
-# is passed as argument, nothing is rebuilt.
+
+helpmsg() {
+
+    echo 'This script fetches source code updates (if any) and rebuilds'
+    echo 'the architectures supplied as arguments. If no architecture'
+    echo 'is passed as argument, $MYARCH is rebuilt. If no architecture'
+    echo 'should be rebuilt, the single argument 'none' should be passed.'
+}
 
 to_rebuild="$@"
+if (( $# == 0 )); then
+    [[ ! -z "$MYARCH" ]] && to_rebuild="$MYARCH"
+fi
+if (( $# == 1 )); then
+    if [[ "$1" == '-h' ]]; then
+        helpmsg
+        exit 1
+    fi
+    [[ "$1" == 'none' ]] && to_rebuild=''
+fi
 
 . $SIFDECODE/bin/sifdecode_envcheck
 
