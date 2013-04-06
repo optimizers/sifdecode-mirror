@@ -13,7 +13,7 @@ if (( $# == 0 )); then
     [[ ! -z "$MYARCH" ]] && to_rebuild="$MYARCH"
 fi
 if (( $# == 1 )); then
-    if [[ "$1" == '-h' ]]; then
+    if [[ "$1" == '-h' || "$1" == '--help' ]]; then
         helpmsg
         exit 1
     fi
