@@ -785,7 +785,7 @@ C
      1        /'      *                                               *'
      1        /'      *         interactive problem selection         *'
      1        /'      *                                               *'
-     1        /'      *                CGT productions                *'
+     1        /'      *          CGT/GOR productions 1992,2013        *'
      1        /'      *                                               *'
      1        /'      *************************************************'
      1        / )

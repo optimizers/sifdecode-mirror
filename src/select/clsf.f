@@ -116,8 +116,15 @@ C Since sed (or basename) does not exist in DOS, the following
 C 9 lines allow that IFNAME be specified with or without the .SIF
 C extension. This means that CLASSIFY.BAT and CLASSALL.BAT work.
       TSIZE=INDEX(IFNAME,' ')
-      IF (TSIZE .GT. 4 .AND. IFNAME(TSIZE-4:TSIZE-1) .EQ. '.SIF') THEN
-        TSIZE=TSIZE-4
+      IF (TSIZE .GT. 4 ) THEN
+        IF (TSIZE .GT. 4 .AND. IFNAME(TSIZE-4:TSIZE-1) .EQ. '.SIF') THEN
+          TSIZE=TSIZE-4
+        ELSE
+          IFNAME(TSIZE:TSIZE) = '.'
+          IFNAME(TSIZE+1:TSIZE+1) = 'S'
+          IFNAME(TSIZE+2:TSIZE+2) = 'I'
+          IFNAME(TSIZE+3:TSIZE+3) = 'F'
+        END IF
       ELSE
         IFNAME(TSIZE:TSIZE) = '.'
         IFNAME(TSIZE+1:TSIZE+1) = 'S'
