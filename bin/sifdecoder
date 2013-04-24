@@ -388,7 +388,8 @@ fi
 
 # construct input file for the decoder
 
-sdinput=sifdecoder.$$.input
+#sdinput=sifdecoder.$$.input
+sdinput='SIFDECODE.CNF'
 
 echo $TEMPNAME   > $sdinput
 echo $PACKAGE   >> $sdinput
@@ -407,10 +408,12 @@ if [[ $MEMCHECK == "1" ]]; then
     valgrind $VALGRIND $DECODER < $sdinput
   else
     warning 'no memory checking available, sorry ...\n'
-    $DECODER < $sdinput
+    #$DECODER < $sdinput
+    $DECODER
   fi
 else
-  $DECODER < $sdinput
+  #$DECODER < $sdinput
+  $DECODER
 fi
 
 # Clean up

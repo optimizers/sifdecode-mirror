@@ -10,15 +10,15 @@
 !   Became separate program as part of SifDec, April 2004
 !   Updated fortran 2003 version released December 2012
 
-!  For full documentation, see 
+!  For full documentation, see
 !   http://galahad.rl.ac.uk/galahad-www/specs.html
 
       PROGRAM SIFDECODE_main
 
 !  ------------------------------------------------------------------------
-!  this is the main program for running the SIF decoder for the GALAHAD and 
-!  CUTEst optimization packages. It calls the driver routine SDLANC which does 
-!  all the work. The purpose of this main program is to open and close all 
+!  this is the main program for running the SIF decoder for the GALAHAD and
+!  CUTEst optimization packages. It calls the driver routine SDLANC which does
+!  all the work. The purpose of this main program is to open and close all
 !  files, and to care for the proper filenames when possible
 !  ------------------------------------------------------------------------
 
@@ -32,7 +32,7 @@
 
 !  assign the standard output unit numbers
 
-      INTEGER, PARAMETER :: in = 5
+      INTEGER, PARAMETER :: in = 51
       INTEGER, PARAMETER :: out = 6
       CHARACTER ( LEN = 10 ) :: pbname = REPEAT( ' ', 10 )
       CHARACTER ( LEN = 10 ) :: prb = REPEAT( ' ', 10 )
@@ -59,6 +59,7 @@
 
 !  assign file names
 
+      CHARACTER ( LEN = 24 ), PARAMETER :: prbin  = 'SIFDECODE.CNF          '
       CHARACTER ( LEN = 24 ), PARAMETER :: prbout = 'OUTSDIF.d              '
       CHARACTER ( LEN = 24 ), PARAMETER :: prbfn  = 'ELFUN.f                '
       CHARACTER ( LEN = 24 ), PARAMETER :: prbff  = 'ELFUNF.f               '
@@ -73,9 +74,10 @@
 
       LOGICAL, PARAMETER :: noname = .FALSE.
 
-!  read the problem's name, build default file names and assign 
+!  read the problem's name, build default file names and assign
 !  the actual values used
 
+      OPEN ( in, FILE = prbin, FORM = 'FORMATTED', STATUS = 'OLD')
       READ ( in, "( A10 )" ) prb
       prbdat = TRIM( prb ) // '.SIF'
 
@@ -112,6 +114,7 @@
 !  increased, so the parameter is simply a convenience for larger problems
 
       READ( in, "( I2 )" ) size
+      CLOSE( in )
 
 !  open the relevant files - unix systems
 
@@ -140,7 +143,7 @@
           REWIND outgf
         END IF
         OPEN( outgd, FILE = prbgd,  FORM = 'FORMATTED', STATUS = 'UNKNOWN' )
-        REWIND outgd 
+        REWIND outgd
         OPEN( outea, FILE = prbea,  FORM = 'FORMATTED', STATUS = 'UNKNOWN' )
         REWIND outea
       END IF

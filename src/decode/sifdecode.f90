@@ -10,7 +10,7 @@
 !   Became separate subroutines in SifDec, April 2004
 !   Updated fortran 2003 version packaged and released December 2012
 
-!  For full documentation, see 
+!  For full documentation, see
 !   http://galahad.rl.ac.uk/galahad-www/specs.html
 
     MODULE SIFDECODE
@@ -45,7 +45,7 @@
 
 !  the following parameters define the default sizes of problem
 !  dependent arrays. The actual sizes used will be determined
-!  automatically, and the arrays adjusted as the SIF file is 
+!  automatically, and the arrays adjusted as the SIF file is
 !  decoded, but good initial values may speed things up
 
 !  [In SifDec an error messages was issued if any of these sizes
@@ -71,9 +71,9 @@
 !  maximum number of different group types
 
       INTEGER, PARAMETER :: ngtype_guess_debug = 1
-      INTEGER, PARAMETER :: ngtype_guess_small = 10   
-      INTEGER, PARAMETER :: ngtype_guess_medium = 10   
-      INTEGER, PARAMETER :: ngtype_guess_large = 10   
+      INTEGER, PARAMETER :: ngtype_guess_small = 10
+      INTEGER, PARAMETER :: ngtype_guess_medium = 10
+      INTEGER, PARAMETER :: ngtype_guess_large = 10
 
 !  maximum total number of real parameters associated with groups
 
@@ -135,9 +135,9 @@
 !  maximum number of real parameters
 
       INTEGER, PARAMETER :: nrindex_guess_debug = 1
-      INTEGER, PARAMETER :: nrindex_guess_small = 20000 
-      INTEGER, PARAMETER :: nrindex_guess_medium = 20000 
-      INTEGER, PARAMETER :: nrindex_guess_large = 20000 
+      INTEGER, PARAMETER :: nrindex_guess_small = 20000
+      INTEGER, PARAMETER :: nrindex_guess_medium = 20000
+      INTEGER, PARAMETER :: nrindex_guess_large = 20000
 
 !  maximum number of statements in any level of a do-loop
 
@@ -163,9 +163,9 @@
 !  maximum number of vectors of solutions
 
       INTEGER, PARAMETER :: nstart_guess_debug = 1
-      INTEGER, PARAMETER :: nstart_guess_small = 3     
-      INTEGER, PARAMETER :: nstart_guess_medium = 3     
-      INTEGER, PARAMETER :: nstart_guess_large = 3     
+      INTEGER, PARAMETER :: nstart_guess_small = 3
+      INTEGER, PARAMETER :: nstart_guess_medium = 3
+      INTEGER, PARAMETER :: nstart_guess_large = 3
 
 !  maximum number of vectors of bounds on the objective function
 
@@ -216,7 +216,7 @@
 
 !  the number of unfilled entries in the current hash table
 
-      INTEGER :: hash_empty  
+      INTEGER :: hash_empty
 
 !  the largest prime that is no larger than the size of current hash table
 
@@ -264,7 +264,7 @@
       LOGICAL :: noname, single
 
 !  ------------------------------------------------------------------------
-!  decode a SIF file and convert the data into a form suitable for input to 
+!  decode a SIF file and convert the data into a form suitable for input to
 !  GALAHAD or other external packages using CUTEst
 
 !  formerly sdlanc in SiFDec
@@ -334,7 +334,7 @@
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: IINAMES, RINAMES
       CHARACTER ( LEN = 12 ), ALLOCATABLE, DIMENSION( : ) :: KEY
 
-!  set starting array sizes 
+!  set starting array sizes
 
 !  debug problems
 
@@ -726,7 +726,7 @@
       CALL ALLOCATE_array( EXNAMES, len_exnames, alloc_status )
       IF ( alloc_status /= 0 ) THEN
         bad_alloc = 'EXNAMES' ; GO TO 980 ; END IF
-   
+
 !  make subroutines elfun and range
 
       IF ( iauto == 0 ) THEN
@@ -882,7 +882,7 @@
 
 !  finally, read any additional programs
 
-      DO 
+      DO
         IF ( gotlin ) THEN
           lineex( 1 : 72 ) = nuline( 1 : 72 )
           gotlin = .FALSE.
@@ -1000,7 +1000,7 @@
       INTEGER :: nlisgp, nlisep, size, input, out, status
       INTEGER :: len1_blu, len1_vstart, len1_cstart, len_iinames, len_rinames
       INTEGER :: nevnames, nivnames, nepnames, ngpnames
-      LOGICAL :: single, debug 
+      LOGICAL :: single, debug
       CHARACTER ( LEN = 8 ) :: pname
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELV, INV, ELP
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: EV_ptr, TYPEE, EP_ptr, TYPEV
@@ -1073,7 +1073,7 @@
 !  data card description
 !  ----------------------
 
-!  see 'The SIF reference report', Chapter 7 in 
+!  see 'The SIF reference report', Chapter 7 in
 !       A. R. Conn, N. I. M. Gould and Ph. L. Toint,
 !       LANCELOT A Fortran Package for Large-Scale Nonlinear Optimization
 !       (RElease A), Springer Series in Computational Mathematics 17,
@@ -1089,22 +1089,22 @@
 !    status = - 1  when length not large enough
 !    status = - 2  when A_row, A_col or A_val cannot be extended further
 !    status = - 3  when ELV, INV, ELP or ETYPES cannot be extended further
-!    status = - 4  when GTYPESP_ptr, GANAMES or GTYPES cannot be 
+!    status = - 4  when GTYPESP_ptr, GANAMES or GTYPES cannot be
 !                  extended further
 !    status = - 5  when ONAMES cannot be extended further
-!    status = - 6  when GSTATE, GTYPE, GNAMES, RSCALE, IDROWS or RDROWS 
+!    status = - 6  when GSTATE, GTYPE, GNAMES, RSCALE, IDROWS or RDROWS
 !                  cannot be extended further
 !    status = - 7  when TYPEV, CSCALE, DEFAULT or VNAMES
 !                  cannot be extended further
 !    status = - 8  when VSTART, CSTART or SNAMES cannot be extended further
-!    status = - 9  when ELING_el, ELING_p, WEIGHT, EV_ptr, EP_ptr, TYPEE, or 
+!    status = - 9  when ELING_el, ELING_p, WEIGHT, EV_ptr, EP_ptr, TYPEE, or
 !                  LNAMES cannot be extended further
 !    status = - 10 no longer used
 !    status = - 11 when INSTR1, INSTR2, INSTR3, RVALUE1, RVALUE2 or RVALUE3
 !                  cannot be extended further
-!    status = - 12 when ARRAY, CARRAY, FARRAY IARRAY or VARRAY cannot be 
+!    status = - 12 when ARRAY, CARRAY, FARRAY IARRAY or VARRAY cannot be
 !                  extended further
-!    status = - 13 when B_l, B_u, B_l_default, B_u_default or BNAMES cannot 
+!    status = - 13 when B_l, B_u, B_l_default, B_u_default or BNAMES cannot
 !                  be extended further
 !    status = - 14 when EVNAMES cannot be extended further
 !    status = - 15 when ELVAR cannot be extended further
@@ -1128,7 +1128,7 @@
       INTEGER, PARAMETER :: mqmatr = 21, metype = 22, meuses = 23, mgtype = 24
       INTEGER, PARAMETER :: mguses = 25, mobbnd = 26, mendat = 27
       INTEGER, PARAMETER :: maxnul = 20
-      INTEGER, PARAMETER :: maxlev = 3   
+      INTEGER, PARAMETER :: maxlev = 3
       INTEGER, DIMENSION( mendat ), PARAMETER :: LENIND                        &
         = (/ 0, 12, 11, 4, 4, 6, 11, 7, 9, 9, 3, 4, 6, 6, 11, 7, 9, 5, 7, 8,   &
              7, 12, 12, 10, 10, 12, 6  /)
@@ -1201,7 +1201,7 @@
       INTEGER :: len1_iarray = 5
       INTEGER :: len2_iarray = 3
 
-!  set starting array sizes 
+!  set starting array sizes
 
 !  debug problems
 
@@ -1212,7 +1212,7 @@
         len_gtypes = MAX( ngtype_guess_debug, 1 )
         len_gstate = ng_guess_debug
         len_gtype = ng_guess_debug
-        len_gnames = ng_guess_debug 
+        len_gnames = ng_guess_debug
         len_rscale = ng_guess_debug
         len2_idrows = ng_guess_debug
         len2_rdrows = ng_guess_debug
@@ -1274,7 +1274,7 @@
         len_gtypes = MAX( ngtype_guess_small, 1 )
         len_gstate = ng_guess_small
         len_gtype = ng_guess_small
-        len_gnames = ng_guess_small 
+        len_gnames = ng_guess_small
         len_rscale = ng_guess_small
         len2_idrows = ng_guess_small
         len2_rdrows = ng_guess_small
@@ -1336,7 +1336,7 @@
         len_gtypes = MAX( ngtype_guess_large, 1 )
         len_gstate = ng_guess_large
         len_gtype = ng_guess_large
-        len_gnames = ng_guess_large 
+        len_gnames = ng_guess_large
         len_rscale = ng_guess_large
         len2_idrows = ng_guess_large
         len2_rdrows = ng_guess_large
@@ -1398,7 +1398,7 @@
         len_gtypes = MAX( ngtype_guess_medium, 1 )
         len_gstate = ng_guess_medium
         len_gtype = ng_guess_medium
-        len_gnames = ng_guess_medium 
+        len_gnames = ng_guess_medium
         len_rscale = ng_guess_medium
         len2_idrows = ng_guess_medium
         len2_rdrows = ng_guess_medium
@@ -1464,10 +1464,10 @@
 
 !  set initial values for logical variables
 
-      defnam = .FALSE. ; doloop = .FALSE. ; 
+      defnam = .FALSE. ; doloop = .FALSE. ;
       end_bound_section = .FALSE. ; end_start_section = .FALSE.
       end_quadratic_section = .FALSE.
-      end_element_type_section = .FALSE. ; end_element_uses_section = .FALSE. 
+      end_element_type_section = .FALSE. ; end_element_uses_section = .FALSE.
       end_group_type_section = .FALSE. ; start_group_uses_section = .FALSE.
       grpyet = .FALSE. ; varyet = .FALSE. ; delset = .FALSE. ; dgrset = .FALSE.
       grp1st = .TRUE. ; fixed = .TRUE. ; qgroup = .FALSE. ; qsqr = .FALSE.
@@ -1916,7 +1916,7 @@
             nvar = nvar + 1
             IF ( nvar > len_default ) THEN
               used_length = nvar - 1 ; min_length = nvar
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( DEFAULT, len_default, used_length, new_length,&
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -1926,7 +1926,7 @@
 
             IF ( nvar > len_vnames ) THEN
               used_length = nvar - 1 ; min_length = nvar
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -2018,12 +2018,12 @@
                   i = nevnames - ELV( neltype ) + 1
                   IF ( nivnames + i > len_ivnames ) THEN
                     used_length = nivnames ; min_length = nivnames + i
-                    new_length = increase_n * min_length / increase_d + 1 
+                    new_length = increase_n * min_length / increase_d + 1
                     CALL EXTEND_array( IVNAMES, len_ivnames, used_length,    &
                                        new_length, min_length, buffer,       &
                                        status, alloc_status )
                     IF ( status /= 0 ) THEN
-                      bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
+                      bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980
                     END IF
                     len_ivnames = new_length
                   END IF
@@ -2043,7 +2043,7 @@
 
               IF ( neltype >= len_elv ) THEN
                 used_length = neltype ; min_length = neltype + 1
-                new_length = min_length + 1 
+                new_length = min_length + 1
                 CALL EXTEND_array( ELV, len_elv, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
@@ -2053,7 +2053,7 @@
 
               IF ( neltype >= len_inv ) THEN
                 used_length = neltype ; min_length = neltype + 1
-                new_length = min_length + 1 
+                new_length = min_length + 1
                 CALL EXTEND_array( INV, len_inv, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
@@ -2063,7 +2063,7 @@
 
               IF ( neltype >= len_elp ) THEN
                 used_length = neltype ; min_length = neltype + 1
-                new_length = min_length + 1 
+                new_length = min_length + 1
                 CALL EXTEND_array( ELP, len_elp, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
@@ -2192,7 +2192,7 @@
           IF ( alloc_status /= 0 ) THEN
             bad_alloc = 'GP_val' ; GO TO 980 ; END IF
 
-!  check that the groups have been completely specified by checking that the 
+!  check that the groups have been completely specified by checking that the
 !  parameter values have been set
 
           nlisgp = 0
@@ -2213,9 +2213,9 @@
                     GP_val( nlisgp ) = biginf
                     IF ( out > 0 )                                             &
                       WRITE( out, 2340 ) GNAMES( j ), GPNAMES( ip + i )
-                  END DO 
-                END IF 
-              END IF 
+                  END DO
+                END IF
+              END IF
             ELSE IF ( k == 0 ) THEN
               GP_ptr( j ) = nlisgp + 1
             ELSE
@@ -2237,7 +2237,7 @@
           GP_ptr( ng + 1 ) = nlisgp + 1
           IF ( status /= 0 ) RETURN
 
-!  sort the list of elements for each group, so that the elements for group i 
+!  sort the list of elements for each group, so that the elements for group i
 !  precede those for group i + 1, i = 1, ng - 1
 
           IF ( neling > 0 ) THEN
@@ -2277,7 +2277,7 @@
         GO TO 100
       END IF
 
-!  a data card has been found. Rread the character fields 1, 2, 3 and 5 
+!  a data card has been found. Rread the character fields 1, 2, 3 and 5
 !  from the new data line
 
       field1 = NULINE(  2 :  3 )
@@ -2309,7 +2309,7 @@
           IF ( ninstr1 > len2_instr1 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr1 - 1 ; min_length2 = ninstr1
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2325,7 +2325,7 @@
           IF ( ninstr2 > len2_instr2 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr2 - 1 ; min_length2 = ninstr2
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2341,7 +2341,7 @@
           IF ( ninstr3 > len2_instr3 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr3 - 1 ; min_length2 = ninstr3
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2494,7 +2494,7 @@
           IF ( ninstr1 > len2_instr1 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr1 - 1 ; min_length2 = ninstr1
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2510,7 +2510,7 @@
           IF ( ninstr2 > len2_instr2 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr2 - 1 ; min_length2 = ninstr2
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2526,7 +2526,7 @@
           IF ( ninstr3 > len2_instr3 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr3 - 1 ; min_length2 = ninstr3
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2545,7 +2545,7 @@
           IF ( ninstr3 > len2_instr3 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr3 - 1 ; min_length2 = ninstr3
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2563,7 +2563,7 @@
           IF ( ninstr2 > len2_instr2 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr2 - 1 ; min_length2 = ninstr2
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2581,7 +2581,7 @@
           IF ( ninstr1 > len2_instr1 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr1 - 1 ; min_length2 = ninstr1
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2837,7 +2837,7 @@
   300     CONTINUE
           lev1 = lev1 + lev1i
           GO TO 220
-  337     CONTINUE   
+  337     CONTINUE
 
 !  end of level-1 do-loop
 
@@ -2855,7 +2855,7 @@
           IF ( ninstr1 > len2_instr1 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr1 - 1 ; min_length2 = ninstr1
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2867,7 +2867,7 @@
 
           IF ( ninstr1 > len_rvalue1 ) THEN
             used_length = ninstr1 - 1 ; min_length = ninstr1
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RVALUE1, len_rvalue1, used_length, new_length,  &
                                min_length, buffer, status, alloc_status )
             IF ( status /= 0 ) THEN
@@ -2879,7 +2879,7 @@
           IF ( ninstr2 > len2_instr2 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr2 - 1 ; min_length2 = ninstr2
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2891,7 +2891,7 @@
 
           IF ( ninstr2 > len_rvalue2 ) THEN
             used_length = ninstr2 - 1 ; min_length = ninstr2
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RVALUE2, len_rvalue2, used_length, new_length,  &
                                min_length, buffer, status, alloc_status )
             IF ( status /= 0 ) THEN
@@ -2903,7 +2903,7 @@
           IF ( ninstr3 > len2_instr3 ) THEN
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = ninstr3 - 1 ; min_length2 = ninstr3
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -2915,7 +2915,7 @@
 
           IF ( ninstr3 > len_rvalue3 ) THEN
             used_length = ninstr3 - 1 ; min_length = ninstr3
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RVALUE3, len_rvalue3, used_length, new_length,  &
                                min_length, buffer, status, alloc_status )
             IF ( status /= 0 ) THEN
@@ -2979,7 +2979,7 @@
           narray = narray + 1
           IF ( narray > len_farray ) THEN
             used_length = narray - 1 ; min_length = narray
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( FARRAY, len_farray, used_length, new_length,    &
                                min_length, buffer, status, alloc_status )
             IF ( status /= 0 ) THEN
@@ -2990,7 +2990,7 @@
           IF ( narray > len2_varray ) THEN
             used_length = 2 ; new_length = 2 ; min_length = 2
             used_length2 = narray - 1 ; min_length2 = narray
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( VARRAY, 2, len2_varray, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -3003,7 +3003,7 @@
           IF ( narray > len2_carray ) THEN
             used_length = 2 ; new_length = 2 ; min_length = 2
             used_length2 = narray - 1 ; min_length2 = narray
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( CARRAY, 2, len2_carray, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -3016,7 +3016,7 @@
           IF ( narray > len2_array ) THEN
             used_length = 3 ; new_length = 3 ; min_length = 3
             used_length2 = narray - 1 ; min_length2 = narray
-            new_length2 = increase_n * min_length2 / increase_d + 1 
+            new_length2 = increase_n * min_length2 / increase_d + 1
             CALL EXTEND_array( ARRAY, 3, len2_array, used_length,              &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
@@ -3030,7 +3030,7 @@
             used_length = 5 ; new_length = 5 ; min_length = 5
             used_length2 = 3 ; new_length2 = 3 ; min_length2 = 3
             used_length3 = narray - 1 ; min_length3 = narray
-            new_length3 = increase_n * min_length3 / increase_d + 1 
+            new_length3 = increase_n * min_length3 / increase_d + 1
             CALL EXTEND_array( IARRAY, 5, 3, len3_iarray, used_length,         &
                                used_length2, used_length3,                     &
                                new_length, new_length2, new_length3,           &
@@ -3725,7 +3725,7 @@
         ng = ng + 1
         IF ( ng > len_gstate ) THEN
           used_length = ng - 1 ; min_length = ng
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -3735,7 +3735,7 @@
 
         IF ( ng > len_gtype ) THEN
           used_length = ng - 1 ; min_length = ng
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GTYPE, len_gtype, used_length, new_length,        &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -3745,7 +3745,7 @@
 
         IF ( ng > len_gnames ) THEN
           used_length = ng - 1 ; min_length = ng
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -3755,7 +3755,7 @@
 
         IF ( ng > len_rscale ) THEN
           used_length = ng - 1 ; min_length = ng
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -3766,7 +3766,7 @@
         IF ( ng > len2_idrows ) THEN
           used_length = 2 ; new_length = 2 ; min_length = 2
           used_length2 = ng - 1 ; min_length2 = ng
-          new_length2 = increase_n * min_length2 / increase_d + 1 
+          new_length2 = increase_n * min_length2 / increase_d + 1
           CALL EXTEND_array( IDROWS, 2, len2_idrows, used_length,              &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
@@ -3779,7 +3779,7 @@
         IF ( ng > len2_rdrows ) THEN
           used_length = 2 ; new_length = 2 ; min_length = 2
           used_length2 = ng - 1 ; min_length2 = ng
-          new_length2 = increase_n * min_length2 / increase_d + 1 
+          new_length2 = increase_n * min_length2 / increase_d + 1
           CALL EXTEND_array( RDROWS, 2, len2_rdrows, used_length,              &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
@@ -3967,7 +3967,7 @@
           nobj = nobj + 1
           IF ( nobj > len_onames ) THEN
             used_length = nobj - 1 ; min_length = nobj
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,    &
                                min_length, buffer, status, alloc_status )
             IF ( status /= 0 ) THEN
@@ -3982,7 +3982,7 @@
         ng = ng + 1
         IF ( ng > len_gstate ) THEN
           used_length = ng - 1 ; min_length = ng
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -3992,7 +3992,7 @@
 
         IF ( ng > len_gtype ) THEN
           used_length = ng - 1 ; min_length = ng
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GTYPE, len_gtype, used_length, new_length,        &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4002,7 +4002,7 @@
 
         IF ( ng > len_gnames ) THEN
           used_length = ng - 1 ; min_length = ng
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4012,7 +4012,7 @@
 
         IF ( ng > len_rscale ) THEN
           used_length = ng - 1 ; min_length = ng
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4023,7 +4023,7 @@
         IF ( ng > len2_idrows ) THEN
           used_length = 2 ; new_length = 2 ;  min_length = 2
           used_length2 = ng - 1 ; min_length2 = ng
-          new_length2 = increase_n * min_length2 / increase_d + 1 
+          new_length2 = increase_n * min_length2 / increase_d + 1
           CALL EXTEND_array( IDROWS, 2, len2_idrows, used_length,              &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
@@ -4036,7 +4036,7 @@
         IF ( ng > len2_rdrows ) THEN
           used_length = 2 ; new_length = 2 ;  min_length = 2
           used_length2 = ng - 1 ; min_length2 = ng
-          new_length2 = increase_n * min_length2 / increase_d + 1 
+          new_length2 = increase_n * min_length2 / increase_d + 1
           CALL EXTEND_array( RDROWS, 2, len2_rdrows, used_length,              &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
@@ -4148,7 +4148,7 @@
             RETURN
           END IF
 
-!  entries for the linear element for group j are to be specified. Find the 
+!  entries for the linear element for group j are to be specified. Find the
 !  variable numbers for the input entries
 
           DO i = 1, novals
@@ -4165,21 +4165,21 @@
               nnza = nnza + 1
               IF ( nnza >= len_a ) THEN
                 used_length = nnza - 1 ; min_length = nnza
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_row, len_a, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_row' ; status = - 2 ; GO TO 980 ; END IF
 
                 used_length = nnza - 1 ; min_length = nnza
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_col, len_a, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_col' ; status = - 2 ; GO TO 980 ; END IF
 
                 used_length = nnza - 1 ; min_length = nnza
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_val, len_a, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
@@ -4287,7 +4287,7 @@
         nvar = nvar + 1
         IF ( nvar > len_vnames ) THEN
           used_length = nvar - 1 ; min_length = nvar
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4297,7 +4297,7 @@
 
         IF ( nvar > len_cscale ) THEN
           used_length = nvar - 1 ; min_length = nvar
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( CSCALE, len_cscale, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4307,7 +4307,7 @@
 
         IF ( nvar > len_typev ) THEN
           used_length = nvar - 1 ; min_length = nvar
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,        &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4409,7 +4409,7 @@
         nvar = nvar + 1
         IF ( nvar > len_vnames ) THEN
           used_length = nvar - 1 ; min_length = nvar
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4419,7 +4419,7 @@
 
         IF ( nvar > len_cscale ) THEN
           used_length = nvar - 1 ; min_length = nvar
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( CSCALE, len_cscale, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4429,7 +4429,7 @@
 
         IF ( nvar > len_typev ) THEN
           used_length = nvar - 1 ; min_length = nvar
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,        &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4439,7 +4439,7 @@
 
         IF ( nvar > len_default ) THEN
           used_length = nvar - 1 ; min_length = nvar
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( DEFAULT, len_default, used_length, new_length,    &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4529,21 +4529,21 @@
               nnza = nnza + 1
               IF ( nnza >= len_a ) THEN
                 used_length = nnza - 1 ; min_length = nnza
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_row, len_a, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_row' ; status = - 2 ; GO TO 980 ; END IF
 
                 used_length = nnza - 1 ; min_length = nnza
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_col, len_a, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_col' ; status = - 2 ; GO TO 980 ; END IF
 
                 used_length = nnza - 1 ; min_length = nnza
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_val, len_a, used_length, new_length,      &
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
@@ -4651,7 +4651,7 @@
           used_length = nlvars ; min_length = len1_blu
           new_length = len1_blu
           used_length2 = nbnd - 1 ; min_length2 = nbnd
-          new_length2 = increase_n * min_length2 / increase_d + 1 
+          new_length2 = increase_n * min_length2 / increase_d + 1
           CALL EXTEND_array( B_l, len1_blu, len2_blu, used_length,             &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
@@ -4662,7 +4662,7 @@
           used_length = nlvars ; min_length = len1_blu
           new_length = len1_blu
           used_length2 = nbnd - 1 ; min_length2 = nbnd
-          new_length2 = increase_n * min_length2 / increase_d + 1 
+          new_length2 = increase_n * min_length2 / increase_d + 1
           CALL EXTEND_array( B_u, len1_blu, len2_blu, used_length,             &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
@@ -4674,7 +4674,7 @@
 
         IF ( nbnd >= len_blu_default ) THEN
           used_length = nbnd - 1 ; min_length = nbnd
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( B_l_default, len_blu_default, used_length,        &
                              new_length, min_length, buffer,                   &
                              status, alloc_status )
@@ -4682,18 +4682,18 @@
             bad_alloc = 'B_l_default' ; status = - 13 ; GO TO 980 ; END IF
 
           used_length = nbnd - 1 ; min_length = nbnd
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( B_u_default, len_blu_default, used_length,        &
                              new_length, min_length, buffer,                   &
                              status, alloc_status )
           IF ( status /= 0 ) THEN
             bad_alloc = 'B_u_default' ; status = - 13 ; GO TO 980 ; END IF
           len_blu_default = new_length
-        END IF 
+        END IF
 
         IF ( nbnd >= len_bnames ) THEN
           used_length = nbnd - 1 ; min_length = nbnd
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( BNAMES, len_bnames, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -4968,7 +4968,7 @@
           used_length = nlvars ; min_length = len1_vstart
           new_length = len1_vstart
           used_length2 = nstart - 1 ; min_length2 = nstart
-          new_length2 = increase_n * min_length2 / increase_d + 1 
+          new_length2 = increase_n * min_length2 / increase_d + 1
           CALL EXTEND_array( VSTART, len1_vstart, len2_vstart, used_length,    &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
@@ -4980,7 +4980,7 @@
         IF ( nstart > len2_cstart ) THEN
           used_length = ng ; new_length = len1_cstart ; min_length = len1_cstart
           used_length2 = nstart - 1 ; min_length2 = nstart
-          new_length2 = increase_n * min_length2 / increase_d + 1 
+          new_length2 = increase_n * min_length2 / increase_d + 1
           CALL EXTEND_array( CSTART, len1_cstart, len2_cstart, used_length,    &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
@@ -4991,7 +4991,7 @@
         END IF
         IF ( nstart > len_snames ) THEN
           used_length = nstart - 1 ; min_length = nstart
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( SNAMES, len_snames, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -5303,7 +5303,7 @@
             RETURN
           END IF
 
-!  this is the first Hessian term. make it a new group. Find a place to 
+!  this is the first Hessian term. make it a new group. Find a place to
 !  insert the new group name in the hash-table
 
           IF ( .NOT. qgroup ) THEN
@@ -5319,7 +5319,7 @@
               nobj = nobj + 1
               IF ( nobj > len_onames ) THEN
                 used_length = nobj - 1 ; min_length = nobj
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,&
                                    min_length, buffer, status, alloc_status )
                 IF ( status /= 0 ) THEN
@@ -5333,7 +5333,7 @@
               ng = ng + 1
               IF ( ng >= len_gstate ) THEN
                 used_length = ng - 1 ; min_length = ng
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( GSTATE, len_gstate, used_length,            &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -5343,7 +5343,7 @@
               END IF
               IF ( ng >= len_gtype ) THEN
                 used_length = ng - 1 ; min_length = ng
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( GTYPE, len_gtype, used_length,              &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -5353,7 +5353,7 @@
               END IF
               IF ( ng >= len_gnames ) THEN
                 used_length = ng - 1 ; min_length = ng
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( GNAMES, len_gnames, used_length,            &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -5363,7 +5363,7 @@
               END IF
               IF ( ng >= len_rscale ) THEN
                 used_length = ng - 1 ; min_length = ng
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( RSCALE, len_rscale, used_length,            &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -5404,7 +5404,7 @@
                 neltype = neltype + 1
                 IF ( neltype > len_elv ) THEN
                   used_length = neltype - 1 ; min_length = neltype + 1
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ELV, len_elv, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
@@ -5414,7 +5414,7 @@
 
                 IF ( neltype > len_inv ) THEN
                   used_length = neltype - 1 ; min_length = neltype + 1
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( INV, len_inv, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
@@ -5424,7 +5424,7 @@
 
                 IF ( neltype > len_elp ) THEN
                   used_length = neltype - 1 ; min_length = neltype + 1
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ELP, len_elp, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
@@ -5434,7 +5434,7 @@
 
                 IF ( neltype > len_etypes ) THEN
                   used_length = neltype - 1 ; min_length = neltype
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ETYPES, len_etypes, used_length,          &
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
@@ -5446,7 +5446,7 @@
                 nevnames = nevnames + 1
                 IF ( nevnames > len_evnames ) THEN
                   used_length = nevnames - 1 ; min_length = nevnames
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( EVNAMES, len_evnames, used_length,        &
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
@@ -5481,7 +5481,7 @@
               nivnames = nivnames + 1
               IF ( nivnames > len_ivnames ) THEN
                 used_length = nivnames - 1 ; min_length = nivnames
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( IVNAMES, len_ivnames, used_length,          &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -5499,7 +5499,7 @@
             nelnum = nelnum + 1
             IF ( nelnum > len_lnames ) THEN
               used_length = nelnum - 1 ; min_length = nelnum
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5509,7 +5509,7 @@
 
             IF ( nelnum > len_typee ) THEN
               used_length = nelnum - 1 ; min_length = nelnum
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5519,7 +5519,7 @@
 
             IF ( nelnum + 1 > len_ep_ptr ) THEN
               used_length = nelnum - 1 ; min_length = nelnum + 1
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5529,7 +5529,7 @@
 
             IF ( nelnum + 1 > len_ev_ptr ) THEN
               used_length = nelnum - 1 ; min_length = nelnum + 1
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5548,8 +5548,8 @@
             INLIST( ifree ) = nelnum
             LNAMES( nelnum ) = FIELD( 1 : 10 )
 
-!  determine the number of the element type, k, the starting addresses for the 
-!  parameters and variables for the element and the number of parameters and 
+!  determine the number of the element type, k, the starting addresses for the
+!  parameters and variables for the element and the number of parameters and
 !  variables involved
 
             k = istype
@@ -5560,7 +5560,7 @@
             nevars = 1
             IF ( nelvar + nevars > len_elvar ) THEN
               used_length = nelvar ; min_length = nelvar + nevars
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length,    &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5575,7 +5575,7 @@
             neling = neling + 1
             IF ( neling > len_eling_el ) THEN
               used_length = neling - 1 ; min_length = neling
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELING_el, len_eling_el, used_length,          &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -5586,7 +5586,7 @@
 
             IF ( neling > len_eling_g ) THEN
               used_length = neling - 1 ; min_length = neling
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELING_g, len_eling_g, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -5597,7 +5597,7 @@
 
             IF ( neling > len_weight ) THEN
               used_length = neling - 1 ; min_length = neling
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( WEIGHT, len_weight, used_length,              &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -5630,7 +5630,7 @@
                 neltype = neltype + 1
                 IF ( neltype > len_elv ) THEN
                   used_length = neltype - 1 ; min_length = neltype + 1
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ELV, len_elv, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
@@ -5640,7 +5640,7 @@
 
                 IF ( neltype > len_inv ) THEN
                   used_length = neltype - 1 ; min_length = neltype + 1
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( INV, len_inv, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
@@ -5650,7 +5650,7 @@
 
                 IF ( neltype > len_elp ) THEN
                   used_length = neltype - 1 ; min_length = neltype + 1
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ELP, len_elp, used_length, new_length,    &
                                      min_length, buffer, status, alloc_status )
                   IF ( status /= 0 ) THEN
@@ -5660,7 +5660,7 @@
 
                 IF ( neltype > len_etypes ) THEN
                   used_length = neltype - 1 ; min_length = neltype
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ETYPES, len_etypes, used_length,          &
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
@@ -5672,7 +5672,7 @@
                 nevnames = nevnames + 1
                 IF ( nevnames > len_evnames ) THEN
                   used_length = nevnames - 1 ; min_length = nevnames
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( EVNAMES, len_evnames, used_length,        &
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
@@ -5707,7 +5707,7 @@
               nivnames = nivnames + 1
               IF ( nivnames + 1 > len_ivnames ) THEN
                 used_length = nivnames - 1 ; min_length = nivnames + 1
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( IVNAMES, len_ivnames, used_length,          &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -5719,7 +5719,7 @@
               nevnames = nevnames + 1
               IF ( nevnames > len_evnames ) THEN
                 used_length = nevnames - 1 ; min_length = nevnames
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( EVNAMES, len_evnames, used_length,          &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -5739,7 +5739,7 @@
             nelnum = nelnum + 1
             IF ( nelnum > len_lnames ) THEN
               used_length = nelnum - 1 ; min_length = nelnum
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5749,7 +5749,7 @@
 
             IF ( nelnum > len_typee ) THEN
               used_length = nelnum - 1 ; min_length = nelnum
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,    &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5759,7 +5759,7 @@
 
             IF ( nelnum + 1 > len_ep_ptr ) THEN
               used_length = nelnum - 1 ; min_length = nelnum + 1
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5769,7 +5769,7 @@
 
             IF ( nelnum + 1 > len_ev_ptr ) THEN
               used_length = nelnum - 1 ; min_length = nelnum + 1
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5800,7 +5800,7 @@
             nevars = 2
             IF ( nelvar + nevars > len_elvar ) THEN
               used_length = nelvar ; min_length = nelvar + nevars
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length, &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -5816,7 +5816,7 @@
             neling = neling + 1
             IF ( neling > len_eling_el ) THEN
               used_length = neling - 1 ; min_length = neling
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELING_el, len_eling_el, used_length,          &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -5827,7 +5827,7 @@
 
             IF ( neling > len_eling_g ) THEN
               used_length = neling - 1 ; min_length = neling
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELING_g, len_eling_g, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -5838,7 +5838,7 @@
 
             IF ( neling > len_weight ) THEN
               used_length = neling - 1 ; min_length = neling
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( WEIGHT, len_weight, used_length,              &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -5856,7 +5856,7 @@
 
             WEIGHT( neling ) = value
           END IF
-        END IF 
+        END IF
       END DO
       status = 0
       RETURN
@@ -5948,11 +5948,11 @@
             i = nevnames - ELV( neltype ) + 1
             IF ( nivnames + i > len_ivnames ) THEN
               used_length = nivnames ; min_length = nivnames + i
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( IVNAMES, len_ivnames, used_length, new_length,&
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
-                bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
+                bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980
               END IF
               len_ivnames = new_length
             END IF
@@ -5988,7 +5988,7 @@
 
         IF ( neltype > len_elv ) THEN
           used_length = neltype - 1 ; min_length = neltype + 1
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( ELV, len_elv, used_length, new_length,            &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -5998,7 +5998,7 @@
 
         IF ( neltype > len_inv ) THEN
           used_length = neltype - 1 ; min_length = neltype + 1
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( INV, len_inv, used_length, new_length,            &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -6008,7 +6008,7 @@
 
         IF ( neltype > len_elp ) THEN
           used_length = neltype - 1 ; min_length = neltype + 1
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( ELP, len_elp, used_length, new_length,            &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -6018,7 +6018,7 @@
 
         IF ( neltype > len_etypes ) THEN
           used_length = neltype - 1 ; min_length = neltype
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( ETYPES, len_etypes, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -6041,11 +6041,11 @@
 
           IF ( nivnames + novals > len_ivnames ) THEN
             used_length = nivnames ; min_length = nivnames + novals
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( IVNAMES, len_ivnames, used_length, new_length,  &
                                min_length, buffer, status, alloc_status )
             IF ( status /= 0 ) THEN
-              bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 
+              bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980
             END IF
             len_ivnames = new_length
           END IF
@@ -6097,7 +6097,7 @@
               nevnames = nevnames + 1
               IF ( nevnames > len_evnames ) THEN
                 used_length = nevnames - 1 ; min_length = nevnames
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( EVNAMES, len_evnames, used_length,          &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -6136,7 +6136,7 @@
                 nepnames = nepnames + 1
                 IF ( nepnames > len_epnames ) THEN
                   used_length = nepnames - 1 ; min_length = nepnames
-                  new_length = increase_n * min_length / increase_d + 1 
+                  new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( EPNAMES, len_epnames, used_length,        &
                                      new_length, min_length, buffer,           &
                                      status, alloc_status )
@@ -6263,7 +6263,7 @@
             nelnum = nelnum + 1
             IF ( nelnum > len_lnames ) THEN
               used_length = nelnum - 1 ; min_length = nelnum
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -6273,7 +6273,7 @@
 
             IF ( nelnum > len_typee ) THEN
               used_length = nelnum - 1 ; min_length = nelnum
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,    &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -6283,7 +6283,7 @@
 
             IF ( nelnum + 1 > len_ep_ptr ) THEN
               used_length = nelnum - 1 ; min_length = nelnum + 1
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -6293,7 +6293,7 @@
 
             IF ( nelnum + 1 > len_ev_ptr ) THEN
               used_length = nelnum - 1 ; min_length = nelnum + 1
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -6343,8 +6343,8 @@
               RETURN
             END IF
 
-!  determine the number of the element type, k, the starting addresses for 
-!  the parameters and variables for the element and the number of parameters 
+!  determine the number of the element type, k, the starting addresses for
+!  the parameters and variables for the element and the number of parameters
 !  and variables involved
 
             k = INLIST( ifield )
@@ -6356,7 +6356,7 @@
             nevars = ELV( k + 1 ) - ELV( k )
             IF ( nelvar + nevars > len_elvar ) THEN
               used_length = nelvar ; min_length = nelvar + nevars
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length,    &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -6366,7 +6366,7 @@
 
             IF ( nlisep + nepars > len_ep_val ) THEN
               used_length = nlisep ; min_length =  nlisep + nepars
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EP_val, len_ep_val, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -6461,7 +6461,7 @@
             n = n + 1
             IF ( n > len_vnames ) THEN
               used_length = n - 1 ; min_length = n
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,  &
                                  min_length, buffer, status, alloc_status )
               IF ( status /= 0 ) THEN
@@ -6642,7 +6642,7 @@
         setana = .FALSE.
         IF ( ngtype > len_gtypesp_ptr ) THEN
           used_length = ngtype - 1 ; min_length = ngtype + 1
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr, used_length,        &
                              new_length, min_length, buffer, status,           &
                              alloc_status )
@@ -6652,7 +6652,7 @@
         END IF
         IF ( ngtype > len_gtypes ) THEN
           used_length = ngtype - 1 ; min_length = ngtype
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GTYPES, len_gtypes, used_length, new_length,      &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -6661,7 +6661,7 @@
         END IF
         IF ( ngtype > len_ganames ) THEN
           used_length = ngtype - 1 ; min_length = ngtype
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GANAMES, len_ganames, used_length, new_length,    &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -6702,7 +6702,7 @@
               ngpnames = ngpnames + 1
               IF ( ngpnames > len_gpnames ) THEN
                 used_length = ngpnames - 1 ; min_length = ngpnames
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( GPNAMES, len_ganames, used_length,          &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -6743,7 +6743,7 @@
               '  not recognised in GROUP TYPE section ' )
  2240 FORMAT( ' ** Exit from INTERPRET_gpsmps - duplicate group param. name ' )
  2250 FORMAT( ' ** Exit from INTERPRET_gpsmps - no group-type argument given ' )
- 
+
 !  end of subroutine SGTYPE
 
       END SUBROUTINE SGTYPE
@@ -6857,7 +6857,7 @@
             RETURN
           END IF
 
-!  determine the number of the group type, k, the starting addresses for the 
+!  determine the number of the group type, k, the starting addresses for the
 !  parameters for the group and the number of parameters involved
 
           k = INLIST( ifield )
@@ -6870,7 +6870,7 @@
           GP_ptr( ngrupe ) = nlisgp + 1
           IF ( nlisgp + ngpars > len_gp_val_orig ) THEN
             used_length = nlisgp ; min_length = nlisgp + ngpars
-            new_length = increase_n * min_length / increase_d + 1     
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( GP_val_orig, len_gp_val_orig, used_length,      &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
@@ -6890,7 +6890,7 @@
           nlisgp = nlisgp + ngpars
           RETURN
 
-!  the group is new and of default type. determine the starting addresses for 
+!  the group is new and of default type. determine the starting addresses for
 !  the parameters for the group and the number of parameters involved
 
         ELSE
@@ -6905,7 +6905,7 @@
 
           IF ( nlisgp + ngpars > len_gp_val_orig ) THEN
             used_length = nlisgp ; min_length = nlisgp + ngpars
-            new_length = increase_n * min_length / increase_d + 1     
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( GP_val_orig, len_gp_val_orig, used_length,      &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
@@ -6957,7 +6957,7 @@
               neling = neling + 1
               IF ( neling > len_eling_el ) THEN
                 used_length = neling - 1 ; min_length = neling
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( ELING_el, len_eling_el, used_length,        &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -6968,7 +6968,7 @@
 
               IF ( neling > len_eling_g ) THEN
                 used_length = neling - 1 ; min_length = neling
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( ELING_g, len_eling_g, used_length,          &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -6979,7 +6979,7 @@
 
               IF ( neling > len_weight ) THEN
                 used_length = neling - 1 ; min_length = neling
-                new_length = increase_n * min_length / increase_d + 1 
+                new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( WEIGHT, len_weight, used_length,            &
                                    new_length, min_length, buffer,             &
                                    status, alloc_status )
@@ -7157,7 +7157,7 @@
         nobbnd = nobbnd + 1 ; j = nobbnd
         IF ( nobbnd > len_obbname ) THEN
           used_length = nobbnd - 1 ; min_length = nobbnd
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( OBBNAME, len_obbname, used_length, new_length,    &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -7167,14 +7167,14 @@
 
         IF ( nobbnd > len_fbound ) THEN
           used_length = nobbnd - 1 ; min_length = nobbnd
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( FBOUND_l, len_fbound, used_length, new_length,    &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
             bad_alloc = 'FBOUND_l' ; status = - 23 ; GO TO 980 ; END IF
 
           used_length = nobbnd - 1 ; min_length = nobbnd
-          new_length = increase_n * min_length / increase_d + 1 
+          new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( FBOUND_u, len_fbound, used_length, new_length,    &
                              min_length, buffer, status, alloc_status )
           IF ( status /= 0 ) THEN
@@ -8885,7 +8885,7 @@
       INTEGER :: A_row( nnza ), A_col( nnza )
       INTEGER :: ELV( neltype + 1 ), INV( neltype + 1 )
       INTEGER :: EP_ptr ( nelnum + 1 ), GP_ptr( ng + 1 )
-      INTEGER :: ELING_el( neling ), GTYPESP_ptr( ngtype + 1 ) 
+      INTEGER :: ELING_el( neling ), GTYPESP_ptr( ngtype + 1 )
       INTEGER :: TYPEV( n + ng ), TYPEE( nelnum ), GTYPE( ng ), IWK( ng + 1 )
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ABYROW_ptr, ABYROW_col
       REAL ( KIND = wp ) :: A_val( nnza )
@@ -8909,8 +8909,8 @@
       CHARACTER ( LEN = 12 ), ALLOCATABLE, DIMENSION( : ) :: KEY
 
 !  ---------------------------------------------------------------------
-!  convert the output from INTERPRET_gpsmps into a form suitable for any 
-!  of the GALAHAD programs SBMIN (ialgor = 1), AUGLG (ialgor = 2) or 
+!  convert the output from INTERPRET_gpsmps into a form suitable for any
+!  of the GALAHAD programs SBMIN (ialgor = 1), AUGLG (ialgor = 2) or
 !  others (ialgor = 3 )
 
 !  formerly INLANC in SiFDec
@@ -9070,7 +9070,7 @@
         ELSE
           B( i ) = DEFAULT( jconst )
 
-!  initialize lower and upper bounds on slack variables as zero and the 
+!  initialize lower and upper bounds on slack variables as zero and the
 !  default respectively
 
           BL( n + i ) = zero
@@ -9086,8 +9086,8 @@
         END IF
       END DO
 
-!  sweep through the entries of A. Look for entries in columns jconst and 
-!  jrange. Subsequently remove all constant/rhs and range columns to leave 
+!  sweep through the entries of A. Look for entries in columns jconst and
+!  jrange. Subsequently remove all constant/rhs and range columns to leave
 !  only entries corresponding to linear elements
 
       nnz = 0
@@ -9118,7 +9118,7 @@
       END DO
       nnza = nnz
 
-!  the matrix is stored in coordinate form. Resort it so that it is stored 
+!  the matrix is stored in coordinate form. Resort it so that it is stored
 !  by rows
 
       ng1 = ng + 1
@@ -9220,7 +9220,7 @@
           END DO
         END IF
 
-!  if the group is of type 'l' or 'g', insert a slack variable in the 
+!  if the group is of type 'l' or 'g', insert a slack variable in the
 !  linear element
 
         is = GSTATE( ig )
@@ -9350,7 +9350,7 @@
 !  select the objective function group
 !  ------------------------------------
 
-!  find the named objective function group in the list. Mark the remaining 
+!  find the named objective function group in the list. Mark the remaining
 !  objective function groups for removal
 
         IF ( oneobj ) THEN
@@ -9380,7 +9380,7 @@
                 ngr = ngr + 1
                 IF ( i == nobjgr ) nobjgr = ngr
 
-!  shift the group status, name, type, constant, triviality indicator, 
+!  shift the group status, name, type, constant, triviality indicator,
 !  Lagrange multiplier and weight
 
                 IF ( ialgor >= 2 ) GSTATE( ngr ) = GSTATE( i )
@@ -9410,7 +9410,7 @@
                   ngpv = ngpv + 1
                 END DO
 
-!  shift the list of coefficients and positions of the nonzeros for the 
+!  shift the list of coefficients and positions of the nonzeros for the
 !  linear element in the i-th group
 
                 k1 = ABYROW_ptr( i )
@@ -9457,7 +9457,7 @@
       WRITE( outda, 3180 ) n, ng, nelnum, ELING_ptr( ng1  ) - 1,               &
                            EV_ptr( nel1 ) - 1, ABYROW_ptr( ng1  ) - 1,         &
                            GP_ptr( ng1  ) - 1, EP_ptr( nel1 ) - 1,             &
-                           neltype, ngtype 
+                           neltype, ngtype
 
 !  print out problem data. output the number of variables, groups and
 !  elements and, perhaps, the identity of the objective function group
@@ -10028,7 +10028,7 @@
 !  data card description
 !  ----------------------
 
-!  see 'The SIF reference report', Chapter 7 in 
+!  see 'The SIF reference report', Chapter 7 in
 !       A. R. Conn, N. I. M. Gould and Ph. L. Toint,
 !       LANCELOT A Fortran Package for Large-Scale Nonlinear Optimization
 !       (RElease A), Springer Series in Computational Mathematics 17,
@@ -10041,7 +10041,7 @@
 !  array space has been allowed, as follows:
 
 !    status = - 1  when length not large enough
-!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be 
+!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be
 !                  extended further
 !  ----------------------------------------------------------------
 
@@ -10135,12 +10135,12 @@
           nrenames = nrenames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nrenames - 1 ; min_length = nrenames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
             len_renames = new_length
           END IF
@@ -10164,12 +10164,12 @@
           nrenames = nrenames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nrenames - 1 ; min_length = nrenames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
             len_renames = new_length
           END IF
@@ -10194,12 +10194,12 @@
           nrenames = nrenames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nrenames - 1 ; min_length = nrenames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
             len_renames = new_length
           END IF
@@ -10403,7 +10403,7 @@
                FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                   &
                FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ),                   &
                FIELDI( 21 )( 1 : 6 )
-          ELSE   
+          ELSE
             WRITE( outfn, 3000 ) FIELDI( 1 )( 1 : 6 ),                         &
                FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ),                   &
                FIELDI( 18 )( 1 : 6 ),                                          &
@@ -10628,7 +10628,7 @@
           nexnames = nexnames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nexnames - 1 ; min_length = nexnames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( EXNAMES, len_exnames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
@@ -10655,7 +10655,7 @@
             nrenames = nrenames + 1
             IF ( nrenames > len_renames ) THEN
               used_length = nrenames - 1 ; min_length = nrenames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -10668,7 +10668,7 @@
             nminames = nminames + 1
             IF ( nminames > len_minames ) THEN
               used_length = nminames - 1 ; min_length = nminames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( MINAMES, len_minames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -10681,7 +10681,7 @@
             nlonames = nlonames + 1
             IF ( nlonames > len_lonames ) THEN
               used_length = nlonames - 1 ; min_length = nlonames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LONAMES, len_lonames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -10694,7 +10694,7 @@
             ninnames = ninnames + 1
             IF ( ninnames > len_innames ) THEN
               used_length = ninnames - 1 ; min_length = ninnames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( INNAMES, len_innames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -10737,7 +10737,7 @@
 
 ! --------- make conditional parameter assignments
 
-        ELSE   
+        ELSE
 
 !  check that the logical variable has been defined
 
@@ -10756,7 +10756,7 @@
              WRITE( outfn, 3031 ) FIELD2( 1 : 6 ), FIELD3( 1 : 6 ), field7
           ELSE
              WRITE( outfn, 3032 ) FIELD2( 1 : 6 ), FIELD3( 1 : 6 ), field7
-          END IF   
+          END IF
         END IF
 
 ! -------- continue a parameter assignment
@@ -10805,8 +10805,8 @@
                   ELSE
                     WRITE( outfn, 3161 ) FIELDI(  3 )( 1 : 6 ),                &
                                          FIELDI( 15 )( 1 : 6 ), ihvar
-                  END IF   
-                END IF   
+                  END IF
+                END IF
               END DO
               endofh = .TRUE.
             END IF
@@ -10831,11 +10831,11 @@
                   ELSE
                     WRITE( outfn, 3131 ) FIELDI(  3 )( 1 : 6 ),                &
                                          FIELDI( 17 )( 1 : 6 ), ivar
-                  END IF   
-                 END IF   
+                  END IF
+                 END IF
               END DO
               endofg = .TRUE.
-            END IF   
+            END IF
 
 ! ---------- wind up f and g
 
@@ -11018,7 +11018,7 @@
 
 ! --------- make conditional parameter assignments
 
-              ELSE   
+              ELSE
 
 !  check that the logical variable has been defined
 
@@ -11049,7 +11049,7 @@
                        WRITE( outfn, 3085 ) FIELD2( 1 : 6 ),                   &
                                             FIELD3( 1 : 6 ), field7
                   END IF
-                END IF   
+                END IF
               END IF
 
 ! --------- continuation of a parameter assignment
@@ -11196,7 +11196,7 @@
                           ELSE
                             WRITE( outfn, 3131 ) FIELDI(  3 )( 1 : 6 ),        &
                                                  FIELDI( 17 )( 1 : 6 ), ivar
-                          END IF   
+                          END IF
                         END DO
                         startg = .TRUE.
                         endofg = .TRUE.
@@ -11213,8 +11213,8 @@
                             ELSE
                               WRITE( outfn, 3131 ) FIELDI(  3 )( 1 : 6 ),      &
                                                    FIELDI( 17 )( 1 : 6 ), ivar
-                            END IF   
-                          END IF   
+                            END IF
+                          END IF
                         END DO
                         endofg = .TRUE.
                       END IF
@@ -11311,7 +11311,7 @@
 
 !  the end of the input file has been reached before the endata card
 
-  590 CONTINUE 
+  590 CONTINUE
 
 !  if the elements card has not been encountered, exit
 
@@ -11321,7 +11321,7 @@
         RETURN
       END IF
       qprod = .FALSE.
-      DO itype = 1, MIN( 2, neltype ) 
+      DO itype = 1, MIN( 2, neltype )
         IF ( ETYPES( itype ) /= cqsqr .AND.                                   &
              ETYPES( itype ) /= cqprod ) GO TO 930
         IF ( ETYPES( itype ) == cqprod ) qprod = .TRUE.
@@ -11330,7 +11330,7 @@
 
 !  a dummy routine will be substituted
 
-  600 CONTINUE 
+  600 CONTINUE
 
 !  write a dummy elfuns routine
 
@@ -11353,7 +11353,7 @@
            FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                       &
            FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                       &
            FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ), pname, TRIM( version )
-        ELSE   
+        ELSE
           WRITE( outfn, 3002 ) FIELDI( 1 )( 1 : 6 ),                           &
           FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
          ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),          &
@@ -11401,7 +11401,7 @@
             ELSE
                WRITE( outfn, 3019 ) 'X     '
             END IF
-        ELSE   
+        ELSE
           WRITE( outfn, 3000 ) FIELDI( 1 )( 1 : 6 ),                           &
           FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
          ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),          &
@@ -11526,8 +11526,8 @@
                  ELSE
                    WRITE( outfn, 3161 ) FIELDI(  3 )( 1 : 6 ),                 &
                                         FIELDI( 15 )( 1 : 6 ), ihvar
-                 END IF   
-              END IF   
+                 END IF
+              END IF
             END DO
             endofh = .TRUE.
           END IF
@@ -11552,8 +11552,8 @@
                 ELSE
                   WRITE( outfn, 3131 ) FIELDI(  3 )( 1 : 6 ),                  &
                                        FIELDI( 17 )( 1 : 6 ), ivar
-                END IF   
-              END IF   
+                END IF
+              END IF
             END DO
             endofg = .TRUE.
           END IF
@@ -11882,7 +11882,7 @@
       INTEGER :: nevnames, nivnames, nepnames, neltype
       INTEGER :: length, print_level, iauto, iad0
       INTEGER :: len_renames, len_innames, len_lonames, len_minames, len_exnames
-      LOGICAL :: debug, single, gotlin 
+      LOGICAL :: debug, single, gotlin
       CHARACTER ( LEN = max_record_length ) :: nuline
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: TABLE, INLIST
       INTEGER, DIMENSION( neltype + 1 ) :: ELV, INV, ELP
@@ -11897,7 +11897,7 @@
 
 !  --------------------------------------------------------------------
 !  make a function evaluation subroutine, suitable for automatic
-!  differentiation, and a range transformation subroutine from a 
+!  differentiation, and a range transformation subroutine from a
 !  gps function data file
 
 !  function indicator cards
@@ -11917,7 +11917,7 @@
 !  data card description
 !  ----------------------
 
-!  see 'The SIF reference report', Chapter 7 in 
+!  see 'The SIF reference report', Chapter 7 in
 !       A. R. Conn, N. I. M. Gould and Ph. L. Toint,
 !       LANCELOT A Fortran Package for Large-Scale Nonlinear Optimization
 !       (RElease A), Springer Series in Computational Mathematics 17,
@@ -11930,7 +11930,7 @@
 !  array space has been allowed, as follows:
 
 !    status = - 1  when length not large enough
-!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be 
+!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be
 !                  extended further
 !  -------------------------------------------------------------------
 
@@ -12052,12 +12052,12 @@
           nrenames = nrenames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nrenames - 1 ; min_length = nrenames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
             len_renames = new_length
           END IF
@@ -12081,12 +12081,12 @@
           nrenames = nrenames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nrenames - 1 ; min_length = nrenames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
             len_renames = new_length
           END IF
@@ -12112,12 +12112,12 @@
           nrenames = nrenames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nrenames - 1 ; min_length = nrenames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
             len_renames = new_length
           END IF
@@ -12359,7 +12359,7 @@
           FIELDI( 15 )( 1 : 6 ), FIELDI( 16 )( 1 : 6 ),                        &
           FIELDI( 17 )( 1 : 6 ), FIELDI( 20 )( 1 : 6 ),                        &
           FIELDI( 21 )( 1 : 6 ), maxnin
-          ELSE   
+          ELSE
             IF ( loutff ) WRITE( outff, 3000 ) FIELDI( 1 )( 1 : 6 ),           &
           FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ), &
         ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),           &
@@ -12523,13 +12523,13 @@
                    FIELDI( 12 )( 1 : 6 ), FIELDI( 15 )( 1 : 6 ),               &
                    FIELDI( 10 )( 1 : 6 ), FIELDI( 13 )( 1 : 6 )
           IF ( iad0 == 1 ) THEN
-            WRITE( outfd, 3008 ) 
+            WRITE( outfd, 3008 )
           ELSE
             WRITE( outfd, 3011 )
             DO i = 1, nrenm1
                WRITE( outfd, 3016 ) ad0, RENAMES( i )
             END DO
-          END IF  
+          END IF
           WRITE( outfd, 3050 ) nloop,                                          &
                    FIELDI( 21 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),               &
                    FIELDI( 13 )( 1 : 6 ), FIELDI( 11 )( 1 : 6 ),               &
@@ -12714,7 +12714,7 @@
           nexnames = nexnames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nexnames - 1 ; min_length = nexnames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( EXNAMES, len_exnames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
@@ -12741,7 +12741,7 @@
             nrenames = nrenames + 1
             IF ( nrenames > len_renames ) THEN
               used_length = nrenames - 1 ; min_length = nrenames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -12754,7 +12754,7 @@
             nminames = nminames + 1
             IF ( nminames > len_minames ) THEN
               used_length = nminames - 1 ; min_length = nminames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( MINAMES, len_minames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -12767,7 +12767,7 @@
             nlonames = nlonames + 1
             IF ( nlonames > len_lonames ) THEN
               used_length = nlonames - 1 ; min_length = nlonames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LONAMES, len_lonames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -12780,7 +12780,7 @@
             ninnames = ninnames + 1
             IF ( ninnames > len_innames ) THEN
               used_length = ninnames - 1 ; min_length = ninnames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( INNAMES, len_innames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -12799,7 +12799,7 @@
 
   300 CONTINUE
 
-!  start a parameter assignment. check to see that the parameter has been 
+!  start a parameter assignment. check to see that the parameter has been
 !  defined
 
       IF ( field1 == 'A ' .OR. field1 == 'I ' .OR. field1 == 'E ' ) THEN
@@ -12825,7 +12825,7 @@
 
 ! --------- make conditional parameter assignments
 
-        ELSE   
+        ELSE
 
 !  check that the logical variable has been defined
 
@@ -12852,7 +12852,7 @@
             ntem = ntem + 1
             WRITE( outem, 3082 ) FIELD2( 1 : 6 ),                              &
                                  FIELD3( 1 : 6 ), field7
-          END IF   
+          END IF
         END IF
 
 ! --------- continue a parameter assignment
@@ -12911,9 +12911,9 @@
               END IF
               WRITE( outfd, 3150 ) FIELDI( 12 )( 1 : 6 )
               IF ( iad0 == 1 ) THEN
-                WRITE( outfd, 3151 ) 
+                WRITE( outfd, 3151 )
               ELSE
-                WRITE( outfd, 3152 ) 
+                WRITE( outfd, 3152 )
               END IF
               DO js = 1, ninvar
                 DO is = 1, js
@@ -13078,7 +13078,7 @@
 !  insert the value of the new nonzero into u
 
               U( ninv * ( j - 1 ) + i ) = VALUES( k )
-            END DO 
+            END DO
           END IF
 
 !  finish the function assignment
@@ -13104,9 +13104,9 @@
                END IF
                WRITE( outfd, 3150 ) FIELDI( 12 )( 1 : 6 )
                IF ( iad0 == 1 ) THEN
-                 WRITE( outfd, 3151 ) 
+                 WRITE( outfd, 3151 )
                ELSE
-                 WRITE( outfd, 3152 ) 
+                 WRITE( outfd, 3152 )
                END IF
                DO js = 1, ninvar
                  DO  is = 1, js
@@ -13156,7 +13156,7 @@
                    DO i = 1, ntem
                      READ( outem, 1000 ) ctem
                      WRITE( outfd, 1000 ) ctem
-                   END DO 
+                   END DO
                    startv = .TRUE.
                  END IF
 
@@ -13183,7 +13183,7 @@
 
 ! --------- make conditional parameter assignments
 
-                 ELSE   
+                 ELSE
 
 !  check that the logical variable has been defined
 
@@ -13222,7 +13222,7 @@
                          WRITE( outfd, 3085 ) FIELD2( 1 : 6 ),                 &
                            FIELD3( 1 : 6 ), field7
                       END IF
-                   END IF   
+                   END IF
                  END IF
 
 ! --------- continuation of a parameter assignment
@@ -13325,9 +13325,9 @@
                 END IF
                 WRITE( outfd, 3150 ) FIELDI( 12 )( 1 : 6 )
                 IF ( iad0 == 1 ) THEN
-                  WRITE( outfd, 3151 ) 
+                  WRITE( outfd, 3151 )
                 ELSE
-                  WRITE( outfd, 3152 ) 
+                  WRITE( outfd, 3152 )
                 END IF
                 DO js = 1, ninvar
                   DO is = 1, js
@@ -13355,7 +13355,7 @@
 
 !  the end of the input file has been reached before the endata card
 
-  590 CONTINUE 
+  590 CONTINUE
 
 !  if the elements card has not been encountered, exit
 
@@ -13366,7 +13366,7 @@
       END IF
 !     if ( neltype > 0 ) go to 930
       qprod = .FALSE.
-      DO itype = 1, MIN( 2, neltype ) 
+      DO itype = 1, MIN( 2, neltype )
         IF ( ETYPES( itype ) /= cqsqr .AND.                                    &
              ETYPES( itype ) /= cqprod ) GO TO 930
         IF ( ETYPES( itype ) == cqprod ) qprod = .TRUE.
@@ -13375,7 +13375,7 @@
 
 !  a dummy routine will be substituted
 
-  600 CONTINUE 
+  600 CONTINUE
 
 !  write a dummy elfuns routine
 
@@ -13435,7 +13435,7 @@
            FIELDI(  3 )( 1 : 6 ), FIELDI( 29 )( 1 : 6 ),                       &
            FIELDI(  4 )( 1 : 6 ), FIELDI( 30 )( 1 : 6 ),                       &
            FIELDI( 18 )( 1 : 6 ), FIELDI( 31 )( 1 : 6 ), pname, TRIM( version )
-        ELSE   
+        ELSE
           IF ( loutff ) WRITE( outff, 3002 ) FIELDI( 1 )( 1 : 6 ),             &
           FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ),                        &
           FIELDI( 18 )( 1 : 6 ), ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ),         &
@@ -13525,7 +13525,7 @@
             IF ( loutff ) WRITE( outff, 3019 ) 'X     '
              WRITE( outfd, 3019 ) 'X     '
           END IF
-        ELSE   
+        ELSE
           IF ( loutff ) WRITE( outff, 3000 ) FIELDI( 1 )( 1 : 6 ),             &
        FIELDI(  3 )( 1 : 6 ), FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ),    &
        ( FIELDI(  i )( 1 : 6 ), i = 5, 10 ), FIELDI( 19 )( 1 : 6 ),            &
@@ -13715,9 +13715,9 @@
             END IF
             WRITE( outfd, 3150 ) FIELDI( 12 )( 1 : 6 )
             IF ( iad0 == 1 ) THEN
-              WRITE( outfd, 3151 ) 
+              WRITE( outfd, 3151 )
             ELSE
-              WRITE( outfd, 3152 ) 
+              WRITE( outfd, 3152 )
             END IF
             DO js = 1, ninvar
               DO is = 1, js
@@ -14238,7 +14238,7 @@
       CHARACTER ( LEN = 12 ), ALLOCATABLE, DIMENSION( : ) :: KEY
 
 !  -------------------------------------------------------------------
-!  make a group function evaluation subroutine from a gps group 
+!  make a group function evaluation subroutine from a gps group
 !  function data file
 
 !  function indicator cards
@@ -14255,7 +14255,7 @@
 !  data card description
 !  ----------------------
 
-!  see 'The SIF reference report', Chapter 7 in 
+!  see 'The SIF reference report', Chapter 7 in
 !       A. R. Conn, N. I. M. Gould and Ph. L. Toint,
 !       LANCELOT A Fortran Package for Large-Scale Nonlinear Optimization
 !       (RElease A), Springer Series in Computational Mathematics 17,
@@ -14268,7 +14268,7 @@
 !  array space has been allowed, as follows:
 
 !    status = - 1  when length not large enough
-!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be 
+!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be
 !                  extended further
 !  -------------------------------------------------------------------
 
@@ -14336,12 +14336,12 @@
           nrenames = nrenames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nrenames - 1 ; min_length = nrenames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
             len_renames = new_length
           END IF
@@ -14366,12 +14366,12 @@
           ELSE
             IF ( nrenames > len_renames ) THEN
               used_length = nrenames - 1 ; min_length = nrenames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
               END IF
               len_renames = new_length
             END IF
@@ -14553,7 +14553,7 @@
                       FIELDI(  2 )( 1 : 6 ), FIELDI(  3 )( 1 : 6 ),            &
                       FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ),            &
                       FIELDI( 11 )( 1 : 6 ), FIELDI( 19 )( 1 : 6 ),            &
-                      pname, TRIM( version )                                
+                      pname, TRIM( version )
           ELSE
             WRITE( outgr, 3000 ) ( FIELDI( i )( 1 : 6 ), i = 1, 4 ),           &
                       FIELDI( 11 )( 1 : 6 ), FIELDI(  5 )( 1 : 6 ),            &
@@ -14570,7 +14570,7 @@
                       FIELDI(  2 )( 1 : 6 ), FIELDI(  3 )( 1 : 6 ),            &
                       FIELDI(  4 )( 1 : 6 ), FIELDI( 18 )( 1 : 6 ),            &
                       FIELDI( 11 )( 1 : 6 ), FIELDI( 19 )( 1 : 6 ),            &
-                      pname, TRIM( version )                            
+                      pname, TRIM( version )
           END IF
           IF ( ngtype == 0 ) THEN
             WRITE( outgr, 3009 ) FIELDI( 20 )( 1 : 6 )
@@ -14705,7 +14705,7 @@
            nexnames = nexnames + 1
            IF ( nrenames > len_renames ) THEN
              used_length = nexnames - 1 ; min_length = nexnames
-             new_length = increase_n * min_length / increase_d + 1 
+             new_length = increase_n * min_length / increase_d + 1
              CALL EXTEND_array( EXNAMES, len_exnames, used_length,             &
                                 new_length, min_length, buffer,                &
                                 status, alloc_status )
@@ -14732,7 +14732,7 @@
             nrenames = nrenames + 1
             IF ( nrenames > len_renames ) THEN
               used_length = nrenames - 1 ; min_length = nrenames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -14745,7 +14745,7 @@
             nminames = nminames + 1
             IF ( nminames > len_minames ) THEN
               used_length = nminames - 1 ; min_length = nminames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( MINAMES, len_minames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -14758,7 +14758,7 @@
             nlonames = nlonames + 1
             IF ( nlonames > len_lonames ) THEN
               used_length = nlonames - 1 ; min_length = nlonames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LONAMES, len_lonames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -14771,7 +14771,7 @@
             ninnames = ninnames + 1
             IF ( ninnames > len_innames ) THEN
               used_length = ninnames - 1 ; min_length = ninnames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( INNAMES, len_innames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -14813,7 +14813,7 @@
 
 ! --------- make conditional parameter assignments
 
-        ELSE   
+        ELSE
 
 !  check that the logical variable has been defined
 
@@ -14832,7 +14832,7 @@
             WRITE( outgr, 3031 ) FIELD2( 1 : 6 ), FIELD3( 1 : 6 ), field7
           ELSE
             WRITE( outgr, 3032 ) FIELD2( 1 : 6 ), FIELD3( 1 : 6 ), field7
-          END IF   
+          END IF
         END IF
 
 ! --------- continue a parameter assignment
@@ -14964,7 +14964,7 @@
 
 ! --------- make conditional parameter assignments
 
-            ELSE   
+            ELSE
 
 !  check that the logical variable has been defined
 
@@ -14995,7 +14995,7 @@
                    WRITE( outgr, 3085 ) FIELD2( 1 : 6 ),                       &
                                       FIELD3( 1 : 6 ), field7
                 END IF
-              END IF   
+              END IF
             END IF
 
 ! --------- continuation of a parameter assignment
@@ -15132,7 +15132,7 @@
 
 !  the end of the input file has been reached before the endata card
 
-  590 CONTINUE 
+  590 CONTINUE
 
 !  if the elements card has not been encountered, exit
 
@@ -15146,7 +15146,7 @@
 
 !  a dummy routine will be substituted
 
-  600 CONTINUE 
+  600 CONTINUE
 
 !  write a dummy groups routine
 
@@ -15403,7 +15403,7 @@
       CHARACTER ( LEN = 12 ), ALLOCATABLE, DIMENSION( : ) :: KEY
 
 !  --------------------------------------------------------------------
-!  make a group function evaluation subroutine, suitable for 
+!  make a group function evaluation subroutine, suitable for
 !  automatic differentiation from a gps function data file
 
 !  function indicator cards
@@ -15420,7 +15420,7 @@
 !  data card description
 !  ----------------------
 
-!  see 'The SIF reference report', Chapter 7 in 
+!  see 'The SIF reference report', Chapter 7 in
 !       A. R. Conn, N. I. M. Gould and Ph. L. Toint,
 !       LANCELOT A Fortran Package for Large-Scale Nonlinear Optimization
 !       (RElease A), Springer Series in Computational Mathematics 17,
@@ -15433,7 +15433,7 @@
 !  array space has been allowed, as follows:
 
 !    status = - 1  when length not large enough
-!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be 
+!    status = - 2  when RENAMES, INNAMES, LONAMES, MINAMES or EXNAMES cannot be
 !                  extended further
 !  -------------------------------------------------------------------
 
@@ -15507,12 +15507,12 @@
           nrenames = nrenames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nrenames - 1 ; min_length = nrenames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
             IF ( status /= 0 ) THEN
-              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+              bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
             len_renames = new_length
           END IF
@@ -15538,12 +15538,12 @@
             nrenames = nrenames + 1
             IF ( nrenames > len_renames ) THEN
               used_length = nrenames - 1 ; min_length = nrenames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
               IF ( status /= 0 ) THEN
-                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 
+                bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
               END IF
               len_renames = new_length
             END IF
@@ -15704,7 +15704,7 @@
               IF ( out > 0 ) WRITE( out, 2590 ) FIELDI( i )
               GO TO 800
             END IF
-          END DO 
+          END DO
 
 !  -------- set up subroutine call and reserved parameter declarations
 
@@ -15998,7 +15998,7 @@
           nexnames = nexnames + 1
           IF ( nrenames > len_renames ) THEN
             used_length = nexnames - 1 ; min_length = nexnames
-            new_length = increase_n * min_length / increase_d + 1 
+            new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( EXNAMES, len_exnames, used_length,              &
                                new_length, min_length, buffer,                 &
                                status, alloc_status )
@@ -16025,7 +16025,7 @@
             nrenames = nrenames + 1
             IF ( nrenames > len_renames ) THEN
               used_length = nrenames - 1 ; min_length = nrenames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -16038,7 +16038,7 @@
             nminames = nminames + 1
             IF ( nminames > len_minames ) THEN
               used_length = nminames - 1 ; min_length = nminames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( MINAMES, len_minames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -16051,7 +16051,7 @@
             nlonames = nlonames + 1
             IF ( nlonames > len_lonames ) THEN
               used_length = nlonames - 1 ; min_length = nlonames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LONAMES, len_lonames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -16064,7 +16064,7 @@
             ninnames = ninnames + 1
             IF ( ninnames > len_innames ) THEN
               used_length = ninnames - 1 ; min_length = ninnames
-              new_length = increase_n * min_length / increase_d + 1 
+              new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( INNAMES, len_innames, used_length,            &
                                  new_length, min_length, buffer,               &
                                  status, alloc_status )
@@ -16108,7 +16108,7 @@
 
 ! --------- make conditional parameter assignments
 
-        ELSE   
+        ELSE
 
 !  check that the logical variable has been defined
 
@@ -16134,8 +16134,8 @@
                                                FIELD3( 1 : 6 ), field7
             ntem = ntem + 1
             WRITE( outem, 3082 ) FIELD2( 1 : 6 ),                              &
-                                 FIELD3( 1 : 6 ), field7                  
-          END IF   
+                                 FIELD3( 1 : 6 ), field7
+          END IF
         END IF
 
 ! --------- continue a parameter assignment
@@ -16313,7 +16313,7 @@
 
 ! --------- make conditional parameter assignments
 
-              ELSE   
+              ELSE
 
 !  check that the logical variable has been defined
 
@@ -16352,7 +16352,7 @@
                     WRITE( outgd, 3085 ) FIELD2( 1 : 6 ),                      &
                                          FIELD3( 1 : 6 ), field7
                   END IF
-                END IF   
+                END IF
               END IF
 
 ! --------- continuation of a parameter assignment
@@ -16444,7 +16444,7 @@
 
 !  the end of the input file has been reached before the endata card
 
-  590 CONTINUE 
+  590 CONTINUE
 
 !  if the elements card has not been encountered, exit
 
@@ -16458,7 +16458,7 @@
 
 !  a dummy routine will be substituted
 
-  600 CONTINUE 
+  600 CONTINUE
 
 !  write a dummy groups routine
 
@@ -16777,12 +16777,12 @@
  3064 FORMAT( '       A_int( 1 ) = ', A6, '(', A6, ')', /,                     &
               '       CALL AD01_INITIALIZE(2, A_value( : 1 ),',                &
                       ' A_int( : 1 ), 0) ', /,                                 &
-              '       ', A6, ' = A_value( 1 ) ' ) 
+              '       ', A6, ' = A_value( 1 ) ' )
  3065 FORMAT( '       A_int( 1 ) = ', A6, '(', A6, ')', /,                     &
               '       CALL AD02_INITIALIZE_COMP(2, A_value( : 1 ),',           &
                       ' A_int( : 1 ),', /,                                     &
               '     *                      DATA_AD02, ERROR_AD02, 0)',         &
-           /, '       ', A6, ' = A_value( 1 ) ' ) 
+           /, '       ', A6, ' = A_value( 1 ) ' )
  3080 FORMAT( '       ', A6, '= ', A41 )
  3081 FORMAT( '       IF (', A6, ') ', A6, ' = ', A41 )
  3082 FORMAT( '       IF (.NOT.', A6, ') ', A6, ' = ', A41 )
@@ -16840,7 +16840,7 @@
 !  print out the scatter part
 
       DO j = 1, nelv
-        k = 0         
+        k = 0
         anynnz = .FALSE.
         DO i = 1, ninv
           uij = U( i, j )
@@ -17060,7 +17060,7 @@
 !  print out the scatter part
 
       DO j = 1, nelv
-        k = 0         
+        k = 0
         anynnz = .FALSE.
         DO i = 1, ninv
           uij = U( i, j )
@@ -17320,7 +17320,7 @@
       DATA CHARAC / 'Z', 'Y', 'X', 'W', 'V', 'U', 'T', 'S', 'R',               &
                     'Q', 'P', 'O', 'N', 'M', 'L', 'K', 'J', 'I',               &
                     'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A', '0',               &
-                    '9', '8', '7', '6', '5', '4', '3', '2', '1' / 
+                    '9', '8', '7', '6', '5', '4', '3', '2', '1' /
 
    10 CONTINUE
 
@@ -17839,7 +17839,7 @@
 
 !  the body of the procedure has been found. complete the
 !  introduction
-! 
+!
           REWIND( tempry )
           card = 'B'
    60     CONTINUE
@@ -17862,10 +17862,10 @@
             IF ( card == 'F' ) WRITE( output, 2020 ) ad0, adtype
 
 !  write out the previous set of real values
-!       
+!
             IF ( startr ) THEN
               IF ( nre > 0 ) THEN
-                DO i = 1, mre - 1 
+                DO i = 1, mre - 1
                    CALL WRITE_line( RELINE( i ), 72, output )
                 END DO
                 CALL WRITE_line( RELINE( mre ), lre, output )
@@ -17950,7 +17950,7 @@
               RELINE( mre )( lre + 1 : lre + 1 ) = ','
               lre = lre + 1
             END IF
-          END IF                   
+          END IF
           IF ( lre + j + 1 > 72 ) THEN
             mre = mre + 1
             RELINE( mre ) = bl72
@@ -17960,7 +17960,7 @@
           RELINE( mre )( lre + 1 : lre + j ) = OLDLIN( i1 : ii - 1 )
           lre = lre + j
           nre = nre + 1
-  130     CONTINUE   
+  130     CONTINUE
           IF ( endlin ) GO TO 60
 
 !  find the next parameter
@@ -17974,7 +17974,7 @@
           GO TO 60
 
 !  write out any unfinished set of real values
-!       
+!
   190     CONTINUE
           IF ( startr ) THEN
             IF ( nre > 0 ) THEN
@@ -18027,7 +18027,7 @@
               len_rinames = new_length
             END IF
             RINAMES( nreal ) = field
-  230       CONTINUE   
+  230       CONTINUE
             IF ( endlin ) GO TO 400
           GO TO 210
         END IF
@@ -18083,7 +18083,7 @@
                NULINE( i : i + 10 ) == li ) THEN
             intri = .TRUE.
             GO TO 10
-          END IF         
+          END IF
         END DO
 
 !  hunt for the start of a subroutine
@@ -18102,7 +18102,7 @@
             IF ( status /= 0 ) RETURN
             WRITE( tempry, 2000 ) nuline
             GO TO 10
-          END IF         
+          END IF
         END DO
 
 !  hunt for the start of a function
@@ -18168,15 +18168,15 @@
             END DO
 
 !  no name has been found so far. read the next card
-!   
+!
             READ ( input, 1000, END = 600, ERR = 600 ) nuline
             ii = 7
             GO TO 433
 
 !  find the end of the name
 
-  435       CONTINUE   
-            DO jj = j + 1, MIN( 72, j + 5 ) 
+  435       CONTINUE
+            DO jj = j + 1, MIN( 72, j + 5 )
               IF ( .NOT. ( letter( NULINE( jj : jj ) ) .OR.                    &
                            number( NULINE( jj : jj ) ) ) ) GO TO 437
             END DO
@@ -18190,7 +18190,7 @@
                            out, status )
             IF ( status /= 0 ) RETURN
             GO TO 10
-          END IF         
+          END IF
         END DO
 
 !  hunt for the start of a subroutine
@@ -18307,7 +18307,7 @@
             GO TO 20
           END IF
         END DO
-   20 CONTINUE   
+   20 CONTINUE
       RETURN
 
 !  end of subroutine UPPER
@@ -18335,7 +18335,7 @@
             GO TO 20
           END IF
         END DO
-   20 CONTINUE   
+   20 CONTINUE
       RETURN
 
 !  end of subroutine LOWER
@@ -18374,7 +18374,7 @@
 
 !  next, find its last character
 
-   30 CONTINUE   
+   30 CONTINUE
       DO i = i1 + 1, MIN( 72, i1 + 6 )
         IF ( .NOT. letter( NULINE( i : i ) ) .AND.                             &
              .NOT. number( NULINE( i : i ) ) ) THEN
@@ -18387,7 +18387,7 @@
       i2 = MIN( 72, i1 + 6 )
       endlin = .TRUE.
 
-!  last, check to see if it is an array 
+!  last, check to see if it is an array
 
    50 CONTINUE
       arrays = .FALSE.
@@ -18461,7 +18461,7 @@
           len_dummy = new_length
         END IF
         DUMMY( ndummy ) = field
-   30   CONTINUE   
+   30   CONTINUE
         IF ( endlin ) RETURN
         GO TO 10
 
@@ -18533,7 +18533,7 @@
         IW( j ) = IW( j ) + 1
       END DO
 
-!  put the positions where each column begins in a compressed collection into 
+!  put the positions where each column begins in a compressed collection into
 !  ip and iw
 
       IP( 1 ) = 1
@@ -18561,9 +18561,9 @@
 
             IF ( j == ic ) EXIT
             locat = IW( j )
-!          
+!
 !  as a new entry is placed in column j, increase the pointer iw( j ) by one
-!          
+!
             IW( j  ) = locat + 1
 
 !  record details of the entry which currently occupies location locat
@@ -18571,7 +18571,7 @@
             itemp = A_row( locat ) ; jtemp = A_col( locat )
             atemp = A_val( locat )
 
-!  move the new entry to it correct place. 
+!  move the new entry to it correct place.
 
             A_row( locat ) = i ; A_col( locat ) = j ; A_val( locat ) = anext
 
@@ -18580,7 +18580,7 @@
             i = itemp ; j = jtemp ; anext = atemp
           END DO
 
-!  move the new entry to it correct place. 
+!  move the new entry to it correct place.
 
           A_col( k ) = j ; A_row( k ) = i ; A_val( k ) = anext
         END DO
@@ -18600,7 +18600,7 @@
 !  ------------------------------------------------------------
 !  set up initial scatter table (Williams, CACM 2, 21-24, 1959)
 
-!  TABLE(i) gives the status of table entry i. 
+!  TABLE(i) gives the status of table entry i.
 !  If status = - (length+1), the entry is unused
 !  ------------------------------------------------------------
 
@@ -18610,7 +18610,7 @@
 
       hash_empty = length + 1
 
-!  Find an appropriate prime number for the hash function. Compute the largest 
+!  Find an appropriate prime number for the hash function. Compute the largest
 !  prime smaller than length
 
       prime = 2 * ( ( length + 1 ) / 2 ) - 1
@@ -18662,7 +18662,7 @@
       CHARACTER ( LEN = 1 ) :: BFIELD( nbytes )
       INTEGER :: IVALUE( 2 )
 
-!  find a starting position, ifree, for the insertion. Perform the hashing on 
+!  find a starting position, ifree, for the insertion. Perform the hashing on
 !  8 characters of field at a time
 
       ifree = 0
@@ -18783,7 +18783,7 @@
 !                entry in the chain
 !  IFIELD(i) gives the field key for used entries in the table
 !  ifree > 0 indicates that the field occurs as entry ifree
-!        < 0 indicates that the field once occured as entry - ifree 
+!        < 0 indicates that the field once occured as entry - ifree
 !            but has been deleted in the interim
 !        = 0 the table is full and the field has not been inserted
 !  -------------------------------------------------------------------
@@ -18794,7 +18794,7 @@
       CHARACTER ( LEN = 1 ) :: BFIELD( nbytes )
       INTEGER :: IVALUE( 2 )
 
-!  find a starting position, ifree, for the chain leading to the required 
+!  find a starting position, ifree, for the chain leading to the required
 !  location. Perform the hashing on nbytes characters of field at a time
 
       ifree = 0
@@ -18866,7 +18866,7 @@
 !-*-*- S I F D E C O D E   H A S H _ r e b u i l d    S U B R O U T I N E -*-*-
 
       SUBROUTINE HASH_rebuild( len_table, nchar, TABLE, KEY,                   &
-                               len_table_new, TABLE_new, KEY_new, inform ) 
+                               len_table_new, TABLE_new, KEY_new, inform )
       INTEGER :: nchar, len_table, len_table_new, inform
       INTEGER :: TABLE( len_table )
       INTEGER :: TABLE_new( len_table_new )
@@ -18875,7 +18875,7 @@
 
 !  -------------------------------------------------------------------
 !  rebuild the chained scatter table (Williams, CACM 2, 21-24, 1959)
-!  to account for an increase in its length 
+!  to account for an increase in its length
 
 !  TABLE_new(i) gives the status of new table entry i
 !  if TABLE_new(i) = - (length+1), the entry is unused
@@ -18900,7 +18900,7 @@
 
       DO k = 1, len_table
 
-!  if the kth entry was previously occupied, copy its key into the new table 
+!  if the kth entry was previously occupied, copy its key into the new table
 
         IF ( TABLE( k ) >= 0 ) THEN
           FIELD( : nchar ) = KEY( : nchar, k )
@@ -18944,7 +18944,7 @@
 !  if TABLE(i) = k, the entry is used. k gives the index of the next
 !                entry in the chain
 !  ifree > 0 indicates that the field occurs as entry ifree
-!        < 0 indicates that the field once occured as entry - ifree 
+!        < 0 indicates that the field once occured as entry - ifree
 !            but has been deleted in the interim
 !        = 0 the table was full and attempts to enlarge the table failed
 !  ---------------------------------------------------------------------
@@ -19001,7 +19001,7 @@
         END IF
 
 !  write the current table to the buffer
-     
+
         current = 0
         DO k = 1, length
           IF ( TABLE( k ) >= 0 ) THEN
@@ -19079,7 +19079,7 @@
           END IF
 
 !  write the current table to the buffer
-     
+
           DO k = 1, current
             WRITE( UNIT = buffer, FMT =  "( I10, 1X, A12 )" )                  &
               INLIST_old( k ), KEY_old( k )
@@ -19095,7 +19095,7 @@
           GO TO 100
         END IF
         GO TO 10
-      ENDIF 
+      ENDIF
 
 !  initialize the new table
 
@@ -19105,7 +19105,7 @@
 
       DO k = 1, current
 
-!  if the kth entry was previously occupied, copy its key into the new table 
+!  if the kth entry was previously occupied, copy its key into the new table
 
         key_temp = KEY_old( k )
         CALL HASH_insert( new_length, nchar, key_temp, TABLE, KEY, ifree )
@@ -19116,7 +19116,7 @@
 
 !write(6,*) ' hash table length increased from ', length, ' to ', new_length
 
-      length = new_length  
+      length = new_length
 
 !  deallocate the space used for the old table
 
@@ -19166,7 +19166,7 @@
 
         IF ( new_length <= length ) GO TO 900
         GO TO 110
-      ENDIF 
+      ENDIF
 
 !  initialize the new table
 
@@ -19178,7 +19178,7 @@
       DO k = 1, current
         READ( UNIT = buffer, FMT = "( I10, 1X, A12 )" ) i, key_temp
 
-!  if the kth entry was previously occupied, copy its key into the new table 
+!  if the kth entry was previously occupied, copy its key into the new table
 
         CALL HASH_insert( new_length, nchar, key_temp, TABLE, KEY, ifree )
         INLIST( ifree ) = i
@@ -19188,7 +19188,7 @@
 
 !write(6,*) ' hash table length increased from ', length, ' to ', new_length
 
-      length = new_length  
+      length = new_length
 
 !  try once again inserting the new value into the new current table
 
@@ -19198,7 +19198,7 @@
 !  fatal errors
 
   900 CONTINUE
-      ifree = 0      
+      ifree = 0
 
 !write(6,*) ' enlargement failed '
 
@@ -19581,7 +19581,7 @@
                                       status, alloc_status )
 
 !  -------------------------------------------------------------------------
-!  extend an integer array so that its length is increaed from old_length to 
+!  extend an integer array so that its length is increaed from old_length to
 !  as close to new_length as possible while keeping existing data intact
 !  -------------------------------------------------------------------------
 
@@ -19727,7 +19727,7 @@
                                    status, alloc_status )
 
 !  ---------------------------------------------------------------------
-!  extend a real array so that its length is increaed from old_length to 
+!  extend a real array so that its length is increaed from old_length to
 !  as close to new_length as possible while keeping existing data intact
 !  ---------------------------------------------------------------------
 
@@ -20021,7 +20021,7 @@
                                        status, alloc_status )
 
 !  -------------------------------------------------------------------------
-!  extend an integer array so that its length is increaed from old_length to 
+!  extend an integer array so that its length is increaed from old_length to
 !  as close to new_length as possible while keeping existing data intact
 !  -------------------------------------------------------------------------
 
@@ -20108,7 +20108,7 @@
 !  copy the contents of ARRAY back from the buffer i/o area
 
      ARRAY( : used_length1, : used_length2 )                                   &
-       = DUMMY( : used_length1, : used_length2 ) 
+       = DUMMY( : used_length1, : used_length2 )
      DEALLOCATE( DUMMY )
      new_length1 = length1 ; new_length2 = length2
      GO TO 200
@@ -20175,7 +20175,7 @@
                                     status, alloc_status )
 
 !  ---------------------------------------------------------------------
-!  extend a real array so that its length is increaed from old_length to 
+!  extend a real array so that its length is increaed from old_length to
 !  as close to new_length as possible while keeping existing data intact
 !  ---------------------------------------------------------------------
 
@@ -20262,7 +20262,7 @@
 !  copy the contents of ARRAY back from the buffer i/o area
 
      ARRAY( : used_length1, : used_length2 )                                   &
-       = DUMMY( : used_length1, : used_length2 ) 
+       = DUMMY( : used_length1, : used_length2 )
      DEALLOCATE( DUMMY )
      new_length1 = length1 ; new_length2 = length2
      GO TO 200
@@ -20416,7 +20416,7 @@
 !  copy the contents of ARRAY back from the buffer i/o area
 
      ARRAY( : used_length1, : used_length2 )                                   &
-       = DUMMY( : used_length1, : used_length2 ) 
+       = DUMMY( : used_length1, : used_length2 )
      DEALLOCATE( DUMMY )
      new_length1 = length1 ; new_length2 = length2
      GO TO 200
@@ -20485,7 +20485,7 @@
                                        status, alloc_status )
 
 !  -------------------------------------------------------------------------
-!  extend an integer array so that its length is increaed from old_length to 
+!  extend an integer array so that its length is increaed from old_length to
 !  as close to new_length as possible while keeping existing data intact
 !  -------------------------------------------------------------------------
 
@@ -20577,7 +20577,7 @@
 !  copy the contents of ARRAY back from the buffer i/o area
 
      ARRAY( : used_length1, : used_length2, : used_length3 )                   &
-       = DUMMY( : used_length1, : used_length2, : used_length3 ) 
+       = DUMMY( : used_length1, : used_length2, : used_length3 )
      DEALLOCATE( DUMMY )
      new_length1 = length1 ; new_length2 = length2 ; new_length3 = length3
      GO TO 200
