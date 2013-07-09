@@ -57,9 +57,9 @@
 !  maximum number of variables
 
       INTEGER, PARAMETER :: n_guess_debug = 1
-      INTEGER, PARAMETER :: n_guess_small = 100
-      INTEGER, PARAMETER :: n_guess_medium = 10000
-      INTEGER, PARAMETER :: n_guess_large = 1001000
+      INTEGER, PARAMETER :: n_guess_small = 200
+      INTEGER, PARAMETER :: n_guess_medium = 20000
+      INTEGER, PARAMETER :: n_guess_large = 2000000
 
 !  maximum number of groups
 
@@ -121,9 +121,9 @@
 !  maximum number of nonzeros in linear elements
 
       INTEGER, PARAMETER :: nnza_guess_debug = 1
-      INTEGER, PARAMETER :: nnza_guess_small = 8000
-      INTEGER, PARAMETER :: nnza_guess_medium = 800000
-      INTEGER, PARAMETER :: nnza_guess_large = 8000000
+      INTEGER, PARAMETER :: nnza_guess_small = 12000
+      INTEGER, PARAMETER :: nnza_guess_medium = 1200000
+      INTEGER, PARAMETER :: nnza_guess_large = 12000000
 
 !  maximum number of integer parameters
 
@@ -136,8 +136,8 @@
 
       INTEGER, PARAMETER :: nrindex_guess_debug = 1
       INTEGER, PARAMETER :: nrindex_guess_small = 20000
-      INTEGER, PARAMETER :: nrindex_guess_medium = 20000
-      INTEGER, PARAMETER :: nrindex_guess_large = 20000
+      INTEGER, PARAMETER :: nrindex_guess_medium = 200000
+      INTEGER, PARAMETER :: nrindex_guess_large = 2000000
 
 !  maximum number of statements in any level of a do-loop
 
@@ -368,7 +368,6 @@
         len_lonames = nauxpar_guess_medium
         len_minames = nauxpar_guess_medium
         len_exnames = nauxpar_guess_medium
-
       END IF
 
       debug = print_level < 0
