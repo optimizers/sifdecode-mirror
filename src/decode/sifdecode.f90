@@ -59,14 +59,14 @@
       INTEGER, PARAMETER :: n_guess_debug = 1
       INTEGER, PARAMETER :: n_guess_small = 100
       INTEGER, PARAMETER :: n_guess_medium = 10000
-      INTEGER, PARAMETER :: n_guess_large = 1000000
+      INTEGER, PARAMETER :: n_guess_large = 1001000
 
 !  maximum number of groups
 
       INTEGER, PARAMETER :: ng_guess_debug = 1
       INTEGER, PARAMETER :: ng_guess_small = 100
       INTEGER, PARAMETER :: ng_guess_medium = 10000
-      INTEGER, PARAMETER :: ng_guess_large = 600000
+      INTEGER, PARAMETER :: ng_guess_large = 1000000
 
 !  maximum number of different group types
 
@@ -80,7 +80,7 @@
       INTEGER, PARAMETER :: ngp_guess_debug = 1
       INTEGER, PARAMETER :: ngp_guess_small = 200
       INTEGER, PARAMETER :: ngp_guess_medium = 20000
-      INTEGER, PARAMETER :: ngp_guess_large = 1200000
+      INTEGER, PARAMETER :: ngp_guess_large = 2000000
 
 !  maximum number of nonlinear elements
 
@@ -99,9 +99,9 @@
 !  maximum total number of elemental variables
 
       INTEGER, PARAMETER :: nelvar_guess_debug = 1
-      INTEGER, PARAMETER :: nelvar_guess_small = 100
-      INTEGER, PARAMETER :: nelvar_guess_medium = 10000
-      INTEGER, PARAMETER :: nelvar_guess_large = 100000
+      INTEGER, PARAMETER :: nelvar_guess_small = 2000
+      INTEGER, PARAMETER :: nelvar_guess_medium = 200000
+      INTEGER, PARAMETER :: nelvar_guess_large = 2000000
 
 !  maximum total number of auxliliary parameters used when defining function
 !  and derivative values
@@ -289,9 +289,6 @@
       CHARACTER ( LEN = max_record_length ) :: nuline
 
 !  array definitions
-
-!     INTEGER :: INLIST( length ), TABLE( length )
-!     CHARACTER ( LEN = 12  ) :: KEY( length )
 
       CHARACTER ( LEN = 1 ), DIMENSION( 2 ), PARAMETER :: S = (/ ' ', 's' /)
       CHARACTER ( LEN = 3 ), DIMENSION( 2 ), PARAMETER :: ARE                  &
@@ -1322,10 +1319,10 @@
         len2_carray = maxarray_guess_small
         len2_varray = maxarray_guess_small
         len3_iarray = maxarray_guess_small
-        length = n_guess_small + ng_guess_small + nel_guess_small              &
-                   + nauxpar_guess_small + 1000
         len_iinames = niindex_guess_small
         len_rinames = nrindex_guess_small
+        length = n_guess_small + ng_guess_small + nel_guess_small              &
+                   + nauxpar_guess_small + 1000
 
 !  large  problems
 
@@ -1918,7 +1915,8 @@
               used_length = nvar - 1 ; min_length = nvar
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( DEFAULT, len_default, used_length, new_length,&
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'DEFAULT' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'DEFAULT' ; status = - 7 ; GO TO 980 ; END IF
               len_default = new_length
@@ -1928,7 +1926,8 @@
               used_length = nvar - 1 ; min_length = nvar
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'VNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
               len_vnames = new_length
@@ -2019,9 +2018,9 @@
                   IF ( nivnames + i > len_ivnames ) THEN
                     used_length = nivnames ; min_length = nivnames + i
                     new_length = increase_n * min_length / increase_d + 1
-                    CALL EXTEND_array( IVNAMES, len_ivnames, used_length,    &
-                                       new_length, min_length, buffer,       &
-                                       status, alloc_status )
+                    CALL EXTEND_array( IVNAMES, len_ivnames, used_length,      &
+                                       new_length, min_length, buffer,         &
+                                       status, alloc_status, 'IVNAMES' )
                     IF ( status /= 0 ) THEN
                       bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980
                     END IF
@@ -2045,7 +2044,8 @@
                 used_length = neltype ; min_length = neltype + 1
                 new_length = min_length + 1
                 CALL EXTEND_array( ELV, len_elv, used_length, new_length,      &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'ELV' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
                 len_elv = new_length
@@ -2055,7 +2055,8 @@
                 used_length = neltype ; min_length = neltype + 1
                 new_length = min_length + 1
                 CALL EXTEND_array( INV, len_inv, used_length, new_length,      &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'INV' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
                 len_inv = new_length
@@ -2065,7 +2066,8 @@
                 used_length = neltype ; min_length = neltype + 1
                 new_length = min_length + 1
                 CALL EXTEND_array( ELP, len_elp, used_length, new_length,      &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'ELP' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
                 len_elp = new_length
@@ -2093,7 +2095,8 @@
               used_length = nlvars ; min_length = n
               new_length = n
               CALL EXTEND_array( CSCALE, len_cscale, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'CSCALE' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'CSCALE' ; status = - 7 ; GO TO 980 ; END IF
               len_cscale = new_length
@@ -2103,7 +2106,8 @@
               used_length = nlvars ; min_length = n
               new_length = n
               CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,    &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'TYPEV' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'TYPEV' ; status = - 7 ; GO TO 980 ; END IF
               len_typev = new_length
@@ -2170,9 +2174,10 @@
               IF ( ngtype >= len_gtypesp_ptr ) THEN
                 used_length = ngtype ; min_length = ngtype + 1
                 new_length = increase_n * min_length / increase_d + 1
-                CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr,              &
-                                   used_length, new_length, min_length,       &
-                                   buffer, status, alloc_status )
+                CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr,               &
+                                   used_length, new_length, min_length,        &
+                                   buffer, status, alloc_status,               &
+                                   'GTYPESP_ptr' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
                 len_gtypesp_ptr = new_length
@@ -2253,7 +2258,8 @@
             used_length = n ; min_length = n + ng
             new_length = n + ng
             CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,    &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'VNAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
             len_vnames = new_length
@@ -2263,7 +2269,8 @@
             used_length = n ; min_length = n + ng
             new_length = n + ng
             CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,      &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'TYPEV' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'TYPEV' ; status = - 7 ; GO TO 980 ; END IF
             len_typev = new_length
@@ -2313,7 +2320,7 @@
             CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR1' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR1' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr1 = new_length2
@@ -2329,7 +2336,7 @@
             CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR2' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR2' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr2 = new_length2
@@ -2345,7 +2352,7 @@
             CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR3' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR3' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr3 = new_length2
@@ -2368,7 +2375,8 @@
             used_length = niival - 1 ; min_length = niival
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( IIVAL, len_iival, used_length, new_length,      &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'IIVAL' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'IIVAL' ; status = - 21 ; GO TO 980 ; END IF
             len_iival = new_length
@@ -2378,7 +2386,8 @@
             used_length = niival - 1 ; min_length = niival
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( IINAMES, len_iinames, used_length, new_length,  &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,     &
+                               'IINAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'IINAMES' ; status = - 21 ; GO TO 980 ; END IF
             len_iinames = new_length
@@ -2498,7 +2507,7 @@
             CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR1' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR1' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr1 = new_length2
@@ -2514,7 +2523,7 @@
             CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR2' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR2' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr2 = new_length2
@@ -2530,7 +2539,7 @@
             CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR3' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR3' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr3 = new_length2
@@ -2549,7 +2558,7 @@
             CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR3' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR3' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr3 = new_length2
@@ -2567,7 +2576,7 @@
             CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR2' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR2' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr2 = new_length2
@@ -2585,7 +2594,7 @@
             CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR1' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR1' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr1 = new_length2
@@ -2859,7 +2868,7 @@
             CALL EXTEND_array( INSTR1, 5, len2_instr1, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR1' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR1' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr1 = new_length2
@@ -2869,7 +2878,8 @@
             used_length = ninstr1 - 1 ; min_length = ninstr1
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RVALUE1, len_rvalue1, used_length, new_length,  &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'RVALUE1' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RVALUE1' ; status = - 11 ; GO TO 980 ; END IF
             len_rvalue1 = new_length
@@ -2883,7 +2893,7 @@
             CALL EXTEND_array( INSTR2, 5, len2_instr2, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR2' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR2' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr2 = new_length2
@@ -2893,7 +2903,8 @@
             used_length = ninstr2 - 1 ; min_length = ninstr2
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RVALUE2, len_rvalue2, used_length, new_length,  &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'RVALUE2' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RVALUE2' ; status = - 11 ; GO TO 980 ; END IF
             len_rvalue2 = new_length
@@ -2907,7 +2918,7 @@
             CALL EXTEND_array( INSTR3, 5, len2_instr3, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'INSTR3' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'INSTR3' ; status = - 11 ; GO TO 980 ; END IF
             len2_instr3 = new_length2
@@ -2917,7 +2928,8 @@
             used_length = ninstr3 - 1 ; min_length = ninstr3
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RVALUE3, len_rvalue3, used_length, new_length,  &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'RVALUE3' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RVALUE3' ; status = - 11 ; GO TO 980 ; END IF
             len_rvalue3 = new_length
@@ -2981,7 +2993,8 @@
             used_length = narray - 1 ; min_length = narray
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( FARRAY, len_farray, used_length, new_length,    &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'FARRAY' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'FARRAY' ; status = - 12 ; GO TO 980 ; END IF
             len_farray = new_length
@@ -2994,7 +3007,7 @@
             CALL EXTEND_array( VARRAY, 2, len2_varray, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'VARRAY' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'VARRAY' ; status = - 12 ; GO TO 980 ; END IF
             len2_varray = new_length2
@@ -3007,7 +3020,7 @@
             CALL EXTEND_array( CARRAY, 2, len2_carray, used_length,            &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'CARRAY' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'CARRAY' ; status = - 12 ; GO TO 980 ; END IF
             len2_carray = new_length2
@@ -3020,7 +3033,7 @@
             CALL EXTEND_array( ARRAY, 3, len2_array, used_length,              &
                                used_length2, new_length, new_length2,          &
                                min_length, min_length2, buffer,                &
-                               status, alloc_status )
+                               status, alloc_status, 'ARRAY' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'ARRAY' ; status = - 12 ; GO TO 980 ; END IF
             len2_array = new_length2
@@ -3035,7 +3048,7 @@
                                used_length2, used_length3,                     &
                                new_length, new_length2, new_length3,           &
                                min_length, min_length2, min_length3,           &
-                               buffer, status, alloc_status )
+                               buffer, status, alloc_status, 'IARRAY' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'IARRAY' ; status = - 12 ; GO TO 980 ; END IF
             len3_iarray = new_length3
@@ -3712,7 +3725,8 @@
             used_length = nobj - 1 ; min_length = nobj
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,    &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'ONAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
             len_onames = new_length
@@ -3727,7 +3741,8 @@
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'GSTATE' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
           len_gstate = new_length
@@ -3737,7 +3752,8 @@
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GTYPE, len_gtype, used_length, new_length,        &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'GTYPE' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
           len_gtype = new_length
@@ -3747,7 +3763,8 @@
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'GNAMES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
           len_gnames = new_length
@@ -3757,7 +3774,8 @@
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'RSCALE' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
           len_rscale = new_length
@@ -3770,7 +3788,7 @@
           CALL EXTEND_array( IDROWS, 2, len2_idrows, used_length,              &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
-                             status, alloc_status )
+                             status, alloc_status, 'IDROWS' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'IDROWS' ; status = - 6 ; GO TO 980 ; END IF
           len2_idrows = new_length2
@@ -3783,7 +3801,7 @@
           CALL EXTEND_array( RDROWS, 2, len2_rdrows, used_length,              &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
-                             status, alloc_status )
+                             status, alloc_status, 'RDROWS' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'RDROWS' ; status = - 6 ; GO TO 980 ; END IF
           len2_rdrows = new_length2
@@ -3969,7 +3987,8 @@
             used_length = nobj - 1 ; min_length = nobj
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,    &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'ONAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
             len_onames = new_length
@@ -3984,7 +4003,8 @@
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GSTATE, len_gstate, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'GSTATE' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
           len_gstate = new_length
@@ -3994,7 +4014,8 @@
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GTYPE, len_gtype, used_length, new_length,        &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'GTYPE' )
           IF ( status /= 0 ) THEN
              bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
           len_gtype = new_length
@@ -4004,7 +4025,8 @@
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GNAMES, len_gnames, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'GNAMES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
           len_gnames = new_length
@@ -4014,7 +4036,8 @@
           used_length = ng - 1 ; min_length = ng
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( RSCALE, len_rscale, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'RSCALE' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
           len_rscale = new_length
@@ -4027,7 +4050,7 @@
           CALL EXTEND_array( IDROWS, 2, len2_idrows, used_length,              &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
-                             status, alloc_status )
+                             status, alloc_status, 'IDROWS' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'IDROWS' ; status = - 6 ; GO TO 980 ; END IF
           len2_idrows = new_length2
@@ -4040,7 +4063,7 @@
           CALL EXTEND_array( RDROWS, 2, len2_rdrows, used_length,              &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
-                             status, alloc_status )
+                             status, alloc_status, 'RDROWS' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'RDROWS' ; status = - 6 ; GO TO 980 ; END IF
           len2_rdrows = new_length2
@@ -4167,21 +4190,24 @@
                 used_length = nnza - 1 ; min_length = nnza
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_row, len_a, used_length, new_length,      &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'A_row' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_row' ; status = - 2 ; GO TO 980 ; END IF
 
                 used_length = nnza - 1 ; min_length = nnza
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_col, len_a, used_length, new_length,      &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'A_col' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_col' ; status = - 2 ; GO TO 980 ; END IF
 
                 used_length = nnza - 1 ; min_length = nnza
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_val, len_a, used_length, new_length,      &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'A_val' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_val' ; status = - 2 ; GO TO 980 ; END IF
                 len_a = new_length
@@ -4289,7 +4315,8 @@
           used_length = nvar - 1 ; min_length = nvar
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'VNAMES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
           len_vnames = new_length
@@ -4299,7 +4326,8 @@
           used_length = nvar - 1 ; min_length = nvar
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( CSCALE, len_cscale, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'CSCALE' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'CSCALE' ; status = - 7 ; GO TO 980 ; END IF
           len_cscale = new_length
@@ -4309,7 +4337,8 @@
           used_length = nvar - 1 ; min_length = nvar
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,        &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'TYPEV' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'TYPEV' ; status = - 7 ; GO TO 980 ; END IF
           len_typev = new_length
@@ -4411,7 +4440,8 @@
           used_length = nvar - 1 ; min_length = nvar
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'VNAMES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
           len_vnames = new_length
@@ -4421,7 +4451,8 @@
           used_length = nvar - 1 ; min_length = nvar
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( CSCALE, len_cscale, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'CSCALE' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'CSCALE' ; status = - 7 ; GO TO 980 ; END IF
           len_cscale = new_length
@@ -4431,7 +4462,8 @@
           used_length = nvar - 1 ; min_length = nvar
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,        &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'TYPEV' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'TYPEV' ; status = - 7 ; GO TO 980 ; END IF
           len_typev = new_length
@@ -4441,7 +4473,8 @@
           used_length = nvar - 1 ; min_length = nvar
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( DEFAULT, len_default, used_length, new_length,    &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'DEFAULT' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'DEFAULT' ; status = - 7 ; GO TO 980 ; END IF
           len_default = new_length
@@ -4531,21 +4564,24 @@
                 used_length = nnza - 1 ; min_length = nnza
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_row, len_a, used_length, new_length,      &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'A_row' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_row' ; status = - 2 ; GO TO 980 ; END IF
 
                 used_length = nnza - 1 ; min_length = nnza
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_col, len_a, used_length, new_length,      &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'A_col' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_col' ; status = - 2 ; GO TO 980 ; END IF
 
                 used_length = nnza - 1 ; min_length = nnza
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( A_val, len_a, used_length, new_length,      &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'A_val' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'A_val' ; status = - 2 ; GO TO 980 ; END IF
                 len_a = new_length
@@ -4655,7 +4691,7 @@
           CALL EXTEND_array( B_l, len1_blu, len2_blu, used_length,             &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
-                             status, alloc_status )
+                             status, alloc_status, 'B_l' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'B_l' ; status = - 13 ; GO TO 980 ; END IF
 
@@ -4666,7 +4702,7 @@
           CALL EXTEND_array( B_u, len1_blu, len2_blu, used_length,             &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
-                             status, alloc_status )
+                             status, alloc_status, 'B_u' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'B_u' ; status = - 13 ; GO TO 980 ; END IF
           len2_blu = new_length2
@@ -4677,7 +4713,7 @@
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( B_l_default, len_blu_default, used_length,        &
                              new_length, min_length, buffer,                   &
-                             status, alloc_status )
+                             status, alloc_status, 'B_l_default' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'B_l_default' ; status = - 13 ; GO TO 980 ; END IF
 
@@ -4685,7 +4721,7 @@
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( B_u_default, len_blu_default, used_length,        &
                              new_length, min_length, buffer,                   &
-                             status, alloc_status )
+                             status, alloc_status, 'B_u_default' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'B_u_default' ; status = - 13 ; GO TO 980 ; END IF
           len_blu_default = new_length
@@ -4695,7 +4731,8 @@
           used_length = nbnd - 1 ; min_length = nbnd
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( BNAMES, len_bnames, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'BNAMES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'BNAMES' ; status = - 13 ; GO TO 980 ; END IF
           len_bnames = new_length
@@ -4972,7 +5009,7 @@
           CALL EXTEND_array( VSTART, len1_vstart, len2_vstart, used_length,    &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
-                             status, alloc_status )
+                             status, alloc_status, 'VSTART' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'VSTART' ; status = - 8 ; GO TO 980 ; END IF
           len2_vstart = new_length2
@@ -4984,7 +5021,7 @@
           CALL EXTEND_array( CSTART, len1_cstart, len2_cstart, used_length,    &
                              used_length2, new_length, new_length2,            &
                              min_length, min_length2, buffer,                  &
-                             status, alloc_status )
+                             status, alloc_status, 'CSTART' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'CSTART' ; status = - 8 ; GO TO 980 ; END IF
           len2_cstart = new_length2
@@ -4993,7 +5030,8 @@
           used_length = nstart - 1 ; min_length = nstart
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( SNAMES, len_snames, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'SNAMES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'SNAMES' ; status = - 8 ; GO TO 980 ; END IF
           len_snames = new_length
@@ -5321,7 +5359,8 @@
                 used_length = nobj - 1 ; min_length = nobj
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( ONAMES, len_gnames, used_length, new_length,&
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'ONAMES' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'ONAMES' ; status = - 5 ; GO TO 980 ; END IF
                 len_onames = new_length
@@ -5336,7 +5375,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( GSTATE, len_gstate, used_length,            &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'GSTATE' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'GSTATE' ; status = - 6 ; GO TO 980 ; END IF
                 len_gstate = new_length
@@ -5346,7 +5385,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( GTYPE, len_gtype, used_length,              &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'GTYPE' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'GTYPE' ; status = - 6 ; GO TO 980 ; END IF
                 len_gtype = new_length
@@ -5356,7 +5395,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( GNAMES, len_gnames, used_length,            &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'GNAMES' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'GNAMES' ; status = - 6 ; GO TO 980 ; END IF
                 len_gnames = new_length
@@ -5366,7 +5405,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( RSCALE, len_rscale, used_length,            &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'RSCALE' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'RSCALE' ; status = - 6 ; GO TO 980 ; END IF
                 len_rscale = new_length
@@ -5406,7 +5445,8 @@
                   used_length = neltype - 1 ; min_length = neltype + 1
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ELV, len_elv, used_length, new_length,    &
-                                     min_length, buffer, status, alloc_status )
+                                     min_length, buffer, status, alloc_status, &
+                                     'ELV' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
                   len_elv = new_length
@@ -5416,7 +5456,8 @@
                   used_length = neltype - 1 ; min_length = neltype + 1
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( INV, len_inv, used_length, new_length,    &
-                                     min_length, buffer, status, alloc_status )
+                                     min_length, buffer, status, alloc_status, &
+                                     'INV' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
                   len_inv = new_length
@@ -5426,7 +5467,8 @@
                   used_length = neltype - 1 ; min_length = neltype + 1
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ELP, len_elp, used_length, new_length,    &
-                                     min_length, buffer, status, alloc_status )
+                                     min_length, buffer, status, alloc_status, &
+                                     'ELP' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
                   len_elp = new_length
@@ -5437,7 +5479,7 @@
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ETYPES, len_etypes, used_length,          &
                                      new_length, min_length, buffer,           &
-                                     status, alloc_status )
+                                     status, alloc_status, 'ETYPES' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
                   len_etypes = new_length
@@ -5449,7 +5491,7 @@
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( EVNAMES, len_evnames, used_length,        &
                                      new_length, min_length, buffer,           &
-                                     status, alloc_status )
+                                     status, alloc_status, 'EVNAMES' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
                   len_evnames = new_length
@@ -5484,7 +5526,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( IVNAMES, len_ivnames, used_length,          &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'IVNAMES' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 ; END IF
                 len_ivnames = new_length
@@ -5501,7 +5543,8 @@
               used_length = nelnum - 1 ; min_length = nelnum
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'LNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
               len_lnames = new_length
@@ -5510,8 +5553,9 @@
             IF ( nelnum > len_typee ) THEN
               used_length = nelnum - 1 ; min_length = nelnum
               new_length = increase_n * min_length / increase_d + 1
-              CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+              CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,    &
+                                 min_length, buffer, status, alloc_status,     &
+                                 'TYPEE' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
               len_typee = new_length
@@ -5521,7 +5565,8 @@
               used_length = nelnum - 1 ; min_length = nelnum + 1
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'EP_ptr' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ep_ptr = new_length
@@ -5531,7 +5576,8 @@
               used_length = nelnum - 1 ; min_length = nelnum + 1
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'EV_ptr' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ev_ptr = new_length
@@ -5562,7 +5608,8 @@
               used_length = nelvar ; min_length = nelvar + nevars
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length,    &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'ELVAR' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
               len_elvar = new_length
@@ -5578,7 +5625,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELING_el, len_eling_el, used_length,          &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'ELING_el' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
               len_eling_el = new_length
@@ -5589,7 +5636,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELING_g, len_eling_g, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'ELING_g' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
               len_eling_g = new_length
@@ -5600,7 +5647,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( WEIGHT, len_weight, used_length,              &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'WEIGHT' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
               len_weight = new_length
@@ -5632,7 +5679,8 @@
                   used_length = neltype - 1 ; min_length = neltype + 1
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ELV, len_elv, used_length, new_length,    &
-                                     min_length, buffer, status, alloc_status )
+                                     min_length, buffer, status, alloc_status, &
+                                     'ELV' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
                   len_elv = new_length
@@ -5642,7 +5690,8 @@
                   used_length = neltype - 1 ; min_length = neltype + 1
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( INV, len_inv, used_length, new_length,    &
-                                     min_length, buffer, status, alloc_status )
+                                     min_length, buffer, status, alloc_status, &
+                                     'INV' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
                   len_inv = new_length
@@ -5652,7 +5701,8 @@
                   used_length = neltype - 1 ; min_length = neltype + 1
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ELP, len_elp, used_length, new_length,    &
-                                     min_length, buffer, status, alloc_status )
+                                     min_length, buffer, status, alloc_status, &
+                                     'ELP' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
                   len_elp = new_length
@@ -5663,7 +5713,7 @@
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( ETYPES, len_etypes, used_length,          &
                                      new_length, min_length, buffer,           &
-                                     status, alloc_status )
+                                     status, alloc_status, 'ETYPES' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
                   len_etypes = new_length
@@ -5675,7 +5725,7 @@
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( EVNAMES, len_evnames, used_length,        &
                                      new_length, min_length, buffer,           &
-                                     status, alloc_status )
+                                     status, alloc_status, 'EVNAMES' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
                   len_evnames = new_length
@@ -5710,7 +5760,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( IVNAMES, len_ivnames, used_length,          &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'IVNAMES' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980 ; END IF
                 len_ivnames = new_length
@@ -5722,7 +5772,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( EVNAMES, len_evnames, used_length,          &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'EVNAMES' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
                 len_evnames = new_length
@@ -5741,7 +5791,8 @@
               used_length = nelnum - 1 ; min_length = nelnum
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'LNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
               len_lnames = new_length
@@ -5751,7 +5802,8 @@
               used_length = nelnum - 1 ; min_length = nelnum
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,    &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'TYPEE' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
               len_typee = new_length
@@ -5761,7 +5813,8 @@
               used_length = nelnum - 1 ; min_length = nelnum + 1
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'EP_ptr' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ep_ptr = new_length
@@ -5771,7 +5824,8 @@
               used_length = nelnum - 1 ; min_length = nelnum + 1
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'EV_ptr' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ev_ptr = new_length
@@ -5802,7 +5856,8 @@
               used_length = nelvar ; min_length = nelvar + nevars
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length, &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'ELVAR' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
               len_elvar = new_length
@@ -5819,7 +5874,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELING_el, len_eling_el, used_length,          &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'ELING_el' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
               len_eling_el = new_length
@@ -5830,7 +5885,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELING_g, len_eling_g, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'ELING_g' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
               len_eling_g = new_length
@@ -5841,7 +5896,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( WEIGHT, len_weight, used_length,              &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'WEIGHT' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
               len_weight = new_length
@@ -5950,7 +6005,8 @@
               used_length = nivnames ; min_length = nivnames + i
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( IVNAMES, len_ivnames, used_length, new_length,&
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'IVNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980
               END IF
@@ -5990,7 +6046,8 @@
           used_length = neltype - 1 ; min_length = neltype + 1
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( ELV, len_elv, used_length, new_length,            &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'ELV' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'ELV' ; status = - 3 ; GO TO 980 ; END IF
           len_elv = new_length
@@ -6000,7 +6057,8 @@
           used_length = neltype - 1 ; min_length = neltype + 1
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( INV, len_inv, used_length, new_length,            &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'INV' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'INV' ; status = - 3 ; GO TO 980 ; END IF
           len_inv = new_length
@@ -6010,7 +6068,8 @@
           used_length = neltype - 1 ; min_length = neltype + 1
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( ELP, len_elp, used_length, new_length,            &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'ELP' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'ELP' ; status = - 3 ; GO TO 980 ; END IF
           len_elp = new_length
@@ -6020,7 +6079,8 @@
           used_length = neltype - 1 ; min_length = neltype
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( ETYPES, len_etypes, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'ETYPES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'ETYPES' ; status = - 3 ; GO TO 980 ; END IF
           len_etypes = new_length
@@ -6043,7 +6103,8 @@
             used_length = nivnames ; min_length = nivnames + novals
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( IVNAMES, len_ivnames, used_length, new_length,  &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'IVNAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'IVNAMES' ; status = - 16 ; GO TO 980
             END IF
@@ -6100,7 +6161,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( EVNAMES, len_evnames, used_length,          &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'EVNAMES' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'EVNAMES' ; status = - 14 ; GO TO 980 ; END IF
                 len_evnames = new_length
@@ -6139,7 +6200,7 @@
                   new_length = increase_n * min_length / increase_d + 1
                   CALL EXTEND_array( EPNAMES, len_epnames, used_length,        &
                                      new_length, min_length, buffer,           &
-                                     status, alloc_status )
+                                     status, alloc_status, 'EPNAMES' )
                   IF ( status /= 0 ) THEN
                     bad_alloc = 'EPNAMES' ; status = - 19 ; GO TO 980 ; END IF
                   len_epnames = new_length
@@ -6265,7 +6326,8 @@
               used_length = nelnum - 1 ; min_length = nelnum
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LNAMES, len_lnames, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'LNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'LNAMES' ; status = - 9 ; GO TO 980 ; END IF
               len_lnames = new_length
@@ -6275,7 +6337,8 @@
               used_length = nelnum - 1 ; min_length = nelnum
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( TYPEE, len_typee, used_length, new_length,    &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'TYPEE' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'TYPEE' ; status = - 9 ; GO TO 980 ; END IF
               len_typee = new_length
@@ -6285,7 +6348,8 @@
               used_length = nelnum - 1 ; min_length = nelnum + 1
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EP_ptr, len_ep_ptr, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'EP_ptr' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'EP_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ep_ptr = new_length
@@ -6295,7 +6359,8 @@
               used_length = nelnum - 1 ; min_length = nelnum + 1
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EV_ptr, len_ev_ptr, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'EV_ptr' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'EV_ptr' ; status = - 9 ; GO TO 980 ; END IF
               len_ev_ptr = new_length
@@ -6358,7 +6423,8 @@
               used_length = nelvar ; min_length = nelvar + nevars
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( ELVAR, len_elvar, used_length, new_length,    &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'ELVAR' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'ELVAR' ; status = - 15 ; GO TO 980 ; END IF
               len_elvar = new_length
@@ -6368,7 +6434,8 @@
               used_length = nlisep ; min_length =  nlisep + nepars
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( EP_val, len_ep_val, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'EP_val' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'EP_val' ; status = - 17 ; GO TO 980 ; END IF
               len_ep_val = new_length
@@ -6463,7 +6530,8 @@
               used_length = n - 1 ; min_length = n
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,  &
-                                 min_length, buffer, status, alloc_status )
+                                 min_length, buffer, status, alloc_status,     &
+                                 'VNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'VNAMES' ; status = - 7 ; GO TO 980 ; END IF
               len_vnames = new_length
@@ -6645,7 +6713,7 @@
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GTYPESP_ptr, len_gtypesp_ptr, used_length,        &
                              new_length, min_length, buffer, status,           &
-                             alloc_status )
+                             alloc_status, 'GTYPESP_ptr' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'GTYPESP_ptr' ; status = - 4 ; GO TO 980 ; END IF
           len_gtypesp_ptr = new_length
@@ -6654,7 +6722,8 @@
           used_length = ngtype - 1 ; min_length = ngtype
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GTYPES, len_gtypes, used_length, new_length,      &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'GTYPES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'GTYPES' ; status = - 4 ; GO TO 980 ; END IF
           len_gtypes = new_length
@@ -6663,7 +6732,8 @@
           used_length = ngtype - 1 ; min_length = ngtype
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( GANAMES, len_ganames, used_length, new_length,    &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'GANAMES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'GANAMES' ; status = - 4 ; GO TO 980 ; END IF
           len_ganames = new_length
@@ -6705,7 +6775,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( GPNAMES, len_ganames, used_length,          &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'GPNAMES' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'GPNAMES' ; status = - 20 ; GO TO 980 ; END IF
                 len_gpnames = new_length
@@ -6873,7 +6943,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( GP_val_orig, len_gp_val_orig, used_length,      &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'GP_val_orig' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'GTYPES' ; status = - 18 ; GO TO 980 ; END IF
             len_gp_val_orig = new_length
@@ -6908,7 +6978,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( GP_val_orig, len_gp_val_orig, used_length,      &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status,  'GP_val_orig' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'GTYPES' ; status = - 18 ; GO TO 980 ; END IF
             len_gp_val_orig = new_length
@@ -6960,7 +7030,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( ELING_el, len_eling_el, used_length,        &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'ELING_el' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'ELING_el' ; status = - 9 ; GO TO 980 ; END IF
                 len_eling_el = new_length
@@ -6971,7 +7041,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( ELING_g, len_eling_g, used_length,          &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'ELING_g' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'ELING_g' ; status = - 9 ; GO TO 980 ; END IF
                 len_eling_g = new_length
@@ -6982,7 +7052,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( WEIGHT, len_weight, used_length,            &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'WEIGHT' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'WEIGHT' ; status = - 9 ; GO TO 980 ; END IF
                 len_weight = new_length
@@ -7159,7 +7229,8 @@
           used_length = nobbnd - 1 ; min_length = nobbnd
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( OBBNAME, len_obbname, used_length, new_length,    &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'OBBNAME' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'OBBNAME' ; status = - 23 ; GO TO 980 ; END IF
           len_obbname = new_length
@@ -7169,14 +7240,16 @@
           used_length = nobbnd - 1 ; min_length = nobbnd
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( FBOUND_l, len_fbound, used_length, new_length,    &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'FBOUND_l' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'FBOUND_l' ; status = - 23 ; GO TO 980 ; END IF
 
           used_length = nobbnd - 1 ; min_length = nobbnd
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( FBOUND_u, len_fbound, used_length, new_length,    &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'FBOUND_u' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'FBOUND_u' ; status = - 23 ; GO TO 980 ; END IF
           len_fbound = new_length
@@ -7350,7 +7423,8 @@
             used_length = niival - 1 ; min_length = niival
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( IIVAL, len_iival, used_length, new_length,      &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'IIVAL' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'IIVAL' ; status = - 21 ; GO TO 980 ; END IF
             len_iival = new_length
@@ -7360,7 +7434,8 @@
             used_length = niival - 1 ; min_length = niival
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( IINAMES, len_iinames, used_length, new_length,  &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'IINAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'IINAMES' ; status = - 21 ; GO TO 980 ; END IF
             len_iinames = new_length
@@ -7504,7 +7579,8 @@
             used_length = nrival - 1 ; min_length = nrival
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RIVAL, len_rival, used_length, new_length,      &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'RIVAL' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RIVAL' ; status = - 22 ; GO TO 980 ; END IF
             len_rival = new_length
@@ -7514,7 +7590,8 @@
             used_length = nrival - 1 ; min_length = nrival
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RINAMES, len_rinames, used_length, new_length,  &
-                               min_length, buffer, status, alloc_status )
+                               min_length, buffer, status, alloc_status,       &
+                               'RINAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RINAMES' ; status = - 22 ; GO TO 980 ; END IF
             len_rinames = new_length
@@ -7980,7 +8057,8 @@
                 used_length = nrival - 1 ; min_length = nrival
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( RIVAL, len_rival, used_length, new_length,  &
-                                   min_length, buffer, status, alloc_status )
+                                   min_length, buffer, status, alloc_status,   &
+                                   'RIVAL' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'RIVAL' ; status = - 22 ; GO TO 980 ; END IF
                 len_rival = new_length
@@ -7991,7 +8069,7 @@
                 new_length = increase_n * min_length / increase_d + 1
                 CALL EXTEND_array( RINAMES, len_rinames, used_length,          &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, 'RINAMES' )
                 IF ( status /= 0 ) THEN
                   bad_alloc = 'RINAMES' ; status = - 22 ; GO TO 980 ; END IF
                 len_rinames = new_length
@@ -8196,7 +8274,8 @@
           used_length = nrival - 1 ; min_length = nrival
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( RIVAL, len_rival, used_length, new_length,        &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'RIVAL' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'RIVAL' ; status = - 22 ; GO TO 980 ; END IF
           len_rival = new_length
@@ -8206,7 +8285,8 @@
           used_length = nrival - 1 ; min_length = nrival
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( RINAMES, len_rinames, used_length, new_length,    &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'RINAMES' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'RINAMES' ; status = - 22 ; GO TO 980 ; END IF
           len_rinames = new_length
@@ -10138,7 +10218,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'RENAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
@@ -10167,7 +10247,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'RENAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
@@ -10197,7 +10277,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'RENAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
@@ -10631,7 +10711,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( EXNAMES, len_exnames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'EXNAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
             len_exnames = new_length
@@ -10658,7 +10738,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'RENAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_renames = new_length
@@ -10671,7 +10751,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( MINAMES, len_minames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'MINAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_minames = new_length
@@ -10684,7 +10764,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LONAMES, len_lonames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'LONAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_lonames = new_length
@@ -10697,7 +10777,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( INNAMES, len_innames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'INNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_innames = new_length
@@ -12055,7 +12135,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'RENAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
@@ -12084,7 +12164,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'RENAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
@@ -12115,7 +12195,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'RENAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
@@ -12717,7 +12797,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( EXNAMES, len_exnames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'EXNAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
             len_exnames = new_length
@@ -12744,7 +12824,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'RENAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_renames = new_length
@@ -12757,7 +12837,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( MINAMES, len_minames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'MINAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_minames = new_length
@@ -12770,7 +12850,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LONAMES, len_lonames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'LONAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_lonames = new_length
@@ -12783,7 +12863,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( INNAMES, len_innames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'INNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_innames = new_length
@@ -14339,7 +14419,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'RENAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
@@ -14369,7 +14449,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'RENAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
               END IF
@@ -14708,7 +14788,7 @@
              new_length = increase_n * min_length / increase_d + 1
              CALL EXTEND_array( EXNAMES, len_exnames, used_length,             &
                                 new_length, min_length, buffer,                &
-                                status, alloc_status )
+                                status, alloc_status, 'EXNAMES' )
              IF ( status /= 0 ) THEN
                bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
              len_exnames = new_length
@@ -14735,7 +14815,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'RENAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_renames = new_length
@@ -14748,7 +14828,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( MINAMES, len_minames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'MINAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_minames = new_length
@@ -14761,7 +14841,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LONAMES, len_lonames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'LONAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_lonames = new_length
@@ -14774,7 +14854,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( INNAMES, len_innames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'INNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
             END IF
@@ -15510,7 +15590,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( RENAMES, len_renames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'RENAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
             END IF
@@ -15541,7 +15621,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'RENAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980
               END IF
@@ -16001,7 +16081,7 @@
             new_length = increase_n * min_length / increase_d + 1
             CALL EXTEND_array( EXNAMES, len_exnames, used_length,              &
                                new_length, min_length, buffer,                 &
-                               status, alloc_status )
+                               status, alloc_status, 'EXNAMES' )
             IF ( status /= 0 ) THEN
               bad_alloc = 'EXNAMES' ; status = - 2 ; GO TO 980 ; END IF
             len_exnames = new_length
@@ -16028,7 +16108,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RENAMES, len_renames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'RENAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'RENAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_renames = new_length
@@ -16041,7 +16121,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( MINAMES, len_minames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'MINAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'MINAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_minames = new_length
@@ -16054,7 +16134,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( LONAMES, len_lonames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'LONAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'LONAMES' ; status = - 2 ; GO TO 980 ; END IF
               len_lonames = new_length
@@ -16067,7 +16147,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( INNAMES, len_innames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'INNAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'INNAMES' ; status = - 2 ; GO TO 980 ; END IF
             END IF
@@ -18021,7 +18101,7 @@
               new_length = increase_n * min_length / increase_d + 1
               CALL EXTEND_array( RINAMES, len_rinames, used_length,            &
                                  new_length, min_length, buffer,               &
-                                 status, alloc_status )
+                                 status, alloc_status, 'RINAMES' )
               IF ( status /= 0 ) THEN
                 bad_alloc = 'RINAMES' ; status = - 22 ; GO TO 980 ; END IF
               len_rinames = new_length
@@ -18455,7 +18535,8 @@
           used_length = ndummy - 1 ; min_length = ndummy
           new_length = increase_n * min_length / increase_d + 1
           CALL EXTEND_array( DUMMY, len_dummy, used_length, new_length,        &
-                             min_length, buffer, status, alloc_status )
+                             min_length, buffer, status, alloc_status,         &
+                             'DUMMY' )
           IF ( status /= 0 ) THEN
             bad_alloc = 'DUMMY' ; status = - 22 ; GO TO 980 ; END IF
           len_dummy = new_length
@@ -19578,7 +19659,7 @@
 
      SUBROUTINE EXTEND_array_integer( ARRAY, old_length, used_length,          &
                                       new_length, min_length, buffer,          &
-                                      status, alloc_status )
+                                      status, alloc_status, array_name )
 
 !  -------------------------------------------------------------------------
 !  extend an integer array so that its length is increaed from old_length to
@@ -19597,6 +19678,7 @@
      INTEGER, INTENT( IN ) :: old_length, buffer
      INTEGER, INTENT( OUT ) :: status, alloc_status
      INTEGER, INTENT( INOUT ) :: used_length, min_length, new_length
+     CHARACTER ( LEN = * ), INTENT( IN ) :: array_name
      INTEGER, ALLOCATABLE, DIMENSION( : ) :: ARRAY
 
 !  local variables
@@ -19712,7 +19794,8 @@
 !  successful exit
 
  200 CONTINUE
-     IF ( debug_extend ) WRITE( 6, "( 2( 1X, I0 ) )" ) old_length, new_length
+     IF ( debug_extend ) WRITE( 6, "( A, 2( 1X, I0 ) )" )                      &
+       array_name, old_length, new_length
      status = 0
      RETURN
 
@@ -19724,7 +19807,7 @@
 
      SUBROUTINE EXTEND_array_real( ARRAY, old_length, used_length,             &
                                    new_length, min_length, buffer,             &
-                                   status, alloc_status )
+                                   status, alloc_status, array_name )
 
 !  ---------------------------------------------------------------------
 !  extend a real array so that its length is increaed from old_length to
@@ -19743,6 +19826,7 @@
      INTEGER, INTENT( IN ) :: old_length, buffer
      INTEGER, INTENT( OUT ) :: status, alloc_status
      INTEGER, INTENT( INOUT ) :: used_length, min_length, new_length
+     CHARACTER ( LEN = * ), INTENT( IN ) :: array_name
      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
 
 !  local variables
@@ -19859,7 +19943,8 @@
 
  200 CONTINUE
      status = 0
-     IF ( debug_extend ) WRITE( 6, "( 2( 1X, I0 ) )" ) old_length, new_length
+     IF ( debug_extend ) WRITE( 6, "( A, 2( 1X, I0 ) )" )                      &
+       array_name, old_length, new_length
      RETURN
 
 !  end of subroutine EXTEND_array_real
@@ -19870,7 +19955,7 @@
 
      SUBROUTINE EXTEND_array_character( ARRAY, old_length, used_length,        &
                                         new_length, min_length, buffer,        &
-                                        status, alloc_status )
+                                        status, alloc_status, array_name )
 
 !  ----------------------------------------------------------------------------
 !  extend a character array so that its length is increaed from old_length
@@ -19889,6 +19974,7 @@
      INTEGER, INTENT( IN ) :: old_length, buffer
      INTEGER, INTENT( OUT ) :: status, alloc_status
      INTEGER, INTENT( INOUT ) :: used_length, min_length, new_length
+     CHARACTER ( LEN = * ), INTENT( IN ) :: array_name
      CHARACTER ( LEN = * ), ALLOCATABLE, DIMENSION( : ) :: ARRAY
 
 !  local variables
@@ -20005,7 +20091,8 @@
 
  200 CONTINUE
      status = 0
-     IF ( debug_extend ) WRITE( 6, "( 2( 1X, I0 ) )" ) old_length, new_length
+     IF ( debug_extend ) WRITE( 6, "( A, 2( 1X, I0 ) )" )                      &
+       array_name, old_length, new_length
      RETURN
 
 !  end of subroutine EXTEND_array_character
@@ -20018,7 +20105,7 @@
                                        used_length1, used_length2,             &
                                        new_length1, new_length2,               &
                                        min_length1, min_length2, buffer,       &
-                                       status, alloc_status )
+                                       status, alloc_status, array_name )
 
 !  -------------------------------------------------------------------------
 !  extend an integer array so that its length is increaed from old_length to
@@ -20039,6 +20126,7 @@
      INTEGER, INTENT( INOUT ) :: used_length1, used_length2
      INTEGER, INTENT( INOUT ) :: new_length1, new_length2
      INTEGER, INTENT( INOUT ) :: min_length1, min_length2
+     CHARACTER ( LEN = * ), INTENT( IN ) :: array_name
      INTEGER, ALLOCATABLE, DIMENSION( : , : ) :: ARRAY
 
 !  local variables
@@ -20157,8 +20245,8 @@
 !  successful exit
 
  200 CONTINUE
-     IF ( debug_extend ) WRITE( 6, "( 4( 1X, I0 ) )" ) old_length1,            &
-       new_length1, old_length2, new_length2
+     IF ( debug_extend ) WRITE( 6, "( A, 4( 1X, I0 ) )" )                      &
+       array_name, old_length1, new_length1, old_length2, new_length2
      status = 0
      RETURN
 
@@ -20172,7 +20260,7 @@
                                     used_length1, used_length2,                &
                                     new_length1, new_length2,                  &
                                     min_length1, min_length2, buffer,          &
-                                    status, alloc_status )
+                                    status, alloc_status, array_name )
 
 !  ---------------------------------------------------------------------
 !  extend a real array so that its length is increaed from old_length to
@@ -20193,6 +20281,7 @@
      INTEGER, INTENT( INOUT ) :: used_length1, used_length2
      INTEGER, INTENT( INOUT ) :: new_length1, new_length2
      INTEGER, INTENT( INOUT ) :: min_length1, min_length2
+     CHARACTER ( LEN = * ), INTENT( IN ) :: array_name
      REAL ( KIND = wp ), ALLOCATABLE, DIMENSION( : , : ) :: ARRAY
 
 !  local variables
@@ -20311,8 +20400,8 @@
 !  successful exit
 
  200 CONTINUE
-     IF ( debug_extend ) WRITE( 6, "( 4( 1X, I0 ) )" ) old_length1,            &
-       new_length1, old_length2, new_length2
+     IF ( debug_extend ) WRITE( 6, "( A, 4( 1X, I0 ) )" )                      &
+       array_name, old_length1, new_length1, old_length2, new_length2
      status = 0
      RETURN
 
@@ -20326,7 +20415,7 @@
                                          used_length1, used_length2,           &
                                          new_length1, new_length2,             &
                                          min_length1, min_length2, buffer,     &
-                                         status, alloc_status )
+                                         status, alloc_status, array_name )
 
 !  ----------------------------------------------------------------------------
 !  extend a character array so that its length is increaed from old_length
@@ -20347,6 +20436,7 @@
      INTEGER, INTENT( INOUT ) :: used_length1, used_length2
      INTEGER, INTENT( INOUT ) :: new_length1, new_length2
      INTEGER, INTENT( INOUT ) :: min_length1, min_length2
+     CHARACTER ( LEN = * ), INTENT( IN ) :: array_name
      CHARACTER ( LEN = * ), ALLOCATABLE, DIMENSION( : , : ) :: ARRAY
 
 !  local variables
@@ -20465,8 +20555,8 @@
 !  successful exit
 
  200 CONTINUE
-     IF ( debug_extend ) WRITE( 6, "( 4( 1X, I0 ) )" ) old_length1,            &
-       new_length1, old_length2, new_length2
+     IF ( debug_extend ) WRITE( 6, "( A, 4( 1X, I0 ) )" )                      &
+       array_name, old_length1, new_length1, old_length2, new_length2
      status = 0
      RETURN
 
@@ -20482,7 +20572,7 @@
                                        new_length1, new_length2, new_length3,  &
                                        min_length1, min_length2,               &
                                        min_length3, buffer,                    &
-                                       status, alloc_status )
+                                       status, alloc_status, array_name )
 
 !  -------------------------------------------------------------------------
 !  extend an integer array so that its length is increaed from old_length to
@@ -20503,6 +20593,7 @@
      INTEGER, INTENT( INOUT ) :: used_length1, used_length2, used_length3
      INTEGER, INTENT( INOUT ) :: new_length1, new_length2, new_length3
      INTEGER, INTENT( INOUT ) :: min_length1, min_length2, min_length3
+     CHARACTER ( LEN = * ), INTENT( IN ) :: array_name
      INTEGER, ALLOCATABLE, DIMENSION( : , : , : ) :: ARRAY
 
 !  local variables
@@ -20631,8 +20722,9 @@
 !  successful exit
 
  200 CONTINUE
-     IF ( debug_extend ) WRITE( 6, "( 6( 1X, I0 ) )" ) old_length1,            &
-       new_length1, old_length2, new_length2, old_length3, new_length3
+     IF ( debug_extend ) WRITE( 6, "( A, 6( 1X, I0 ) )" )                      &
+       array_name, old_length1, new_length1, old_length2, new_length2,         &
+       old_length3, new_length3
      status = 0
      RETURN
 
