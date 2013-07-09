@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Collect all symbolic links under the current directory and output a shell
 # script that restores them. This is useful on systems that do not support
 # true symbolic links, such as MSYS.
@@ -28,7 +28,7 @@ real_path () {
 # Probably won't work if names have spaces in them.
 # But then if you have spaces in your file names, you have other problems than
 # just restoring symbolic links...
-echo "#!/bin/sh"
+echo "#!/bin/bash"
 for symlink in `find . -type l`
 do
     #pointsto=`real_path $symlink`
