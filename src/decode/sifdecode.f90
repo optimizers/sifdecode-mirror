@@ -2253,9 +2253,9 @@
 
 !  ensure there is sufficient room for the names of slack variables
 
-          IF ( n + ng > len_vnames ) THEN
-            used_length = n ; min_length = n + ng
-            new_length = n + ng
+          IF ( nvar + ng > len_vnames ) THEN
+            used_length = nvar ; min_length = nvar + ng
+            new_length = nvar + ng
             CALL EXTEND_array( VNAMES, len_vnames, used_length, new_length,    &
                                min_length, buffer, status, alloc_status,       &
                                'VNAMES' )
@@ -2264,9 +2264,9 @@
             len_vnames = new_length
           END IF
 
-          IF ( n + ng > len_typev ) THEN
-            used_length = n ; min_length = n + ng
-            new_length = n + ng
+          IF ( nvar + ng > len_typev ) THEN
+            used_length = nvar ; min_length = nvar + ng
+            new_length = nvar + ng
             CALL EXTEND_array( TYPEV, len_typev, used_length, new_length,      &
                                min_length, buffer, status, alloc_status,       &
                                'TYPEV' )
@@ -9723,15 +9723,15 @@
               ' Although the manual may suggest otherwise,',                   &
               ' non-trivial',/,                                                &
               ' groups are not allowed for inequality constraints',/)
- 2460 FORMAT( ' ** Exit from MAKE_outsdif - constant name ', A8,               &
+ 2460 FORMAT( ' ** Exit from MAKE_outsdif - constant name ', A10,              &
               ' not recognised ' )
- 2470 FORMAT( ' ** Exit from MAKE_outsdif - bound name ', A8,                  &
+ 2470 FORMAT( ' ** Exit from MAKE_outsdif - bound name ', A10,                 &
               ' not recognised ' )
- 2480 FORMAT( ' ** Exit from MAKE_outsdif - range name ', A8,                  &
+ 2480 FORMAT( ' ** Exit from MAKE_outsdif - range name ', A10,                 &
               ' not recognised ' )
- 2490 FORMAT( ' ** Exit from MAKE_outsdif - start point name ', A8,            &
+ 2490 FORMAT( ' ** Exit from MAKE_outsdif - start point name ', A10,           &
               ' not recognised ' )
- 2500 FORMAT( ' ** Exit from MAKE_outsdif - obj. bound name ', A8,             &
+ 2500 FORMAT( ' ** Exit from MAKE_outsdif - obj. bound name ', A10,            &
               ' not recognised ' )
  3000 FORMAT( ' Group ', A10, ' removed as a redundant objective ' )
  3010 FORMAT( /, ' Objective function ', A10, ' is group number ', I8 )
