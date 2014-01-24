@@ -1,4 +1,4 @@
-C     ( Last modified on 22 Jan 2014 at 19:23:33 )
+C     ( Last modified on 14 Jan 2001 at 19:03:33 )
 C-----------------------------------------------------------------------------
 C
       PROGRAM SELECT
@@ -65,12 +65,11 @@ C    default directory for classification file
 C    names for output listing file
 C                  Addition by Kristjan Jonasson
       CHARACTER*72 FILES
-      CHARACTER*36 PBCLS
+      CHARACTER*28 PBCLS
       CHARACTER*8  TARGET( MAXTRG ), LIST(5)
       CHARACTER*1  CHOICE, CHAR, UPPER
       INTEGER      I, IM1, J, NVAR( MAXTRG ), NCON( MAXTRG ), L, K, NUM,
-     *             NMATCH, CONVERT, NBT,  NBI, LN, UN, LM, SIZE, UM, 
-     *             NBLK
+     *             NMATCH, CONVERT, NBT,  NBI, LN, UN, LM, SIZE, UM
       LOGICAL      REJECT, ANYFNV,  ANYFNC, MATCH
       INTRINSIC    MIN
 C
@@ -472,7 +471,7 @@ C
      1           CHOICE .EQ. '*' .OR. CHOICE .EQ. ' '
             IF ( NUM .NE. 0 ) ANYFNV = CHOICE .EQ. '*'
             IF ( CHOICE .EQ. ' ' .OR. ANYFNV ) GO TO 695
-            NVAR( I ) = CONVERT( LINE(1:9) )
+            NVAR( I ) = CONVERT( LINE(1:5) )
             IF ( I .GT. 1 ) THEN
               IM1 = I - 1
               DO 655 J = 1, IM1
@@ -520,7 +519,7 @@ C
           READ ( STDIN, '( A80 ) ', ERR = 802 ) LINE
           CHOICE = UPPER( LINE(1:1) )
           IF ( CHOICE .NE. ' ' ) THEN
-            LN = CONVERT( LINE(1:9) )
+            LN = CONVERT( LINE(1:5) )
             IF ( LN .LT. 0 .OR. LN. GT. 99999999 ) GO TO 802
           ENDIF
           GO TO 805
@@ -537,7 +536,7 @@ C
           READ ( STDIN, '( A80 ) ', ERR = 804 ) LINE
           CHOICE = UPPER( LINE(1:1) )
           IF ( CHOICE .NE. ' ' ) THEN
-            UN = CONVERT( LINE(1:9) )
+            UN = CONVERT( LINE(1:5) )
             IF ( UN .LT. 0 .OR. UN. GT. 99999999 .OR. LN. GT. UN )
      1         GO TO 804
           ENDIF
@@ -604,7 +603,7 @@ C
      1           CHOICE .EQ. '*' .OR. CHOICE .EQ. ' '
             IF ( NUM .NE. 0 ) ANYFNC = CHOICE .EQ. '*'
             IF ( CHOICE .EQ. ' ' .OR. ANYFNC ) GO TO 795
-            NCON(I) = CONVERT( LINE(1:9) )
+            NCON(I) = CONVERT( LINE(1:5) )
             IF ( I .GT. 1 ) THEN
               IM1 = I - 1
               DO 755 J = 1, IM1
@@ -652,7 +651,7 @@ C
           READ ( STDIN, '( A80 ) ', ERR = 902 ) LINE
           CHOICE = UPPER( LINE(1:1) )
           IF ( CHOICE .NE. ' ' ) THEN
-            LM = CONVERT( LINE(1:9) )
+            LM = CONVERT( LINE(1:5) )
             IF ( LM .LT. 0 .OR. LM. GT. 99999999 ) GO TO 902
           ENDIF
           GO TO 905
@@ -669,7 +668,7 @@ C
           READ ( STDIN, '( A80 ) ', ERR = 904 ) LINE
           CHOICE = UPPER( LINE(1:1) )
           IF ( CHOICE .NE. ' ' ) THEN
-            UM = CONVERT( LINE(1:9) )
+            UM = CONVERT( LINE(1:5) )
             IF ( UM .LT. 0 .OR. UM. GT. 99999999 .OR. LM. GT. UM )
      1          GO TO 904
           ENDIF
@@ -720,8 +719,8 @@ C
       NMATCH = 0
       L      = 0
  3000 CONTINUE
-      READ ( CLSDVC, '( A36 )', END = 3010 ) PBCLS
-      IF ( MATCH( PBCLS(10:36), TARGET, MAXTRG, ANYFNV, ANYFNC,
+      READ ( CLSDVC, '( A28 )', END = 3010 ) PBCLS
+      IF ( MATCH( PBCLS(10:28), TARGET, MAXTRG, ANYFNV, ANYFNC,
      1             NVAR, NCON, LN, UN, LM, UM ) ) THEN
         NMATCH = NMATCH + 1
         L = L + 1
@@ -751,19 +750,18 @@ C
         SIZE = LEN( FILES )
         OPEN( UNIT = FLSDVC, FILE = FILES, STATUS = 'UNKNOWN' )
  3020   CONTINUE
-        READ ( CLSDVC, '( A36 )', END = 3050 ) PBCLS
-        IF ( MATCH( PBCLS(10:36), TARGET, MAXTRG, ANYFNV, ANYFNC,
+        READ ( CLSDVC, '( A28 )', END = 3050 ) PBCLS
+        IF ( MATCH( PBCLS(10:28), TARGET, MAXTRG, ANYFNV, ANYFNC,
      1               NVAR, NCON, LN, UN, LM, UM ) ) THEN
           NBLK = 8
-          DO 3030 NBLK = 8, 2, -1
+          DO 3030 NLBK = 8, 2, -1
             IF ( PBCLS(NBLK:NBLK) .NE. ' ' ) GO TO 3040
  3030     CONTINUE
  3040     CONTINUE
           WRITE ( FLSDVC, '(A)' ) PBCLS(1:NBLK)
         ENDIF
         GO TO 3020
- 3050   CONTINUE
-        CLOSE ( FLSDVC )
+ 3050   CLOSE ( FLSDVC )
         CLOSE ( CLSDVC )
       ENDIF
       WRITE ( STDOUT, 7000 )
@@ -778,19 +776,19 @@ C  Non excutable statements
 C
  1000 FORMAT( /'      *************************************************'
      1        /'      *                                               *'
-     1        /'      *         Constrained and Unconstrained         *'
-     1        /'      *              Testing Environment              *'
+     1        /'      *         CONSTRAINED AND UNCONSTRAINED         *'
+     1        /'      *              TESTING ENVIRONMENT              *'
      1        /'      *                                               *'
-     1        /'      *                   ( CUTEst )                  *'
+     1        /'      *                   ( CUTE )                    *'
      1        /'      *                                               *'
-     1        /'      *         interactive problem selection         *'
+     1        /'      *         INTERACTIVE PROBLEM SELECTION         *'
      1        /'      *                                               *'
-     1        /'      *          CGT/GOR productions 1992,2013        *'
+     1        /'      *                CGT PRODUCTIONS                *'
      1        /'      *                                               *'
      1        /'      *************************************************'
      1        / )
- 1101 FORMAT( '   *** THIS SELECTION HAS ALREADY BEEN MADE.  Please ',
-     1             'choose again.'
+ 1101 FORMAT( '   *** THIS SELECTION IS REPETITION.  Please choose ',
+     1             'again.'
      1        / )
  1201 FORMAT( '   *** YOU USED MORE THAN 32 CHARACTERS.  Please choose',
      1             ' again.'
@@ -802,7 +800,7 @@ C
  4957 FORMAT( /'   Do you wish to change this [<CR> = N] ?',
      1             ' (N/Y)')
  4955 FORMAT(  '   Input the filename you want (up to 32 characters): ')
- 5000 FORMAT( /'   CHOOSE A PROBLEM CHARACTERISTIC THAT YOU WISH',
+ 5000 FORMAT( /'   CHOOSE A PROBLEM CHARACTERISTIC THAT YOU WANT',
      1         ' TO SPECIFY :'
      1        /'   ---------------------------------------------',
      1         '-------------' )
@@ -837,13 +835,13 @@ C
  5011 FORMAT(  '     Number of variables             : any fixed number
      1               ')
  5012 FORMAT(  '     Number of variables             : ',
-     1               5 ( I9, 1X ) )
+     1               10 ( I5, 1X ) )
  5013 FORMAT(  '     Number of constraints           : v' )
  5014 FORMAT(  '     Number of constraints           : *' )
  5015 FORMAT(  '     Number of constraints           : any fixed number
      1               ')
  5016 FORMAT(  '     Number of constraints           : ',
-     1               5 ( I9, 1X ) )
+     1               10 ( I5, 1X ) )
  1002 FORMAT( /'   OBJECTIVE FUNCTION TYPE :'
      1        /'   -------------------------' )
  1103 FORMAT( /'     C   : Constant                L : Linear'
@@ -987,7 +985,7 @@ C
  2029 FORMAT( /'   You have specified any number of variables.' )
  2010 FORMAT( /'   You have specified a number of variables',
      1         ' in the set: ',
-     1        /'       ', 5( I10, 1X ) )
+     1        /'       ', 10( I5, 1X ) )
  2020 FORMAT( /'   You have specified any fixed number of variables.' )
  2110 FORMAT( /'   *** Please choose a number of variables.' )
  2011 FORMAT( /'   You have specified a fixed number of constraints.' )
@@ -995,10 +993,10 @@ C
  2031 FORMAT( /'   You have specified any number of constraints.' )
  2012 FORMAT( /'   You have specified a number of constraints',
      1         ' in the set: ',
-     1        /'       ', 5( I10, 1X ) )
+     1        /'       ', 10( I5, 1X ) )
  2022 FORMAT( /'   You have specified any fixed number of constraints.')
  2120 FORMAT( /'   *** Please choose a number of constraints.' )
- 4000 FORMAT( /'   ', I0, ' Problem(s) match(es) the specification.' / )
+ 4000 FORMAT( /'   ', I5, ' Problem(s) match(es) the specification.' / )
  4001 FORMAT( /'   MATCHING PROBLEMS :'
      1        /'   -------------------' / )
  4002 FORMAT(  '     ', 5( A8, 3X ) )
@@ -1015,9 +1013,9 @@ C
      1        /' '
      1        /'   Your choice : ' )
  4007 FORMAT( /'   You have specified a number of variables in [ ',
-     1        I0,', ',I0,' ]' )
+     1        I5,', ',I5,' ]' )
  4008 FORMAT(  '     Number of variables             : in [ ',
-     1        I0,', ',I0,' ]' )
+     1        I5,', ',I5,' ]' )
  4009 FORMAT( /'   You have specified an interval for the number of',
      1         ' variables.' )
  6003 FORMAT( /'   LOWER BOUND ON THE NUMBER OF CONSTRAINTS :'
@@ -1033,9 +1031,9 @@ C
      1        /' '
      1        /'   Your choice : ' )
  6007 FORMAT( /'   You have specified a number of constraints in [ ',
-     1        I0,', ',I0,' ]' )
+     1        I5,', ',I5,' ]' )
  6008 FORMAT(  '     Number of constraints           : in [ ',
-     1        I0,', ',I0,' ]' )
+     1        I5,', ',I5,' ]' )
  6009 FORMAT( /'   You have specified an interval for the number of',
      1         ' constraints.' )
 C                            Added by Kristjan Jonasson.
@@ -1156,11 +1154,10 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      LOGICAL      ANYFNV, ANYFNC
-      INTEGER      MAXTRG, LN, UN, LM, UM
-      CHARACTER*27 C
-      INTEGER      NV( MAXTRG ), NC( MAXTRG )
       CHARACTER*8  T( MAXTRG )
+      CHARACTER*19 C
+      LOGICAL      ANYFNV, ANYFNC
+      INTEGER      NV( MAXTRG ), NC( MAXTRG ), MAXTRG, LN, UN, LM, UM
 C
 C  Other variables
 C
@@ -1230,12 +1227,12 @@ C
       IF ( CH .EQ. '*' ) THEN
         MATCH = .TRUE.
       ELSE IF ( CH .EQ. 'V' ) THEN
-        MATCH = C(17:17) .EQ. 'V'
+        MATCH = C(13:13) .EQ. 'V'
       ELSE IF ( CH .EQ. 'I' ) THEN
 C    interval.  A variable number of variables is no longer considered to
 C    match a number in an interval.
-        IF ( C(17:17) .NE. 'V' ) THEN
-          I = CONVERT( C(9:17) )
+        IF ( C(13:13) .NE. 'V' ) THEN
+          I = CONVERT( C(9:13) )
           MATCH = I. GE. LN .AND. I .LE. UN
         ENDIF
       ELSE
@@ -1244,8 +1241,8 @@ C    match a number in an interval.
         ELSE
 C    A variable number of variables is no longer considered to match a fixed
 C    number.
-          IF ( C(17:17) .NE. 'V' ) THEN
-            J = CONVERT( C(9:17) )
+          IF ( C(13:13) .NE. 'V' ) THEN
+            J = CONVERT( C(9:13) )
             DO 90 I = 1, MAXTRG
               IF ( NV(I) .LT. 0 ) GO TO 90
               MATCH = NV(I) .EQ. J
@@ -1264,12 +1261,12 @@ C
       IF ( CH .EQ. '*' ) THEN
         MATCH = .TRUE.
       ELSE IF ( CH .EQ. 'V' ) THEN
-        MATCH = C(27:27) .EQ. 'V'
+        MATCH = C(19:19) .EQ. 'V'
       ELSE IF ( CH .EQ. 'I' ) THEN
 C    interval.  A variable number of constraints is no longer considered to
 C    match a number in an interval.
-        IF ( C(27:27) .NE. 'V' ) THEN
-          I = CONVERT( C(19:27) )
+        IF ( C(19:19) .NE. 'V' ) THEN
+          I = CONVERT( C(15:19) )
           MATCH = I. GE. LM .AND. I .LE. UM
         ENDIF
       ELSE
@@ -1278,8 +1275,8 @@ C    match a number in an interval.
         ELSE
 C    A variable number of constraints is no longer considered to match a fixed
 C    number.
-          IF ( C(27:27) .NE. 'V' ) THEN
-            J = CONVERT( C(19:27) )
+          IF ( C(19:19) .NE. 'V' ) THEN
+            J = CONVERT( C(15:19) )
             DO 110 I = 1, MAXTRG
               IF ( NC(I) .LT. 0 ) GO TO 110
               MATCH = NC(I) .EQ. J
@@ -1303,51 +1300,45 @@ C  in the first 5 characters of the string LINE into a proper integer.
 C  -1 is returned in case of error.
 C
 C  Programming: Ph. Toint, Dec 1991, for CGT Productions.
-C  adapted Nick Gould, Jan 2014
 C
 C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      CHARACTER ( len = * )  LINE
+      CHARACTER*5    LINE
 C
 C  Other variables
 C
-      CHARACTER ( len = LEN( line ) )  adjust
-      INTEGER len_line
+      INTEGER L
 C
-C  Remove leading blanks and find the length of the integer
+C  Remove trailing blanks
 C
-      adjust = ADJUSTL( LINE )
-      len_line = LEN( TRIM( adjust ) )
+      DO 10 L= 5, 1, -1
+        IF ( LINE(L:L) .NE. ' ' ) GO TO 20
+ 10   CONTINUE
+      GO TO 30
 C
 C  Read the integer
 C
-      SELECT CASE ( len_line )
-      CASE( 1 )
-        READ ( adjust, '( I1 )' ) CONVERT
-      CASE( 2 )
-        READ ( adjust, '( I2 )' ) CONVERT
-      CASE( 3 )
-        READ ( adjust, '( I3 )' ) CONVERT
-      CASE( 4 )
-        READ ( adjust, '( I4 )' ) CONVERT
-      CASE( 5 )
-        READ ( adjust, '( I5 )' ) CONVERT
-      CASE( 6 )
-        READ ( adjust, '( I6 )' ) CONVERT
-      CASE( 7 )
-        READ ( adjust, '( I7 )' ) CONVERT
-      CASE( 8 )
-        READ ( adjust, '( I8 )' ) CONVERT
-      CASE( 9 )
-        READ ( adjust, '( I9 )' ) CONVERT
-      CASE( 10 )
-        READ ( adjust, '( I10 )' ) CONVERT
-      CASE DEFAULT
-        CONVERT = - 1
-      END SELECT
-      RETURN 
+ 20   CONTINUE
+      IF ( L .EQ. 1 ) THEN
+        READ ( LINE(1:1), '( I1 )', ERR = 30 ) CONVERT
+      ELSE IF ( L .EQ. 2 ) THEN
+        READ ( LINE(1:2), '( I2 )', ERR = 30 ) CONVERT
+      ELSE IF ( L .EQ. 3 ) THEN
+        READ ( LINE(1:3), '( I3 )', ERR = 30 ) CONVERT
+      ELSE IF ( L .EQ. 4 ) THEN
+        READ ( LINE(1:4), '( I4 )', ERR = 30 ) CONVERT
+      ELSE
+        READ ( LINE(1:5), '( I5 )', ERR = 30 ) CONVERT
+      ENDIF
+      RETURN
+C
+C  Error
+C
+ 30   CONTINUE
+      CONVERT = -1
+      RETURN
       END
 C
 C-----------------------------------------------------------------------------
@@ -1365,8 +1356,8 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      INTEGER     I, MX
       CHARACTER*8 T( MX )
+      INTEGER     I, MX
 C
 C  Other variables
 C
@@ -1395,8 +1386,7 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      INTEGER MX
-      INTEGER N( MX )
+      INTEGER N( MX ), MX
 C
 C  Other variables
 C

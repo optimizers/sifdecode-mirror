@@ -1,4 +1,4 @@
-C     ( Last modified on 14 Jan 2001 at 19:03:33 )
+C     ( Last modified on 22 Jan 2014 at 19:23:33 )
 C-----------------------------------------------------------------------------
 C
       PROGRAM SELECT
@@ -65,11 +65,12 @@ C    default directory for classification file
 C    names for output listing file
 C                  Addition by Kristjan Jonasson
       CHARACTER*72 FILES
-      CHARACTER*28 PBCLS
+      CHARACTER*36 PBCLS
       CHARACTER*8  TARGET( MAXTRG ), LIST(5)
       CHARACTER*1  CHOICE, CHAR, UPPER
       INTEGER      I, IM1, J, NVAR( MAXTRG ), NCON( MAXTRG ), L, K, NUM,
-     *             NMATCH, CONVERT, NBT,  NBI, LN, UN, LM, SIZE, UM
+     *             NMATCH, CONVERT, NBT,  NBI, LN, UN, LM, SIZE, UM, 
+     *             NBLK
       LOGICAL      REJECT, ANYFNV,  ANYFNC, MATCH
       INTRINSIC    MIN
 C
@@ -719,8 +720,8 @@ C
       NMATCH = 0
       L      = 0
  3000 CONTINUE
-      READ ( CLSDVC, '( A28 )', END = 3010 ) PBCLS
-      IF ( MATCH( PBCLS(10:28), TARGET, MAXTRG, ANYFNV, ANYFNC,
+      READ ( CLSDVC, '( A36 )', END = 3010 ) PBCLS
+      IF ( MATCH( PBCLS(10:36), TARGET, MAXTRG, ANYFNV, ANYFNC,
      1             NVAR, NCON, LN, UN, LM, UM ) ) THEN
         NMATCH = NMATCH + 1
         L = L + 1
@@ -750,18 +751,19 @@ C
         SIZE = LEN( FILES )
         OPEN( UNIT = FLSDVC, FILE = FILES, STATUS = 'UNKNOWN' )
  3020   CONTINUE
-        READ ( CLSDVC, '( A28 )', END = 3050 ) PBCLS
-        IF ( MATCH( PBCLS(10:28), TARGET, MAXTRG, ANYFNV, ANYFNC,
+        READ ( CLSDVC, '( A36 )', END = 3050 ) PBCLS
+        IF ( MATCH( PBCLS(10:36), TARGET, MAXTRG, ANYFNV, ANYFNC,
      1               NVAR, NCON, LN, UN, LM, UM ) ) THEN
           NBLK = 8
-          DO 3030 NLBK = 8, 2, -1
+          DO 3030 NBLK = 8, 2, -1
             IF ( PBCLS(NBLK:NBLK) .NE. ' ' ) GO TO 3040
  3030     CONTINUE
  3040     CONTINUE
           WRITE ( FLSDVC, '(A)' ) PBCLS(1:NBLK)
         ENDIF
         GO TO 3020
- 3050   CLOSE ( FLSDVC )
+ 3050   CONTINUE
+        CLOSE ( FLSDVC )
         CLOSE ( CLSDVC )
       ENDIF
       WRITE ( STDOUT, 7000 )
@@ -776,14 +778,14 @@ C  Non excutable statements
 C
  1000 FORMAT( /'      *************************************************'
      1        /'      *                                               *'
-     1        /'      *         CONSTRAINED AND UNCONSTRAINED         *'
-     1        /'      *              TESTING ENVIRONMENT              *'
+     1        /'      *         Constrained and Unconstrained         *'
+     1        /'      *              Testing Environment              *'
      1        /'      *                                               *'
-     1        /'      *                   ( CUTE )                    *'
+     1        /'      *                   ( CUTEst )                  *'
      1        /'      *                                               *'
-     1        /'      *         INTERACTIVE PROBLEM SELECTION         *'
+     1        /'      *         interactive problem selection         *'
      1        /'      *                                               *'
-     1        /'      *                CGT PRODUCTIONS                *'
+     1        /'      *          CGT/GOR productions 1992,2013        *'
      1        /'      *                                               *'
      1        /'      *************************************************'
      1        / )
@@ -1154,10 +1156,11 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      CHARACTER*8  T( MAXTRG )
-      CHARACTER*19 C
       LOGICAL      ANYFNV, ANYFNC
-      INTEGER      NV( MAXTRG ), NC( MAXTRG ), MAXTRG, LN, UN, LM, UM
+      INTEGER      MAXTRG, LN, UN, LM, UM
+      CHARACTER*27 C
+      INTEGER      NV( MAXTRG ), NC( MAXTRG )
+      CHARACTER*8  T( MAXTRG )
 C
 C  Other variables
 C
@@ -1231,8 +1234,8 @@ C
       ELSE IF ( CH .EQ. 'I' ) THEN
 C    interval.  A variable number of variables is no longer considered to
 C    match a number in an interval.
-        IF ( C(13:13) .NE. 'V' ) THEN
-          I = CONVERT( C(9:13) )
+        IF ( C(17:17) .NE. 'V' ) THEN
+          I = CONVERT( C(9:17) )
           MATCH = I. GE. LN .AND. I .LE. UN
         ENDIF
       ELSE
@@ -1241,8 +1244,8 @@ C    match a number in an interval.
         ELSE
 C    A variable number of variables is no longer considered to match a fixed
 C    number.
-          IF ( C(13:13) .NE. 'V' ) THEN
-            J = CONVERT( C(9:13) )
+          IF ( C(17:17) .NE. 'V' ) THEN
+            J = CONVERT( C(9:17) )
             DO 90 I = 1, MAXTRG
               IF ( NV(I) .LT. 0 ) GO TO 90
               MATCH = NV(I) .EQ. J
@@ -1261,12 +1264,12 @@ C
       IF ( CH .EQ. '*' ) THEN
         MATCH = .TRUE.
       ELSE IF ( CH .EQ. 'V' ) THEN
-        MATCH = C(19:19) .EQ. 'V'
+        MATCH = C(27:27) .EQ. 'V'
       ELSE IF ( CH .EQ. 'I' ) THEN
 C    interval.  A variable number of constraints is no longer considered to
 C    match a number in an interval.
         IF ( C(19:19) .NE. 'V' ) THEN
-          I = CONVERT( C(15:19) )
+          I = CONVERT( C(19:27) )
           MATCH = I. GE. LM .AND. I .LE. UM
         ENDIF
       ELSE
@@ -1275,8 +1278,8 @@ C    match a number in an interval.
         ELSE
 C    A variable number of constraints is no longer considered to match a fixed
 C    number.
-          IF ( C(19:19) .NE. 'V' ) THEN
-            J = CONVERT( C(15:19) )
+          IF ( C(27:27) .NE. 'V' ) THEN
+            J = CONVERT( C(19:27) )
             DO 110 I = 1, MAXTRG
               IF ( NC(I) .LT. 0 ) GO TO 110
               MATCH = NC(I) .EQ. J
@@ -1356,8 +1359,8 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      CHARACTER*8 T( MX )
       INTEGER     I, MX
+      CHARACTER*8 T( MX )
 C
 C  Other variables
 C
@@ -1386,7 +1389,8 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      INTEGER N( MX ), MX
+      INTEGER MX
+      INTEGER N( MX )
 C
 C  Other variables
 C
