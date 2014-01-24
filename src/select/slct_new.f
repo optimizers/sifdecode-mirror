@@ -1,4 +1,4 @@
-C     ( Last modified on 13 Aug 2005 at 23:44:33 )
+C     ( Last modified on 22 Jan 2014 at 18:00:00 )
 C-----------------------------------------------------------------------------
 C
       PROGRAM SELECT
@@ -63,7 +63,6 @@ C
 C
 C  Variable definitions
 C
-      CHARACTER*80  LINE
 C    names for classification file
       CHARACTER*72  FILEN
 C    default directory for classification file
@@ -72,13 +71,15 @@ C    names for output listing file
 C                  Addition by Kristjan Jonasson
       CHARACTER*72  FILES
       CHARACTER*200 PBCLS
-      CHARACTER*18  TARGET( MAXTRG )
+      CHARACTER ( len = CEQG ) TARGET( MAXTRG )
       CHARACTER*8   LIST(5)
       CHARACTER*1   CHOICE, CHAR, UPPER
-      INTEGER       I, IM1, J, L, K, NUM, NMATCH, CONVERT, NBT,  NBI, 
-     *              SIZE, LOW(VARN:CEQG), UPP(VARN:CEQG)
+      INTEGER       I, IM1, J, L, K, NUM, NMATCH, NBT,  NBI
+C     INTEGER       SIZE, LOW(VARN:CEQG), UPP(VARN:CEQG)
+      INTEGER       SIZE, LOW(1:CEQG), UPP(1:CEQG)
       INTEGER       CHOSEN( MAXTRG, VARN:CEQG )
-      LOGICAL       REJECT, ANYFIX(VARN:CEQG), MATCH
+      LOGICAL       REJECT, MATCH
+      LOGICAL       ANYFIX(1:CEQG)
       INTRINSIC     MIN
 C
 C  Banner
@@ -612,14 +613,13 @@ C
         CALL GETDIM( VFR, TARGET(1)(VFR:VFR), ANYFIX(VFR), 
      1               CHOSEN(1,VFR), LOW(VFR), UPP(VFR), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'free variables+' ) 
-   
+     1               'free variables+                   ' ) 
       ELSE IF ( CHAR .EQ. 'A' ) THEN
 
         CALL GETDIM( V1S, TARGET(1)(V1S:V1S), ANYFIX(V1S), 
      1               CHOSEN(1,V1S), LOW(V1S), UPP(V1S), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'variables bounded below or above+' ) 
+     1               'variables bounded below or above+ ' ) 
    
       ELSE IF ( CHAR .EQ. 'B' ) THEN
         CALL GETDIM( V2S, TARGET(1)(V2S:V2S), ANYFIX(V2S), 
@@ -632,14 +632,14 @@ C
         CALL GETDIM( VFX, TARGET(1)(VFX:VFX), ANYFIX(VFX), 
      1               CHOSEN(1,VFX), LOW(VFX), UPP(VFX), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'fixed variables+' ) 
+     1               'fixed variables+                  ' ) 
    
       ELSE IF ( CHAR .EQ. 'N' ) THEN
 
         CALL GETDIM( VARN, TARGET(1)(VARN:VARN), ANYFIX(VARN), 
      1               CHOSEN(1,VARN), LOW(VARN), UPP(VARN), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'variables+' ) 
+     1               'variables+                        ' ) 
 C
 C  Get the number of constraints
 C
@@ -647,43 +647,43 @@ C
         CALL GETDIM( C1SL, TARGET(1)(C1SL:C1SL), ANYFIX(C1SL), 
      1               CHOSEN(1,C1SL), LOW(C1SL), UPP(C1SL), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'one-sided linear constraints+' ) 
+     1               'one-sided linear constraints+     ' ) 
 
       ELSE IF ( CHAR .EQ. 'Q' ) THEN
         CALL GETDIM( C2SL, TARGET(1)(C2SL:C2SL), ANYFIX(C2SL), 
      1               CHOSEN(1,C2SL), LOW(C2SL), UPP(C2SL), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'two-sided linear constraints+' ) 
+     1               'two-sided linear constraints+     ' ) 
 
       ELSE IF ( CHAR .EQ. 'E' ) THEN
         CALL GETDIM( CEQL, TARGET(1)(CEQL:CEQL), ANYFIX(CEQL), 
      1               CHOSEN(1,CEQL), LOW(CEQL), UPP(CEQL), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'linear equality constraints+' ) 
+     1               'linear equality constraints+      ' ) 
 
       ELSE IF ( CHAR .EQ. 'V' ) THEN
         CALL GETDIM( C1SG, TARGET(1)(C1SG:C1SG), ANYFIX(C1SG), 
      1               CHOSEN(1,C1SG), LOW(C1SG), UPP(C1SG), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'one-sided general constraints+' )
+     1               'one-sided general constraints+    ' )
 
       ELSE IF ( CHAR .EQ. 'W' ) THEN
         CALL GETDIM( C2SG, TARGET(1)(C2SG:C2SG), ANYFIX(C2SG), 
      1               CHOSEN(1,C2SG), LOW(C2SG), UPP(C2SG), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'two-sided general constraints+' ) 
+     1               'two-sided general constraints+    ' ) 
 
       ELSE IF ( CHAR .EQ. 'G' ) THEN
         CALL GETDIM( CEQG, TARGET(1)(CEQG:CEQG), ANYFIX(CEQG), 
      1               CHOSEN(1,CEQG), LOW(CEQG), UPP(CEQG), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'general equality constraints+' ) 
+     1               'general equality constraints+     ' ) 
 
       ELSE IF ( CHAR .EQ. 'M' ) THEN
         CALL GETDIM( VARM, TARGET(1)(VARM:VARM), ANYFIX(VARM), 
      1               CHOSEN(1,VARM), LOW(VARM), UPP(VARM), MAXTRG, 
      1               STDIN, STDOUT, UMAX, 
-     1               'constraints+' ) 
+     1               'constraints+                      ' ) 
 C
 C  All characteristics have been recorded. Quit
 C
@@ -779,18 +779,19 @@ C  Non excutable statements
 C
  1000 FORMAT( /'      *************************************************'
      1        /'      *                                               *'
-     1        /'      *         CONSTRAINED AND UNCONSTRAINED         *'
-     1        /'      *              TESTING ENVIRONMENT              *'
+     1        /'      *         Constrained and Unconstrained         *'
+     1        /'      *              Testing Environment              *'
+     1        /'      *               using safe threads              *'
      1        /'      *                                               *'
-     1        /'      *                   ( CUTE )                    *'
+     1        /'      *                  ( CUTEst )                   *'
      1        /'      *                                               *'
-     1        /'      *         INTERACTIVE PROBLEM SELECTION         *'
+     1        /'      *         interactive problem selection         *'
      1        /'      *                                               *'
-     1        /'      *                CGT PRODUCTIONS                *'
+     1        /'      *          CGT/GOR productions 1992,2014        *'
      1        /'      *                                               *'
      1        /'      *************************************************'
      1        / )
- 1101 FORMAT( '   *** THIS SELECTION IS REPETITION.  Please choose ',
+ 1101 FORMAT( '   *** THIS SELECTION IS A REPETITION.  Please choose ',
      1             'again.'
      1        / )
  1201 FORMAT( '   *** YOU USED MORE THAN 32 CHARACTERS.  Please choose',
@@ -1024,17 +1025,17 @@ C
      1              LOW, UPP
       LOGICAL       ANYIDX
       CHARACTER*1   T
-      CHARACTER*30  THING
+      CHARACTER*34  THING
 C
 C  Other variables
 C
       INTEGER       NUM, I, J, IM1, K, LTH, CONVERT
       LOGICAL       REJECT
       CHARACTER*1   CHOICE, UPPER
-      CHARACTER*30  UTHING, UNDER
+      CHARACTER*34  UTHING, UNDER
       CHARACTER*80  LINE
 C
-      DO 100 I = 1, 30
+      DO 100 I = 1, 34
         IF ( THING(I:I) .NE. '+' ) THEN
            LTH = I
            UTHING(I:I) = UPPER( THING(I:I) )
@@ -1271,7 +1272,7 @@ C
 C
 C  Classification constants
 C
-      INTEGER      OBJ, CON, REG, DER, INTRST, INTVAR, VARN, VARM
+      INTEGER      OBJ, CON, REG, DER, INTRST, INTVAR, VARN
       PARAMETER  ( OBJ    = 1, CON  = 2, REG  = 3, DER = 4, INTRST = 5,
      1             INTVAR = 6, VARN = 7 )
 C
@@ -1354,9 +1355,18 @@ C  Programming: Ph. Toint, Dec 1991, for CGT Productions. Revised Aug 2005.
 C
 C-----------------------------------------------------------------------------
 C
+      INTEGER        OBJ, CON, REG, DER, INTR, INTV, VARN, VARM,  
+     *               VFR, V1S, V2S, VFX, C1SL, C2SL, CEQL, C1SG, C2SG,
+     *               CEQG
+      PARAMETER    ( OBJ  =  1, CON  =  2, REG  =  3, DER  = 4, 
+     *               INTR =  5, INTV =  6, VARN =  7, VARM = 8,
+     *               VFR  =  9, V1S  = 10, V2S  = 11, VFX  = 12, 
+     *               C1SL = 13, C2SL = 14, CEQL = 15, C1SG = 16, 
+     *               C2SG = 17, CEQG = 18 )
+C
 C  Arguments
 C
-      CHARACTER*8  T( MAXTRG )
+      CHARACTER ( len = CEQG ) T( MAXTRG )
       CHARACTER*27 C
       LOGICAL      ANYFIX( 18 )
       INTEGER      CHOSEN( MAXTRG, 18 ), MAXTRG, LOW( 18 ), UPP( 18 )
@@ -1367,21 +1377,12 @@ C
       CHARACTER*1    OBJTYP,  CONTYP, REGTYP, DERLVL, INTRST, INTVAR
       INTEGER        PBN, PBM, PBNFX,  PBN1S,  PBN2S, PBNFR, PBM1SL, 
      1               PBM2SL, PBMEQL,  PBM1SG, PBM2SG, PBMEQG
-      INTEGER        I, J, CONVERT, LSTN, FRSTM, LASTM
+      INTEGER        I
       LOGICAL        ERROR, MATCHD
       CHARACTER*1    CH
       INTEGER        WRONG, UNKNWN, VARIAB
       PARAMETER    ( WRONG = -10, UNKNWN = -5, VARIAB = -1 )
 
-      INTEGER        OBJ, CON, REG, DER, INTR, INTV, VARN, VARM,  
-     *               VFR, V1S, V2S, VFX, C1SL, C2SL, CEQL, C1SG, C2SG,
-     *               CEQG
-      PARAMETER    ( OBJ  =  1, CON  =  2, REG  =  3, DER  = 4, 
-     *               INTR =  5, INTV =  6, VARN =  7, VARM = 8,
-     *               VFR  =  9, V1S  = 10, V2S  = 11, VFX  = 12, 
-     *               C1SL = 13, C2SL = 14, CEQL = 15, C1SG = 16, 
-     *               C2SG = 17, CEQG = 18 )
-C
       MATCH = .FALSE.
 C
 C  Parse the current classification record.
@@ -1524,7 +1525,8 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      CHARACTER*200  CLASSF
+C     CHARACTER*200  CLASSF
+      CHARACTER*27   CLASSF
       CHARACTER*8    PBNAME
       CHARACTER*1    OBJTYP,  CONTYP, REGTYP, DERLVL, INTRST, INTVAR
       INTEGER        PBN, PBM, PBNFX,  PBN1S,  PBN2S, PBNFR, PBM1SL, 
@@ -1536,7 +1538,7 @@ C
       INTEGER        IOBJ, IINT, IN, IM, INFX, IN1S, IN2S, INFR, IM1SL,
      1               IM2SL, IMEQL, IM1SG, IM2SG, IMEQG, JOBJ, JINT, JN,
      1               JM, JNFX, JN1S, JN2S, JNFR, JM1SL, JM2SL, JMEQL, 
-     1               JM1SG, JM2SG, JMEQG, J, L, MAXL
+     1               JM1SG, JM2SG, JMEQG, L, MAXL
       INTEGER        CONVERT
       PARAMETER    ( MAXL = 200 )
       INTEGER        WRONG, UNKNWN, VARIAB
@@ -1733,13 +1735,15 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      CHARACTER*200 STRING
+C     CHARACTER*200 STRING
+      CHARACTER*27  STRING
       INTEGER       IPOS, ISTART, ISTOP
 C
 C  Other variables
 C
       INTEGER       J, MAXL
-      PARAMETER   ( MAXL = 200 )
+C     PARAMETER   ( MAXL = 200 )
+      PARAMETER   ( MAXL = 27 )
 C
 C  Remove initial blanks
 C
@@ -1860,7 +1864,7 @@ C-----------------------------------------------------------------------------
 C
 C  Arguments
 C
-      CHARACTER*18 T( MX )
+      CHARACTER ( len = 18 ) T( MX )
       INTEGER      I, MX
 C
 C  Other variables

@@ -95,7 +95,7 @@ if [[ -z "$PROBDIR" ]]; then
   if [[ -z "$MASTSIF" ]]; then
     error ' no problem directory specified and environment variable MASTSIF
  is unset.
-  Either specificy problem directory with -M option or set variable MASTSIF.
+  Either specificy problem directory with -D option or set variable MASTSIF.
  and re-run.'
     exit 3
   else
