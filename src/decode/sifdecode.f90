@@ -282,7 +282,7 @@
       INTEGER :: len_renames, len_innames, len_lonames, len_minames
       REAL ( KIND = wp ) :: blo, bup
       LOGICAL :: debug, gotlin
-      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: pname
       CHARACTER ( LEN = 10 ) :: nameof, namerh, namera, namebn, namest, nameob
       CHARACTER ( LEN = 24 ) :: bad_alloc
       CHARACTER ( LEN = 72 ) :: lineex
@@ -600,7 +600,7 @@
                           VSCALE, pname, VNAMES, GNAMES, LNAMES, ETYPES,       &
                           EVNAMES, GANAMES, EPNAMES, GPNAMES, GTYPES,          &
                           out, print_level )
-      IF ( noname ) pname = '        '
+      IF ( noname ) pname = '          '
 
 !  deallocate workspace
 
@@ -946,7 +946,7 @@
  2050 FORMAT( /, ' Single precision version will be formed', / )
  2060 FORMAT( /, ' Double precision version will be formed', / )
  2070 FORMAT( /, '  nconst  nrange    nbnd  nstart    nobj  nobbnd ', /, 6I8, /)
- 2080 FORMAT( A8, 12I8 )
+ 2080 FORMAT( A10, 12I8 )
  2090 FORMAT( /, ' Return from MAKE_elfun_ad, status = ', I0 )
  2100 FORMAT( ' The objective function uses ', I0, ' linear group', A )
  2110 FORMAT( ' The objective function uses ', I0, ' nonlinear group', A )
@@ -997,7 +997,7 @@
       INTEGER :: len1_blu, len1_vstart, len1_cstart, len_iinames, len_rinames
       INTEGER :: nevnames, nivnames, nepnames, ngpnames
       LOGICAL :: single, debug
-      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: pname
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: ELV, INV, ELP
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: EV_ptr, TYPEE, EP_ptr, TYPEV
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: GTYPESP_ptr, ELVAR, IIVAL, IWK
@@ -1828,7 +1828,7 @@
 
           ELSE
             defnam = .TRUE.
-            pname = NULINE( 15: 22 )
+            pname = NULINE( 15: 24 )
             GO TO 100
           END IF
         END IF
@@ -8955,7 +8955,7 @@
       INTEGER :: len1_blu, len1_vstart, len1_cstart
       INTEGER :: iauto
       LOGICAL :: single, debug
-      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: pname
       CHARACTER ( LEN = 10 ) :: nameob, namerh, namera, namebn, namest, nameof
       INTEGER :: ELING_ptr( ng + 1 ), ELVAR( nelvar )
       INTEGER :: EV_ptr( nelnum + 1 )
@@ -9738,7 +9738,7 @@
  3020 FORMAT( /, 3('  Row   Col    Value  '),                                  &
               /, 3('  ---   ---    -----  '),                                  &
               /, ( 3( 2I5, 1P, D12.4 ) ) )
- 3100 FORMAT( i2, A8, i2 )
+ 3100 FORMAT( I2, A10, I2 )
  3110 FORMAT( ( 10I8 ) )
  3120 FORMAT( ( 1P, 4D16.8 ) )
  3121 FORMAT( ( 1P, 4E16.8 ) )
@@ -9777,7 +9777,7 @@
       INTEGER :: ELING_ptr( ng + 1 ), GTYPE( ng ), TYPEE( nelnum )
       INTEGER :: ELP( neltype + 1 ), GTYPESP_ptr( ngtype + 1 ), IWK( nelnum )
       INTEGER :: EP_ptr( nelnum + 1 ), EV_ptr( nelnum + 1 ), GP_ptr( ng + 1 )
-      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: pname
       CHARACTER ( LEN = 10 ) :: GNAMES( ng ), VNAMES( n )
       CHARACTER ( LEN = 10 ) :: ETYPES( neltype ), LNAMES( neling )
       CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames )
@@ -9996,7 +9996,7 @@
 
 !  non-executable statements
 
- 2000 FORMAT( /, ' Problem name ', A8, /,                                      &
+ 2000 FORMAT( /, ' Problem name ', A10, /,                                     &
               /, ' There are ', I8, ' VARIABLES of which ', I8,                &
                  ' are artificials',                                           &
               /, ' There are ', I8, ' GROUPS',                                 &
@@ -10078,7 +10078,7 @@
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: TABLE, INLIST
       INTEGER, DIMENSION( neltype + 1 ) :: ELV, INV, ELP
       LOGICAL, DIMENSION( neltype ) :: DEFINED
-      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: pname
       CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames ), IVNAMES( nivnames )
       CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), ETYPES( neltype )
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
@@ -10393,7 +10393,7 @@
 !  ---------------------------
 
           ELSE
-            IF ( pname  /= NULINE( 15 : 22 ) ) THEN
+            IF ( pname  /= NULINE( 15 : 24 ) ) THEN
               status = 51
               IF ( out > 0 ) WRITE( out, 2510 )
               GO TO 800
@@ -11739,7 +11739,7 @@
               '      DOUBLE PRECISION ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               '      INTEGER ', 5( A6, ', ' ), A6, /,                          &
               '      INTEGER ', A6 )
@@ -11759,7 +11759,7 @@
               '      REAL             ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               '      INTEGER ', 5( A6, ', ' ), A6, /,                          &
               '      INTEGER ', A6 )
@@ -11779,7 +11779,7 @@
               '      DOUBLE PRECISION ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3003 FORMAT( '      SUBROUTINE ', A6, '( ', 5( A6, ', ' ), /,                 &
               '     *                   ', 5( A6, ', ' ), /,                   &
@@ -11797,7 +11797,7 @@
               '      REAL             ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3009 FORMAT( '      ', A6, ' = 0' )
  3010 FORMAT( ( '      INTEGER ', A6, :, 4( ', ', A6, : ) ) )
@@ -11882,7 +11882,7 @@
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      DOUBLE PRECISION W1( LW1 ), W2( LW2 )', /,                &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               'C  TRANSP = .FALSE. <=> W2 = U * W1', /,                        &
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
@@ -11895,7 +11895,7 @@
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      REAL             W1( LW1 ), W2( LW2 )', /,                &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               'C  TRANSP = .FALSE. <=> W2 = U * W1', /,                        &
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
@@ -11908,7 +11908,7 @@
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      DOUBLE PRECISION W1( LW1 ), W2( LW2 )', /,                &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               'C  TRANSP = .FALSE. <=> W2 = U * W1', /,                        &
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
@@ -11920,7 +11920,7 @@
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      REAL             W1( LW1 ), W2( LW2 )', /,                &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               'C  TRANSP = .FALSE. <=> W2 = U * W1', /,                        &
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
@@ -11966,7 +11966,7 @@
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: TABLE, INLIST
       INTEGER, DIMENSION( neltype + 1 ) :: ELV, INV, ELP
       LOGICAL, DIMENSION( neltype ) :: DEFINED
-      CHARACTER ( LEN = 8  ) :: pname
+      CHARACTER ( LEN = 10 ) :: pname
       CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames ), IVNAMES( nivnames )
       CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), ETYPES( neltype  )
       CHARACTER ( LEN = 10 ), ALLOCATABLE, DIMENSION( : ) :: RENAMES, INNAMES
@@ -12313,7 +12313,7 @@
 !  ---------------------------
 
           ELSE
-            IF ( pname  /= NULINE( 15 : 22 ) ) THEN
+            IF ( pname  /= NULINE( 15 : 24 ) ) THEN
               status = 51
               IF ( out > 0 ) WRITE( out, 2510 )
               GO TO 800
@@ -13911,7 +13911,7 @@
         '      DOUBLE PRECISION ', A6, '(', A6, '), ',                         &
                                    A6, '(', A6, '), ',                         &
                                    A6, '(', A6, ')', /,                        &
-        'C', /, 'C  Problem name : ', A8, /,                                   &
+        'C', /, 'C  Problem name : ', A10, /,                                  &
         'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,                  &
         '      INTEGER ', 5( A6, ', ' ), A6, /,                                &
         '      INTEGER ', A6 )
@@ -13931,7 +13931,7 @@
         '      REAL             ', A6, '(', A6, '), ',                         &
                                    A6, '(', A6, '), ',                         &
                                    A6, '(', A6, ')', /,                        &
-        'C', /, 'C  Problem name : ', A8, /,                                   &
+        'C', /, 'C  Problem name : ', A10, /,                                  &
         'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,                  &
         '      INTEGER ', 5( A6, ', ' ), A6, /,                                &
         '      INTEGER ', A6 )
@@ -13951,7 +13951,7 @@
               '      DOUBLE PRECISION ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3003 FORMAT( '      SUBROUTINE ', A6, '( ', 5( A6, ', ' ), /,                 &
               '     *                   ', 5( A6, ', ' ), /,                   &
@@ -13969,7 +13969,7 @@
               '      REAL             ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3004 FORMAT( '      SUBROUTINE ', A6, '( ', 5( A6, ', ' ), /,                 &
               '     *                   ', 5( A6, ', ' ), /,                   &
@@ -13986,7 +13986,7 @@
               '      DOUBLE PRECISION ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
        '      INTEGER ', 5( A6, ', ' ), A6, /, '      INTEGER ', A6, /,        &
               '      INTEGER, POINTER :: H_index( : ) ', /,                    &
@@ -14007,7 +14007,7 @@
               '      REAL             ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
        '      INTEGER ', 5( A6, ', ' ), A6, /, '      INTEGER ', A6, /,        &
               '      INTEGER, POINTER :: H_index( : ) ', /,                    &
@@ -14030,7 +14030,7 @@
               '      DOUBLE PRECISION ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3007 FORMAT( '      SUBROUTINE ', A6, '( ', 5( A6, ', ' ), /,                 &
               '     *                   ', 5( A6, ', ' ), /,                   &
@@ -14049,7 +14049,7 @@
               '      REAL             ', A6, '(', A6, '), ',                   &
                                          A6, '(', A6, '), ',                   &
                                          A6, '(', A6, ')', /,                  &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3008 FORMAT( '      X_AD01_int = AD01_UNDEFINED' )
 !3008 format( '      call ad01_undefine( x_ad01_int ) ' )
@@ -14226,7 +14226,7 @@
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      DOUBLE PRECISION W1( LW1 ), W2( LW2 )', /,                &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               'C  TRANSP = .FALSE. <=> W2 = U * W1', /,                        &
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
@@ -14239,7 +14239,7 @@
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      REAL             W1( LW1 ), W2( LW2 )', /,                &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               'C  TRANSP = .FALSE. <=> W2 = U * W1', /,                        &
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
@@ -14252,7 +14252,7 @@
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      DOUBLE PRECISION W1( LW1 ), W2( LW2 )', /,                &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               'C  TRANSP = .FALSE. <=> W2 = U * W1', /,                        &
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
@@ -14264,7 +14264,7 @@
               ' LW1, LW2', /,                                                  &
               '      LOGICAL TRANSP', /,                                       &
               '      REAL             W1( LW1 ), W2( LW2 )', /,                &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               'C  TRANSP = .FALSE. <=> W2 = U * W1', /,                        &
               'C  TRANSP = .TRUE.  <=> W2 = U(transpose) * W1', /,             &
@@ -14304,7 +14304,7 @@
       INTEGER :: ngtype, ngpnames
       INTEGER :: len_renames, len_innames, len_lonames, len_minames, len_exnames
       LOGICAL :: gotlin, debug, single
-      CHARACTER ( LEN = 8 ) :: pname
+      CHARACTER ( LEN = 10 ) :: pname
       CHARACTER ( LEN = max_record_length ) :: nuline
       INTEGER :: GTYPESP_ptr( ngtype + 1 )
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: TABLE, INLIST
@@ -14562,7 +14562,7 @@
 !  -------------------------
 
           ELSE
-             IF ( pname  /= NULINE( 15 : 22 ) ) THEN
+             IF ( pname  /= NULINE( 15 : 24 ) ) THEN
                status = 51
                IF ( out > 0 ) WRITE( out, 2510 )
                GO TO 800
@@ -15392,7 +15392,7 @@
               '      DOUBLE PRECISION ', A6, '(', A6, ',3), ',                 &
                                          A6, '(', A6, '), ', A6,               &
                                       '(', A6, ')', /,                         &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3001 FORMAT( '      SUBROUTINE ', A6, '( ', 5( A6, ', ' ), /,                 &
               '     *                   ', 5( A6, ', ' ), /,                   &
@@ -15405,7 +15405,7 @@
               '      REAL             ', A6, '(', A6, ',3), ',                 &
                                          A6, '(', A6, '), ', A6,               &
                                       '(', A6, ')', /,                         &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3002 FORMAT( '      INTEGER ', A6, ', ', A6, ', ', A6, ', ', A6 )
  3009 FORMAT( '      ', A6, ' = 0' )
@@ -15469,7 +15469,7 @@
       INTEGER :: print_level, outgd, outem, iauto, iad0
       INTEGER :: len_renames, len_innames, len_lonames, len_minames, len_exnames
       LOGICAL :: gotlin, debug, single
-      CHARACTER ( LEN = 8 ) ::  pname
+      CHARACTER ( LEN = 10 ) ::  pname
       CHARACTER ( LEN = max_record_length ) :: nuline
       INTEGER :: GTYPESP_ptr( ngtype + 1 )
       INTEGER, ALLOCATABLE, DIMENSION( : ) :: TABLE, INLIST
@@ -15733,7 +15733,7 @@
 !  -------------------------
 
           ELSE
-            IF ( pname  /= NULINE( 15 : 22 ) ) THEN
+            IF ( pname  /= NULINE( 15 : 24 ) ) THEN
               status = 51
               IF ( out > 0 ) WRITE( out, 2510 )
               GO TO 800
@@ -16761,7 +16761,7 @@
               '      DOUBLE PRECISION ', A6, '(', A6, ',3), ',                 &
                                          A6, '(', A6, '), ', A6,               &
                                       '(', A6, ')', /,                         &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3001 FORMAT( '      SUBROUTINE ', A6, '( ', 5( A6, ', ' ), /,                 &
               '     *                   ', 5( A6, ', ' ), /,                   &
@@ -16774,7 +16774,7 @@
               '      REAL             ', A6, '(', A6, ',3), ',                 &
                                          A6, '(', A6, '), ', A6,               &
                                       '(', A6, ')', /,                         &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C' )
  3002 FORMAT( '      INTEGER ', A6, ', ', A6, ', ', A6, ', ', A6 )
  3004 FORMAT( '      SUBROUTINE ', A6, '( ', 5( A6, ', ' ), /,                 &
@@ -16789,7 +16789,7 @@
               '      DOUBLE PRECISION ', A6, '(', A6, ',3), ',                 &
                                          A6, '(', A6, '), ', A6,               &
                                       '(', A6, ')', /,                         &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               '      INTEGER, POINTER :: H_index( : ) ', /,                    &
               '      DOUBLE PRECISION, POINTER :: H_result( : ) ', /,          &
@@ -16806,7 +16806,7 @@
               '      REAL             ', A6, '(', A6, ',3), ',                 &
                                          A6, '(', A6, '), ', A6,               &
                                       '(', A6, ')', /,                         &
-              'C', /, 'C  Problem name : ', A8, /,                             &
+              'C', /, 'C  Problem name : ', A10, /,                            &
               'C', /, 'C  -- produced by SIFdecode ', A, /, 'C', /,            &
               '      INTEGER, POINTER :: H_index( : ) ', /,                    &
               '      REAL, POINTER :: H_result( : ) ', /,                      &
