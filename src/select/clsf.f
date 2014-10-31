@@ -72,8 +72,8 @@ C  Variable definitions
 C
       CHARACTER*80 LINE
       CHARACTER*32 IFNAME
-      CHARACTER*36 CLS, CLSDB
-      CHARACTER*8  NAME, NAMEDB
+      CHARACTER*38 CLS, CLSDB
+      CHARACTER*10 NAME, NAMEDB
       CHARACTER*1  CHOICE, OBJ, CON, SMTH, INTRST, INTVAR, UPPER,
      1             VARN, VARM
       LOGICAL      FOUND, WRITTN, AUTO, OVERW
@@ -301,26 +301,26 @@ C
 C  format the new classification
 C
  200  CONTINUE
-      CLS = '                            '
-      CLS(1:8) = NAME
-      CLS(10:10) = OBJ
-      CLS(11:11) = CON
-      CLS(12:12) = SMTH
-      WRITE ( CLS(13:13), '( I1 )' ) IDER
-      CLS(14:14) = '-'
-      CLS(15:15) = INTRST
-      CLS(16:16) = INTVAR
-      CLS(17:17) = '-'
+      CLS = '                              '
+      CLS(1:10) = NAME
+      CLS(12:12) = OBJ
+      CLS(13:13) = CON
+      CLS(14:14) = SMTH
+      WRITE ( CLS(15:15), '( I1 )' ) IDER
+      CLS(16:16) = '-'
+      CLS(17:17) = INTRST
+      CLS(18:18) = INTVAR
+      CLS(19:19) = '-'
       IF ( VARN .EQ. 'V' ) THEN
-        CLS(26:26) = VARN
+        CLS(28:28) = VARN
       ELSE
-        WRITE ( CLS(18:26), '( I9 )' ) NVAR
+        WRITE ( CLS(20:28), '( I9 )' ) NVAR
       ENDIF
-      CLS(27:27) = '-'
+      CLS(29:29) = '-'
       IF ( VARM .EQ. 'V' ) THEN
-        CLS(36:36) = VARM
+        CLS(38:38) = VARM
       ELSE
-        WRITE ( CLS(28:36), '( I9 )' ) NCON
+        WRITE ( CLS(30:38), '( I9 )' ) NCON
       ENDIF
 C
 C  open the classification database
@@ -336,8 +336,8 @@ C  read the current line in the existing database
 C
       WRITTN = .FALSE.
  400  CONTINUE
-      READ ( DBDVC, '( A36 )', END = 900 ) CLSDB
-      NAMEDB = CLSDB(1:8)
+      READ ( DBDVC, '( A38 )', END = 900 ) CLSDB
+      NAMEDB = CLSDB(1:10)
 C
 C  verify that the name of the problem to be classified is not already
 C  present in the database
@@ -361,23 +361,23 @@ C  write the new problem classification, if it is not already present
 C  in the existing database or if overwrite is specified
 C
       IF ( WRITTN .OR. NAMEDB .LT. NAME ) THEN
-        WRITE ( UDBDVC, '( A36 )' ) CLSDB
+        WRITE ( UDBDVC, '( A38 )' ) CLSDB
       ELSEIF ( NAMEDB .EQ. NAME ) THEN
         IF ( CLSDB .GT. CLS .AND. .NOT. OVERW) THEN
-          WRITE ( UDBDVC, '( A36 )' ) CLS
+          WRITE ( UDBDVC, '( A38 )' ) CLS
           WRITTN = .TRUE.
-          WRITE ( UDBDVC, '( A36 )' ) CLSDB
+          WRITE ( UDBDVC, '( A38 )' ) CLSDB
         ELSEIF ( CLSDB .LT. CLS .AND. .NOT. OVERW) THEN
-          WRITE ( UDBDVC, '( A36 )' ) CLSDB
-          WRITE ( UDBDVC, '( A36 )' ) CLS
+          WRITE ( UDBDVC, '( A38 )' ) CLSDB
+          WRITE ( UDBDVC, '( A38 )' ) CLS
           WRITTN = .TRUE.
         ELSE
-          WRITE ( UDBDVC, '( A36 )' ) CLS
+          WRITE ( UDBDVC, '( A38 )' ) CLS
           WRITTN = .TRUE.
         ENDIF
       ELSE
-        WRITE ( UDBDVC, '( A36 )' ) CLS
-        WRITE ( UDBDVC, '( A36 )' ) CLSDB
+        WRITE ( UDBDVC, '( A38 )' ) CLS
+        WRITE ( UDBDVC, '( A38 )' ) CLSDB
         WRITTN = .TRUE.
       ENDIF
 C
@@ -389,34 +389,34 @@ C  close the database files
 C
  900  CONTINUE
       CLOSE ( DBDVC )
-      IF ( .NOT. WRITTN ) WRITE ( UDBDVC, '( A36 )' ) CLS
+      IF ( .NOT. WRITTN ) WRITE ( UDBDVC, '( A38 )' ) CLS
       CLOSE ( UDBDVC )
       STOP
 C
 C  non excutable statements
 C
- 1001 FORMAT( ' Problem ', A8,
+ 1001 FORMAT( ' Problem ', A10,
      1        ' has impossible objective classification!' )
- 1002 FORMAT( ' Problem ', A8,
+ 1002 FORMAT( ' Problem ', A10,
      1        ' has impossible constraints classification!' )
- 1003 FORMAT( ' Problem ', A8,
+ 1003 FORMAT( ' Problem ', A10,
      1        ' has impossible smoothnes classification' )
- 1004 FORMAT( ' Problem ', A8,
+ 1004 FORMAT( ' Problem ', A10,
      1        ' has impossible degree of available derivatives!' )
- 1005 FORMAT( ' Problem ', A8,
+ 1005 FORMAT( ' Problem ', A10,
      1        ' has impossible problem interest specification!' )
- 1006 FORMAT( ' Problem ', A8,
+ 1006 FORMAT( ' Problem ', A10,
      1        ' has  internal variable specification!' )
- 1007 FORMAT( ' Problem ', A8,
+ 1007 FORMAT( ' Problem ', A10,
      1        ' has impossible number of variables!' )
- 1008 FORMAT( ' Problem ', A8,
+ 1008 FORMAT( ' Problem ', A10,
      1        ' has impossible number of constraints!' )
- 1009 FORMAT( ' Incomplete classification for problem ', A8 )
- 1010 FORMAT( ' Classification not found for Problem ', A8 )
+ 1009 FORMAT( ' Incomplete classification for problem ', A10 )
+ 1010 FORMAT( ' Classification not found for Problem ', A10 )
  1201 FORMAT( '   *** YOU USED MORE THAN 28 CHARACTERS.  Please choose',
      1             ' again.'
      1        / )
- 2000 FORMAT( ' Duplicate name: ', A8 )
+ 2000 FORMAT( ' Duplicate name: ', A10 )
  2001 FORMAT( ' Do you wish to overwrite the existing classification?',
      1        '  [<CR> = N] ? (N/Y)' )
  2003 FORMAT( ' Identical classification record already appears in ',

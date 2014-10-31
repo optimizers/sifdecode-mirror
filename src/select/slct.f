@@ -65,8 +65,9 @@ C    default directory for classification file
 C    names for output listing file
 C                  Addition by Kristjan Jonasson
       CHARACTER*72 FILES
-      CHARACTER*36 PBCLS
-      CHARACTER*8  TARGET( MAXTRG ), LIST(5)
+      CHARACTER*38 PBCLS
+      CHARACTER*8  TARGET( MAXTRG )
+      CHARACTER*10 LIST(5)
       CHARACTER*1  CHOICE, CHAR, UPPER
       INTEGER      I, IM1, J, NVAR( MAXTRG ), NCON( MAXTRG ), L, K, NUM,
      *             NMATCH, CONVERT, NBT,  NBI, LN, UN, LM, SIZE, UM, 
@@ -720,12 +721,12 @@ C
       NMATCH = 0
       L      = 0
  3000 CONTINUE
-      READ ( CLSDVC, '( A36 )', END = 3010 ) PBCLS
-      IF ( MATCH( PBCLS(10:36), TARGET, MAXTRG, ANYFNV, ANYFNC,
+      READ ( CLSDVC, '( A38 )', END = 3010 ) PBCLS
+      IF ( MATCH( PBCLS(12:38), TARGET, MAXTRG, ANYFNV, ANYFNC,
      1             NVAR, NCON, LN, UN, LM, UM ) ) THEN
         NMATCH = NMATCH + 1
         L = L + 1
-        LIST(L) = PBCLS(1:8)
+        LIST(L) = PBCLS(1:10)
         IF ( L .EQ. 5 ) THEN
           WRITE ( STDOUT, 4002 ) ( LIST(I), I = 1, 5 )
           L = 0
@@ -751,11 +752,11 @@ C
         SIZE = LEN( FILES )
         OPEN( UNIT = FLSDVC, FILE = FILES, STATUS = 'UNKNOWN' )
  3020   CONTINUE
-        READ ( CLSDVC, '( A36 )', END = 3050 ) PBCLS
-        IF ( MATCH( PBCLS(10:36), TARGET, MAXTRG, ANYFNV, ANYFNC,
+        READ ( CLSDVC, '( A38 )', END = 3050 ) PBCLS
+        IF ( MATCH( PBCLS(12:38), TARGET, MAXTRG, ANYFNV, ANYFNC,
      1               NVAR, NCON, LN, UN, LM, UM ) ) THEN
-          NBLK = 8
-          DO 3030 NBLK = 8, 2, -1
+          NBLK = 10
+          DO 3030 NBLK = 10, 2, -1
             IF ( PBCLS(NBLK:NBLK) .NE. ' ' ) GO TO 3040
  3030     CONTINUE
  3040     CONTINUE
@@ -1001,7 +1002,7 @@ C
  4000 FORMAT( /'   ', I0, ' Problem(s) match(es) the specification.' / )
  4001 FORMAT( /'   MATCHING PROBLEMS :'
      1        /'   -------------------' / )
- 4002 FORMAT(  '     ', 5( A8, 3X ) )
+ 4002 FORMAT(  '     ', 5( A10, 3X ) )
  4003 FORMAT( /'   LOWER BOUND ON THE NUMBER OF VARIABLES :'
      1        /'   ----------------------------------------' )
  4004 FORMAT( /'    (INT) : Problems with at least (INT) variables'
