@@ -9783,7 +9783,8 @@
       CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames )
       CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), GPNAMES( ngpnames )
       CHARACTER ( LEN = 10 ) :: GANAMES( ngtype ), GTYPES( ngtype )
-      REAL ( KIND = wp ) :: B( ng ), BL( n + ng ), BU( n + ng ), X( n )
+!     REAL ( KIND = wp ) :: B( ng ), BL( n + ng ), BU( n + ng ), X( n )
+      REAL ( KIND = wp ) :: B( ng ), BL( n ), BU( n ), X( n )
       REAL ( KIND = wp ) :: GSCALE( ng ), ESCALE( neling ), VSCALE( n )
       REAL ( KIND = wp ) :: ABYROW_val( nnza )
 
