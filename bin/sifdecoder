@@ -206,6 +206,7 @@ while (( i <= last )); do
     (( i++ ))
   elif [[ "$opt" == '-force' ]]; then
     let FORCE=1
+   (( i++ ))
   fi
   (( i++ ))
 done
