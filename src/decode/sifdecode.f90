@@ -9779,7 +9779,7 @@
       INTEGER :: EP_ptr( nelnum + 1 ), EV_ptr( nelnum + 1 ), GP_ptr( ng + 1 )
       CHARACTER ( LEN = 10 ) :: pname
       CHARACTER ( LEN = 10 ) :: GNAMES( ng ), VNAMES( n )
-      CHARACTER ( LEN = 10 ) :: ETYPES( neltype ), LNAMES( neling )
+      CHARACTER ( LEN = 10 ) :: ETYPES( neltype ), LNAMES( nelnum )
       CHARACTER ( LEN = 10 ) :: EVNAMES( nevnames )
       CHARACTER ( LEN = 10 ) :: EPNAMES( nepnames ), GPNAMES( ngpnames )
       CHARACTER ( LEN = 10 ) :: GANAMES( ngtype ), GTYPES( ngtype )
