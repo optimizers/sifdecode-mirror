@@ -1,4 +1,4 @@
-! THIS VERSION: SIFDECODE 1.0 - 20/12/2012 AT 20:12 GMT.
+! THIS VERSION: SIFDECODE 1.1 - 21/10/2015 AT 12:00 GMT.
 
 !-*-*-*-*-*-*-*-*-*-*-*- S I F D E C O D E   M O D U l E -*-*-*-*-*-*-*-*-*-*-
 
@@ -257,10 +257,10 @@
                                    outra, iingr, outgr, outgf, outgd, iinex,   &
                                    outex, outem, outea, print_level, out,      &
                                    noname, ialgor, iauto, iad0, single, size,  &
-                                   status )
+                                   start, status )
       INTEGER :: iingps, iinfn, iingr, outea, outex, print_level, out
       INTEGER :: outda, outra, outfn, outgr, outff, outfd, outgf, outgd, outem
-      INTEGER :: ialgor, iad0, iauto, size, status
+      INTEGER :: ialgor, iad0, iauto, size, start, status
       LOGICAL :: noname, single
 
 !  ------------------------------------------------------------------------
@@ -445,7 +445,13 @@
       IF ( nconst > 0 ) namerh = VNAMES( nlvars + 1 )
       IF ( nrange > 0 ) namera = VNAMES( nlvars + nconst + 1 )
       IF ( nbnd > 0 ) namebn = BNAMES( 1 )
-      IF ( nstart > 0 ) namest = SNAMES( 1 )
+      IF ( nstart > 0 ) THEN
+        IF ( start > 0 .AND. start <= nstart ) THEN
+          namest = SNAMES( start )
+        ELSE
+          namest = SNAMES( 1 )
+        END IF
+      END IF
       IF ( nobj > 0 .AND. oneobj ) nameof = ONAMES( 1 )
       IF ( nobbnd > 0 ) nameob = OBBNAME( 1 )
       IF ( print_level /= 0 ) WRITE( out, 2070 )                               &

@@ -1,4 +1,4 @@
-! THIS VERSION: SIFDECODE 1.0 - 05/12/2012 AT 14:00 GMT.
+! THIS VERSION: SIFDECODE 1.1 - 21/10/2015 AT 12:00 GMT.
 
 !-*-*-*-*-*-*-*-*-  S I F D E C O D E  _ m a i n   P R O G R A M  -*-*-*-*-*-*-
 
@@ -27,7 +27,7 @@
 
 !  local variables
 
-      INTEGER :: i, ad0, auto, print_level, status, algorithm, size
+      INTEGER :: i, ad0, auto, print_level, status, algorithm, size, start
       LOGICAL :: single
 
 !  assign the standard output unit numbers
@@ -114,6 +114,11 @@
 !  increased, so the parameter is simply a convenience for larger problems
 
       READ( in, "( I2 )" ) size
+
+!  specify which of the starting points provided is to be used; 
+!  if start > # starting vectors, start will be reset to 1
+
+      READ( in, "( I2 )" ) start
       CLOSE( in )
 
 !  open the relevant files - unix systems
@@ -154,7 +159,7 @@
       CALL SIFDECODE_decode( ingps, outda, infn, outfn, outff, outfd, outra,   &
                              ingr, outgr, outgf, outgd, inex, outex, outem,    &
                              outea, print_level, out, noname, algorithm,       &
-                             auto, ad0, single, size, status )
+                             auto, ad0, single, size, start, status )
 
 !  close the opened files
 
