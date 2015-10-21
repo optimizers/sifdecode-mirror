@@ -1,12 +1,13 @@
 #!/bin/bash
 # sifdecoder: script to decode a sif file
 #
-#  N. Gould, D. Orban & Ph. Toint, November 7th, 2000,
+#  N. Gould, D. Orban & Ph. Toint, November 7th, 2000
 #  Updated, January 20th, 2013
+#  This version October 21st, 2015
 
 display_short_help() {
     echo ' Use: sifdecoder [-A architecture] [-sp] [-h] [-f] [-b] [-a j]'
-    echo '                       [-p package] [-s size] [-o j] [-m] [-l secs]'
+    echo '                       [-p package] [-s size] [-o j] [-m] [-st j]'
     echo '                       [-show] [-param name=value[,name=value...]]'
     echo '                       [-force] probname[.SIF]'
 }
@@ -30,6 +31,8 @@ display_long_help() {
     echo "                   1=LANCELOT, 2=BARIA, 3=CUTEst (default)"
     echo "          -s     : rough size of problem for array initialization"
     echo "                   0=debug, 1=small, 2=medium, 3=large (default)"
+    echo "          -st    : starting point vector to be used"
+    echo "                   (Default: -st 1)"
     echo "          -show  : displays possible parameter settings for"
     echo "                   probname[.SIF]. Other options are ignored"
     echo "          -param : cast probname[.SIF] against explicit parameter"
@@ -118,6 +121,10 @@ let PACKAGE=3
 
 let size=2
 
+#  starting point vector to be used; if st > # starting vectors, st = 1
+
+let st=1
+
 #  allow file clobbering
 
 set +C
@@ -169,6 +176,9 @@ while (( i <= last )); do
   elif [[ "$opt" == '-s' ]]; then
     (( i++ ))
     let size=${!i}
+  elif [[ "$opt" == '-st' ]]; then
+    (( i++ ))
+    let st=${!i}
   elif [[ "$opt" == '-f' ]]; then
     let automatic=1
   elif [[ "$opt" == '-b' ]]; then
@@ -400,6 +410,7 @@ echo $automatic >> $sdinput
 echo $ad0       >> $sdinput
 echo '1'        >> $sdinput   # Double precision.
 echo $size      >> $sdinput
+echo $st        >> $sdinput
 
 # Finally, decode the problem
 
