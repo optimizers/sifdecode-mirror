@@ -328,7 +328,7 @@ if ((  nbparam > 0  )); then
             # get the number of the first line defining the parameter
             # and the parameter type (IE, RE, ...)
             fline=`$GREP -n '$-PARAMETER' ${problemLoc} | $GREP ${PARNAMELIST[$p]} | $HEAD -1 | $AWK -F: '{print $1}'`
-            type=`$GREP '$-PARAMETER' ${problemLoc} | $GREP ${PARNAMELIST[$p]} | $HEAD -1 | $AWK '{print $1}' | $SED -e 's/^[ ]*//'`
+            type=`$GREP '$-PARAMETER' ${problemLoc} | $GREP ${PARNAMELIST[$p]} | $HEAD -1 | $AWK '{print $1}' | $SED -e 's/^[ ]*\*//'`
             (( OUTPUT == 1 )) && echo "Forcing parameter ${PARNAMELIST[$p]} on line $fline of type $type to value ${PARVALUELIST[$p]}"
             echo "$fline s/^.*"'$'"/ ${type} ${PARNAMELIST[$p]}                   ${PARVALUELIST[$p]}/" >> $sedScript
         fi
