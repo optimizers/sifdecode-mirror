@@ -4,12 +4,12 @@
 sifdecoder \- SIF-decoding script.
 .SH SYNOPSIS
 \fBsifdecoder\fP [\-A \fIarch\fP] [\-sp] [\-h] [\-o \fI0|1\fP] [-m]
-[\-f] [\-b] [\-a \fI1|2\fP] 
+[\-f] [\-b] [\-a \fI1|2\fP]
 [\-p \fI1|2|3\fP]
 [\-s \fI0|1|2|3\fP]
 [\-st \fI1|2|3\fP]
 [\-show] [\-param
-\fIname=value\fP[\fI,name=value...\fP]] [\-force] 
+\fIname=value\fP[\fI,name=value...\fP]] [\-force]
 \fIproblem[.SIF]\fP
 .SH DESCRIPTION
 \fIsifdecoder\fP applies the SIF decoder to the problem \fIproblem.SIF\fP
@@ -20,19 +20,19 @@ the \-A, \-h, \-o, \-m, \-show and \-param options. Other options are
 useful when \fIsifdecoder\fP is called by other interfaces which
 require the decoding of a SIF file, as for instance a CUTEst
 interface.
-.LP 
+.LP
 .SH sifdecoder Options
 You can start sifdecoder with the following options:
 .TP 5
 .BI \-A " arch"
-Run the decoder using the architecture \fIarch\fP; the architeture 
+Run the decoder using the architecture \fIarch\fP; the architeture
 is a string of the form machine.system.compiler as specified in the
 directory $SIFDECODE/versions. If no \-A option is given, a valid
 architecture given by the environment variable $MYARCH will be
 used, but if $MYARCH is invalid or empty the decoder will terminate.
 .TP
 .B \-sp
-Run sifdecoder in single-precision mode, if available. 
+Run sifdecoder in single-precision mode, if available.
 Double precision is the default.
 .TP
 .B \-h
@@ -45,11 +45,16 @@ silent mode is \fB-o\fP 0. Silent mode is the default.
 .B \-m
 check for memory leaks when possible using valgrind(1).
 .TP
+.BI \-c
+check the derivatves that are provided in ELFUN.f and GROUP.f by comparing
+the values against finite-diffrence approximations; any significant differences
+will be reported.
+.TP
 .BI \-f
-Use automatic differentiation in Forward mode
+Use automatic differentiation in Forward mode.
 .TP
 .BI \-b
-Use automatic differentiation in Backward mode
+Use automatic differentiation in Backward mode.
 .TP
 .BI \-a " 1|2"
 \-a 1 uses the older HSL automatic differentiation package AD01
@@ -65,10 +70,10 @@ The default is to decode for CUTEst.
 Specify the rough size of problem that will be decoded. This is used for
 array initialization and although not crucial, it may lead to efficiencies
 if set correctly. Set \-s 0 is for debugging, \-s 1 is for small problems
-of up to approximately 100 variables and constraints, 
+of up to approximately 100 variables and constraints,
 \-s 2 is for medium-sized problems
 of up to approximately 10000 variables and constraints, and
-\-s 3 is for larger problems. Setting \-s too large may cause memory 
+\-s 3 is for larger problems. Setting \-s too large may cause memory
 allocation errors on modest computers.
 The default is for meedium-sized problems.
 .TP
@@ -97,12 +102,12 @@ file.
 \fIproblem.SIF\fP is the name of the file containing the SIF
 information on the problem to be solved.
 .LP
-.SH ENVIRONMENT 
+.SH ENVIRONMENT
 .TP
 .SB SIFDECODE
 Directory containing SIFDecode.
 .TP
-.SB MYARCH 
+.SB MYARCH
  The default architecture.
 .TP
 .SB MASTSIF
@@ -114,7 +119,7 @@ is searched.
 .SH AUTHORS
 I. Bongartz, A.R. Conn, N.I.M. Gould, D. Orban and Ph.L. Toint
 .SH "SEE ALSO"
-\fICUTEst: a Constrained and Unconstrained Testing 
+\fICUTEst: a Constrained and Unconstrained Testing
 Environment with safe threads for mathematical optimization\fP,
    N.I.M. Gould, D. Orban and Ph.L. Toint,
    Computational Optimization and Applications \fB60\fP:3, pp.545-557, 2014.
@@ -125,7 +130,7 @@ Environment, revisited\fP,
    ACM TOMS, \fB29\fP:4, pp.373-394, 2003.
 
 \fICUTE: Constrained and Unconstrained Testing Environment\fP,
-   I. Bongartz, A.R. Conn, N.I.M. Gould and Ph.L. Toint, 
+   I. Bongartz, A.R. Conn, N.I.M. Gould and Ph.L. Toint,
    ACM TOMS, \fB21\fP:1, pp.123-160, 1995.
 
 valgrind(1).

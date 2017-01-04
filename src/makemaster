@@ -9,28 +9,32 @@ SHELL = /bin/$(BINSHELL)
 
 all: all_$(PRECIS)
 
-all_single: 
+all_single:
 	( cd decode ; $(MAKE) -f $(SIFDECODE)/makefiles/$(VERSION) \
                      sifdecode PRECIS=single PWD=$(PWD)/decode )
+	( cd check ; $(MAKE) -f $(SIFDECODE)/makefiles/$(VERSION) \
+                     check_derivs PRECIS=single PWD=$(PWD)/check )
 	( cd select  ; $(MAKE) -f $(SIFDECODE)/makefiles/$(VERSION) \
                      select PRECIS=single PWD=$(PWD)/select )
 
-all_double: 
+all_double:
 	( cd decode ; $(MAKE) -f $(SIFDECODE)/makefiles/$(VERSION) \
                      sifdecode PRECIS=double PWD=$(PWD)/decode )
+	( cd check ; $(MAKE) -f $(SIFDECODE)/makefiles/$(VERSION) \
+                     check_derivs PRECIS=double PWD=$(PWD)/check )
 	( cd select  ; $(MAKE) -f $(SIFDECODE)/makefiles/$(VERSION) \
                      select PRECIS=double PWD=$(PWD)/select )
 
 #  book keeping
 
-clean: 
-	@printf ' %-9s\t\t' "Cleaning" 
+clean:
+	@printf ' %-9s\t\t' "Cleaning"
 	$(RM) $(OBJ)/*
 	@printf '[ OK ]\n'
 
-cleanall: 
+cleanall:
 	@printf ' %-14s\t\t' \
-          "Removing all $(PRECIS) precision object and module files" 
+          "Removing all $(PRECIS) precision object and module files"
 	$(RM) $(OBJ)/* $(MOD)/*
 #	ls $(OBJ) $(MOD)
 	@printf '[ OK ]\n'

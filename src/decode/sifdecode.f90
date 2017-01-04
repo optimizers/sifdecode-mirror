@@ -1,4 +1,4 @@
-! THIS VERSION: SIFDECODE 1.1 - 21/10/2015 AT 12:00 GMT.
+! THIS VERSION: SIFDECODE 1.2 - 24/10/2016 AT 13:30 GMT.
 
 !-*-*-*-*-*-*-*-*-*-*-*- S I F D E C O D E   M O D U l E -*-*-*-*-*-*-*-*-*-*-
 
@@ -10391,7 +10391,11 @@
 
         IF ( .NOT. defnam  ) THEN
           IF ( header /= INDIC8( mname ) ) THEN
-            IF ( neltype > 0 ) GO TO 930
+!           IF ( neltype > 0 ) GO TO 930
+            IF ( neltype > 0 ) THEN
+              BACKSPACE( input, ERR = 590 )
+              GO TO 590
+            END IF
             IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010)
             gotlin = .TRUE.
             GO TO 600
@@ -10618,7 +10622,11 @@
 !  check that the first non commment card is the elements indicator card
 
         IF ( .NOT. defnam  ) THEN
-          IF ( neltype > 0 ) GO TO 930
+!         IF ( neltype > 0 ) GO TO 930
+          IF ( neltype > 0 ) THEN
+            BACKSPACE( input, ERR = 590 )
+            GO TO 590
+          END IF
           IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010 )
           gotlin = .TRUE.
           GO TO 600
@@ -12311,7 +12319,11 @@
 
         IF ( .NOT. defnam  ) THEN
           IF ( header /= INDIC8( mname ) ) THEN
-            IF ( neltype > 0 ) GO TO 930
+!           IF ( neltype > 0 ) GO TO 930
+            IF ( neltype > 0 ) THEN
+              BACKSPACE( input, ERR = 590 )
+              GO TO 590
+            END IF
             IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010)
             gotlin = .TRUE.
             GO TO 600
@@ -12703,7 +12715,11 @@
 
       ELSE
         IF ( .NOT. defnam  ) THEN
-          IF ( neltype > 0 ) GO TO 930
+!         IF ( neltype > 0 ) GO TO 930
+          IF ( neltype > 0 ) THEN
+            BACKSPACE( input, ERR = 590 )
+            GO TO 590
+          END IF
           IF ( out > 0 .AND. print_level /= 0 ) WRITE( out, 2010 )
           gotlin = .TRUE.
           GO TO 600

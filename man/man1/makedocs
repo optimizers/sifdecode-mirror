@@ -1,11 +1,11 @@
 #!/bin/csh
 
-foreach pack ( classall  classify  select  sifdecoder )
+#foreach pack ( classall  classify  select  sifdecoder )
 
 #foreach pack ( classall )
 #foreach pack ( classify )
-#foreach pack ( select ) 
-#foreach pack ( sifdecoder )
+#foreach pack ( select )
+foreach pack ( sifdecoder )
   echo "    " $pack
   echo "      .. making pdf"
   pdfroff -e -m man $pack.1 > ../../doc/pdf/$pack.pdf
