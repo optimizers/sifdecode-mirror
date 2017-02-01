@@ -144,6 +144,24 @@ let size=2
 
 let st=1
 
+#  -------------------------------------
+#  Set architecture-dependent parameters
+#  -------------------------------------
+
+if [[ -z "$ARCH" ]]; then
+#  echo "ARCH not set"
+  if [[ -z "$MYARCH" ]]; then
+    error ' no architecture specified and environment variable MYARCH is unset.
+ Either specificy architecture with -A option or set variable MYARCH.
+ and re-run.'
+    exit 2
+  else
+    ARCH=${MYARCH}
+  fi
+fi
+
+eval "`cat $SIFDECODE/bin/sys/$ARCH`"
+
 #  -------------------
 #  Interpret arguments
 #  -------------------
@@ -223,24 +241,6 @@ done
 #  allow file clobbering
 
 set +C
-
-#  -------------------------------------
-#  Set architecture-dependent parameters
-#  -------------------------------------
-
-if [[ -z "$ARCH" ]]; then
-#  echo "ARCH not set"
-  if [[ -z "$MYARCH" ]]; then
-    error ' no architecture specified and environment variable MYARCH is unset.
- Either specificy architecture with -A option or set variable MYARCH.
- and re-run.'
-    exit 2
-  else
-    ARCH=${MYARCH}
-  fi
-fi
-
-eval "`cat $SIFDECODE/bin/sys/$ARCH`"
 
 #  -------------------
 #  Create problem name
