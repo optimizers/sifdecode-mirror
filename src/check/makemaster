@@ -27,7 +27,7 @@ PLIBS = $(LIBS)
 
 #  Archive manipulation strings
 
-ARR = $(AR) -rcu $(LS)
+ARR = $(AR) $(ARREPFLAGS) $(LS)
 RMARFILE = $(SIFDECODE)/bin/rmarfile $(AR) $(GREP) $(LS)
 RMOBFILE = $(SIFDECODE)/bin/rmobfile $(RM) $(OBJ)
 
