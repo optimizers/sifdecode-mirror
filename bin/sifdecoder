@@ -144,31 +144,13 @@ let size=2
 
 let st=1
 
-#  -------------------------------------
-#  Set architecture-dependent parameters
-#  -------------------------------------
-
-if [[ -z "$ARCH" ]]; then
-#  echo "ARCH not set"
-  if [[ -z "$MYARCH" ]]; then
-    error ' no architecture specified and environment variable MYARCH is unset.
- Either specificy architecture with -A option or set variable MYARCH.
- and re-run.'
-    exit 2
-  else
-    ARCH=${MYARCH}
-  fi
-fi
-
-eval "`cat $SIFDECODE/bin/sys/$ARCH`"
-
 #  -------------------
 #  Interpret arguments
 #  -------------------
 
 let i=1
 let nbparam=0   # counts the number of parameters passed using -param
-PARAMLIST=( "" )
+PARAMLIST_RAW=( "" )
 
 while (( i <= last )); do
   opt=${!i}
@@ -213,21 +195,7 @@ while (( i <= last )); do
     # or by commas within a -param flag, e.g.:
     # -options... -param par1=val1,par2=val2 -otheroptions... -param par3=val3
     (( i++ ))
-    # see if some parameters were given as a comma-separated list
-    let nbparInThisGroup=`echo ${!i} | $AWK -F, '{print NF}'`
-    if [[ "$nbparInThisGroup" == "0" ]]; then
-        error "error processing -param flag"
-        exit 5
-    fi
-    # check if what follows -param looks like a parameter setting
-    chkparam=`echo ${!i} | $GREP =`
-    if [[  $chkparam == ""  ]]; then
-        error "error processing -param flag"
-        exit 5
-    fi
-    # store the parameters in the PARAM array
-    PARAMLIST=( "$PARAMLIST `echo ${!i} | $SED -e 's/,/ /g'`" )
-    (( nbparam = nbparam + nbparInThisGroup ))
+    PARAMLIST_RAW=( "$PARAMLIST_RAW ${!i}" )
   elif [[ "$opt" == '-show' ]]; then
     let SHOWPARAMS=1
     (( i++ ))
@@ -237,6 +205,39 @@ while (( i <= last )); do
   fi
   (( i++ ))
 done
+
+#  -------------------------------------
+#  Set architecture-dependent parameters
+#  -------------------------------------
+
+if [[ -z "$ARCH" ]]; then
+#  echo "ARCH not set"
+  if [[ -z "$MYARCH" ]]; then
+    error ' no architecture specified and environment variable MYARCH is unset.
+ Either specify architecture with -A option or set variable MYARCH.
+ and re-run.'
+    exit 2
+  else
+    ARCH=${MYARCH}
+  fi
+fi
+
+eval "`cat $SIFDECODE/bin/sys/$ARCH`"
+
+# process parameter settings
+PARAMLIST=( "" )
+for val in ${PARAMLIST_RAW[*]};
+do
+  # check if the array element looks like a parameter setting
+  if [[ $val =~ .*=.* ]]; then
+    true  # relax
+  else
+      error "error processing -param flag"
+      exit 5
+  fi
+  PARAMLIST+=(`echo ${val} | tr ',' ' '`)  # change commas to spaces
+done
+(( nbparam = ${#PARAMLIST[*]} - 1 ))
 
 #  allow file clobbering
 
