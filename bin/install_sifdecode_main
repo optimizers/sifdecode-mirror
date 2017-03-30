@@ -13,7 +13,7 @@ export SIFDECODE=`echo $SIFDECODE | $SED 's"/tmp_mnt""'`
 
 if [[ -e $SIFDECODE/versions/$VERSION ]]; then
     warning "There is already an installed SIFDECODE version $VERSION"
-    yesno_default_no ' Do you wish to proceed ... existing version will be destroyed'
+    yesno_default_yes ' Do you wish to proceed ... existing version will be updated'
     [[ $? != 1 ]] && exit 4
 fi
 

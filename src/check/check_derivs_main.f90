@@ -25,7 +25,8 @@
 !  Default values for parameters
 
      INTEGER :: dfiledevice = 26
-     LOGICAL :: write_problem_data = .FALSE.
+!    LOGICAL :: write_problem_data = .FALSE.
+     LOGICAL :: write_problem_data = .TRUE.
      CHARACTER ( LEN = 30 ) :: dfilename = 'SIF.data'
      LOGICAL :: testal = .FALSE.
      LOGICAL :: dechk  = .FALSE.
@@ -230,9 +231,9 @@
      IF ( ialgor > 1 ) THEN
        ALLOCATE( prob%Y( prob%ng ), STAT = alloc_status )
        IF ( alloc_status /= 0 ) THEN ; bad_alloc = 'prob%Y' ; GO TO 800 ; END IF
-       ALLOCATE( prob%C( prob%ng ), STAT = alloc_status )
-       IF ( alloc_status /= 0 ) THEN ; bad_alloc = 'prob%C' ; GO TO 800 ; END IF
      END IF
+     ALLOCATE( prob%C( prob%ng ), STAT = alloc_status )
+     IF ( alloc_status /= 0 ) THEN ; bad_alloc = 'prob%C' ; GO TO 800 ; END IF
      ALLOCATE( prob%GPVALU( ngpvlu ), STAT = alloc_status )
      IF ( alloc_status /= 0 ) THEN
        bad_alloc = 'prob%GPVALU' ; GO TO 800; END IF
@@ -387,9 +388,9 @@
      IF ( write_problem_data ) WRITE( dfiledevice, 1120 ) 'A     ', prob%A
      READ( input, 1020 ) prob%B
      IF ( write_problem_data ) WRITE( dfiledevice, 1120 ) 'B     ', prob%B
-     READ( input, 1020 ) prob%BL
+     READ( input, 1020 ) prob%BL, prob%C
      IF ( write_problem_data ) WRITE( dfiledevice, 1120 ) 'BL    ', prob%BL
-     READ( input, 1020 ) prob%BU
+     READ( input, 1020 ) prob%BU, prob%C
      IF ( write_problem_data ) WRITE( dfiledevice, 1120 ) 'BU    ', prob%BU
      READ( input, 1020 ) prob%X
      IF ( write_problem_data ) WRITE( dfiledevice, 1120 ) 'X     ', prob%X
@@ -714,8 +715,9 @@
      DEALLOCATE( prob%GSCALE, prob%VSCALE, XT, DGRAD , STAT = alloc_status )
      DEALLOCATE( Q, FT, GVALS , prob%BL, prob%BU, ETYPES, STAT = alloc_status )
      DEALLOCATE( prob%INTREP, prob%GNAMES, prob%VNAMES, STAT = alloc_status )
+     DEALLOCATE( prob%C, STAT = alloc_status )
      IF ( ialgor > 1 )                                                         &
-       DEALLOCATE( prob%Y, prob%C, prob%KNDOFG, STAT = alloc_status )
+       DEALLOCATE( prob%Y, prob%KNDOFG, STAT = alloc_status )
 
  990 CONTINUE
 
